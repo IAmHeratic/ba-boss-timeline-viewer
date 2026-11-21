@@ -20,7 +20,10 @@ items rest on search snippets and are marked as such.
 | EX cost changes: % reductions (Ui, Seia, Fuuka (New Year)) up to 50% rounded down; flat reductions (Kokona stamps, Kikyo, Shiroko (Swimsuit) -1, Umika -3, ...); Rio's copy = original cost - 1, min 0 | WIKI | Game8, Blue Rec |
 | How cost modifiers stack and in what order | UNKNOWN (one source suggests they work from the base cost) | |
 | Kokona: after 5 stamps, every ally's next EX (not hers) costs 1 less, stamps reset | WIKI | |
-| Starting cost at battle start | UNKNOWN. In the player's mock battles cost was 0 and regen began about 1.6 s after the clock started | TEST |
+| Model check against the Binah Lunatic Yellow video (2:38 to 2:26, bar fill measured by pixels, clock read by OCR, 60 fps): cost is deducted instantly when the card is pressed (Mika 9.97 -> 4.03, Kisaki 4.13 -> 1.16, Akane 2.14 -> 0.20); regen between casts matches 0.505/s; the first model (regen from 2:58.4) said 2:30.68, but the bar reached 2.00 at about 2:30.27 once the bar's segment gaps were handled (see the start-cost row); with regen from 2:58.02 they agree. Real presses were not back to back: Mika at 2:32.37, Kisaki 0.34 s later | TEST (video, measured) | |
+| Binah LUNATIC only (Hidden One's Vision, BinahLunaticPassive02): when Binah becomes groggy, all Striker students get +600 Cost Recovery for 10 s. With 4 Strikers and Kisaki's +20.3%: (6 x 700 + 4 x 600) / 10000 x 1.203 = 0.794/s | DATA (SchaleDB enemy skills) |
+| Check of the row above in the Binah Lunatic Yellow video: bar slope 0.79 per clock-second from about 1:51.7 to 1:41.7 (two clean stretches: 0.790 and 0.793), 0.50 before and after. No other stretch of Team 1 shows a different slope | TEST (video, measured) |
+| Starting cost at battle start | Cost starts at 0 and regen begins 1.98 s after the clock starts (zero crossing of the bar at clock 178.02, 178.02 and 178.04 in three recordings; an earlier 1.6 s estimate was wrong). Regen slopes measured: 0.5048, 0.5048 and 0.4388 per clock-second | TEST (bar fill by pixels, clock by OCR, 60 fps) |
 | Whether cost is deducted when the card is pressed or when the skill starts | UNKNOWN | |
 | Retreated or dead Strikers lower regen (3 Strikers = 0.35/s with no Specials counted by that source) | WIKI. The viewer assumes the whole team stays alive | |
 

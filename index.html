@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>BA EX Buff Timeline</title>
+<title>Blue Archive Boss Timeline Viewer</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
 :root{--bg:#141c28;--panel:#1d2838;--panel2:#26334a;--line:#34445f;--text:#e8eef7;--dim:#93a3bb;--accent:#4c9bf5;--warn:#ff6b5e;--ok:#5fd38d}
@@ -20,7 +20,7 @@ main{padding:16px 18px;display:grid;gap:16px;grid-template-columns:minmax(0,1fr)
 .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
 .card h2{margin:0 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.8px;color:var(--dim)}
 .banner{background:#3a2d17;border:1px solid #8a6a2b;color:#ffd98a;border-radius:8px;padding:8px 12px;font-size:13px}
-.roster{display:grid;grid-template-columns:repeat(4,minmax(230px,1fr));gap:12px}
+.roster{display:grid;grid-template-columns:repeat(auto-fill,minmax(max(250px,calc(25% - 12px)),1fr));gap:12px}
 .rowhead{display:flex;align-items:center;gap:10px;margin:12px 0 8px}
 .rowhead b{min-width:110px;font-size:14px}
 .rowhead .btn{padding:3px 12px}
@@ -43,13 +43,15 @@ main{padding:16px 18px;display:grid;gap:16px;grid-template-columns:minmax(0,1fr)
 .lname{position:sticky;left:0;z-index:5;width:210px;height:100%;display:flex;align-items:center;gap:12px;padding:0 12px;background:#141e2e;border-right:1px solid var(--line);font-weight:700;font-size:17px;line-height:1.2}
 .lname img{width:52px;height:52px;border-radius:9px;flex:none}
 .tl-wrap.panning{cursor:grabbing;user-select:none}
-.stu .lvls{display:flex;gap:10px;flex-wrap:nowrap;margin:6px 0 2px}
+.stu .lvls{display:flex;gap:6px 10px;flex-wrap:wrap;margin:6px 0 2px}
 .stu .lvls label{white-space:nowrap}
 .stu .lvls input{width:40px;padding:2px 3px}
 .stu .opt{display:flex;align-items:center;gap:6px;white-space:nowrap;margin-top:5px;font-size:12px;color:var(--dim)}
 .stu .opt input[type=checkbox]{width:auto}
 .stu .opt select{padding:1px 4px}
 .stu .body{min-width:0;flex:1}
+.stu .body b{padding-right:46px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stu{min-width:0}
 .stu small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tick{position:absolute;top:0;bottom:0;border-left:1px solid #1f2d44}
 .tick.maj{border-left-color:#3b4e6e}
@@ -70,6 +72,30 @@ main{padding:16px 18px;display:grid;gap:16px;grid-template-columns:minmax(0,1fr)
 .costlane .lname{display:block}
 .costlane .lname span{position:absolute;right:8px;font-size:12px;color:var(--dim);font-weight:400}
 .cost-bad{color:var(--warn);font-weight:700}.cost-od{color:#ff7de0;font-weight:700}
+.ovr{border-color:#ffd54a !important;color:#ffd54a}
+.evpill{position:absolute;height:26px;line-height:26px;padding:0 8px;border-radius:5px;font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:grab;color:#fff;border:1px solid #0008;z-index:6}
+.evpill.groggy{background:#c0392bcc}.evpill.skill{background:#8e5bd6cc}.evpill.phase{background:#2f7fb8cc}.evpill.note{background:#6b7a99cc}
+.evpill.cancel{text-decoration:line-through;opacity:.75}
+.evline{position:absolute;border-left:2px solid;pointer-events:none;z-index:3}
+.evline.groggy{border-color:#ff6b5e}.evline.skill{border-color:#b98cff;border-left-style:dashed}.evline.phase{border-color:#5dade2;border-left-style:dotted}.evline.note{border-color:#8fa0c0;border-left-style:dotted}
+.tbadge{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px 0 0;border-radius:6px;overflow:hidden;font-size:12.5px;font-weight:700;color:#fff;border:1px solid #0004}
+.tbadge i{font-style:normal;font-size:10px;letter-spacing:.06em;height:100%;display:flex;align-items:center;padding:0 7px;background:#0005;color:#ffffffcc}
+.chip{display:inline-block;padding:3px 9px;border-radius:6px;background:#2a3348;border:1px solid var(--line);font-size:12.5px;color:var(--dim)}.chip b{color:var(--text)}
+.terr{display:inline-block;width:26px;height:26px;vertical-align:middle;background:#5a6a8a;border-radius:6px;padding:2px;box-sizing:border-box}
+.fxrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;padding:6px 10px;border-radius:8px;border:1px solid #2f7fb8;background:#2f7fb81f}
+.sklist{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:8px;margin-top:6px}
+.skcard{display:flex;flex-direction:column;gap:4px;padding:8px 10px;border-radius:8px;background:#2a3348;border:1px solid var(--line);border-left:4px solid #b98cff}
+.skcard .d{font-size:12.5px;color:var(--dim);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.skcard:hover .d{-webkit-line-clamp:unset}
+.evcards{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px}
+.evcard{display:flex;flex-direction:column;align-items:flex-start;gap:3px;text-align:left;padding:8px 10px;border-left:4px solid}
+.evcard small{color:var(--dim);font-weight:400;font-size:12px;white-space:normal}
+.evcard.groggy{border-color:#ff6b5e}.evcard.skill{border-color:#b98cff}.evcard.phase{border-color:#5dade2}.evcard.note{border-color:#8fa0c0}
+.evband{position:absolute;pointer-events:none;background:#ff6b5e1c;z-index:1}
+.bosslane .lname{font-size:14px}
+#evt input[type=number]{width:62px}
+.chain-on{background:var(--accent,#4a7fd4);color:#fff}
+.cost-bad input{color:var(--warn);border-color:var(--warn)}.cost-od input{color:#ff7de0;border-color:#ff7de0}
 .carry{position:absolute;width:14px;height:14px;background:#fff;transform:rotate(45deg);border:2px solid #000;cursor:grab}
 .cline{position:absolute;top:0;bottom:0;border-left:1px dashed #ffffff40;pointer-events:none}
 .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--dim);margin-top:8px}
@@ -79,7 +105,28 @@ table{border-collapse:collapse;width:auto}
 #carry td:nth-child(3){min-width:0}
 th,td{border-bottom:1px solid var(--line);padding:5px 8px;text-align:left;font-size:13px}
 th{color:var(--dim);font-weight:700}
-td input[type=text]{width:78px}
+td input[type=text]{width:92px}
+.rotbar{position:sticky;top:var(--hh,60px);z-index:10;background:var(--panel);padding-top:4px}
+.rotbox{max-height:60vh;min-height:160px;overflow:auto;overscroll-behavior:contain;border-top:1px solid var(--line)}
+.rotbox th{position:sticky;top:0;background:var(--panel);z-index:2}
+.dlg-bg{position:fixed;inset:0;background:#000a;z-index:100;display:flex;align-items:center;justify-content:center}
+.dlg{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 20px;min-width:340px;max-width:92vw;max-height:86vh;overflow:auto;box-shadow:0 10px 40px #000a}
+.dlg a{color:var(--accent,#6aa6ff);text-decoration:underline;cursor:pointer}.dlg h3{margin:0 0 12px}.dlg label{display:flex;gap:8px;align-items:center;padding:4px 0}.dlg .acts{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+#rot td{padding:3px 8px}
+#rot tr[data-row]{cursor:pointer}
+#rot tr.hl td{background:#2f5a9a}
+#rot tr.hl td:first-child{box-shadow:inset 4px 0 0 #ffd54a}
+.addbar{margin-bottom:8px;gap:6px;align-items:center}
+.addq{display:inline-flex;align-items:center;gap:6px;padding:4px 10px 4px 5px}
+.addq img{width:26px;height:26px;border-radius:5px;object-fit:cover}
+.addq small{color:var(--dim)}
+#chainnew{width:22px;height:22px;margin:0 6px 0 4px;vertical-align:middle;cursor:pointer}
+.addbar label{display:inline-flex;align-items:center;cursor:pointer}
+.info{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;border:1px solid var(--line);color:var(--accent,#6aa6ff);cursor:pointer;user-select:none;font-size:15px}
+.info:hover{background:var(--line)}
+.pop{flex-basis:100%;background:#0d1420;border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:12.5px;color:var(--text,#e8eef7);max-width:560px}
+.pop[hidden]{display:none}
+.btn:disabled{opacity:.45;cursor:default}
 input,select{background:#0f1520;color:var(--text);border:1px solid var(--line);border-radius:5px;padding:3px 6px;font:inherit}
 .pill{display:inline-block;padding:1px 8px;border-radius:99px;font-size:11px;font-weight:700;color:#06121f;margin:1px 3px 1px 0}
 .w{color:var(--warn)}.ok{color:var(--ok)}
@@ -93,7 +140,7 @@ header .btn,header select{padding:4px 12px}
 </head>
 <body>
 <header>
-  <h1>BA <span>EX Buff Timeline</span></h1>
+  <h1>Blue Archive <span>Boss Timeline Viewer</span></h1>
   <div class="tabs" id="tabs"></div><button class="btn" id="newteam">+ New team</button>
   <div class="row" style="margin-left:auto">
     <label>Zoom <input type="range" id="zoom" min="4" max="400" value="16"> <small id="zlabel" style="color:var(--dim)"></small></label>
@@ -114,7 +161,6 @@ header .btn,header select{padding:4px 12px}
   <div class="card"><h2>Timeline <small style="text-transform:none;letter-spacing:0">(time counts down; drag a bar to move that cast; Ctrl+scroll to zoom; hatched = cast animation, coloured = buff active)</small></h2>
     <div class="tl-wrap"><div class="tl" id="tl"></div></div>
   </div>
-  <div class="card"><h2>Carry check &mdash; buffs active when the carry fires</h2><div id="carry"></div></div>
   <div class="card"><h2>Team</h2>
     <div class="row" style="margin-bottom:12px"><label>Name <input type="text" id="tname" style="width:220px"></label><button class="btn" id="delteam">Delete team</button>
       <small style="color:var(--dim)">Drag a card onto another in the same row to reorder. &#9733; marks the carry.</small></div>
@@ -122,19 +168,28 @@ header .btn,header select{padding:4px 12px}
     <div class="roster" id="rosterStr"></div>
     <div class="rowhead"><b>Specials <span id="nspc"></span></b><select id="addspc"></select><button class="btn" id="addspcbtn">Add</button></div>
     <div class="roster" id="rosterSpc"></div></div>
+  <div class="card" id="bosscard"><h2>Boss</h2>
+    <div class="row" style="margin-bottom:8px"><label>Boss <select id="bsel"></select></label><label>Difficulty <select id="bdiff"></select></label><label>Terrain <img id="bterricon" class="terr" alt="" style="display:none"> <select id="bterr"></select></label>
+      <button class="btn" id="bclear">Clear boss</button></div>
+    <div id="binfo" style="margin-bottom:10px"></div>
+    <div class="row addbar" id="evadd"></div>
+    <div class="rotbox" style="max-height:260px;min-height:0"><table id="evt"></table></div>
+  </div>
   <div class="card"><h2>Rotation</h2>
-    <div class="row" style="margin-bottom:8px"><button class="btn" id="add">+ Add cast</button><label>Cost regen /s <input type="number" id="regen" step="0.001" min="0" style="width:78px"></label><button class="btn" id="regenauto" title="Use the value calculated from the units below">auto</button><small id="regentext" style="color:var(--dim);max-width:520px"></small><label>Start cost <input type="number" id="scost" step="0.5" style="width:60px"></label><label>Time limit <input type="text" id="limit" style="width:62px" title="In-battle clock. Binah is 3:00; some other raid bosses start at 4:00."></label><span style="color:var(--dim)">Times are the in-game countdown clock. Spend = EX cost (blank = skill default).</span></div>
-    <table id="rot"></table>
+    <div class="rotbar" id="rotbar"><div class="row addbar" id="addbar"></div>
+    <div class="row" style="margin-bottom:8px"><label>Cost regen /s <input type="number" id="regen" step="0.001" min="0" style="width:78px"></label><button class="btn" id="regenauto" title="Set the cost regen back to the value calculated from the team">Reset</button><span class="info" id="reginfo" tabindex="0" title="How the cost regen is calculated">&#9432;</span><div class="pop" id="regentext" hidden></div><label>Start cost <input type="number" id="scost" step="0.5" style="width:60px"></label><label>Time limit <input type="text" id="limit" style="width:62px" title="In-battle clock. Binah is 3:00; some other raid bosses start at 4:00."></label><span style="color:var(--dim)">Times are the in-game countdown clock.</span></div></div>
+    <div class="rotbox" id="rotbox"><table id="rot"></table></div>
   </div>
 </main>
 <script src="data.js"></script>
+<script src="bosses.js?v=2"></script>
 <script src="rotations.js"></script>
 <script>
 const FPS = 30, LH = 100, HEAD = 6, AXIS = 24, LEFT = 210;
 const COLORS = {EnhanceExDamageRate_Base:'#ff9f45',AttackPower_Coefficient:'#ff6b81',CriticalDamageRate_Coefficient:'#f5d547',
   DefensePower_Coefficient:'#6fd0ff',RegenCost_Base:'#7ee0a1',CostOverload:'#ff7de0',ReduceWeakDamagedRate_Base:'#9fd8ff',EnhancePierceRate_Base:'#d6a0ff',Summon:'#9aa7c7',DodgePoint_Coefficient:'#b0f0d0',DamagedRatio2_Coefficient:'#ffd0a0',CriticalDamageResistRate_Coefficient:'#a0c0ff'};
 const KEY = 'ba-buff-timeline-v1';
-let TOTAL = 180, BATTLE0 = 179.6, COST0 = 178.4;   // set from the team's time limit in render(): cooldowns start 0.4s and cost regen 1.6s after the clock starts (measured in mock battles)
+let TOTAL = 180, BATTLE0 = 179.6, COST0 = 178.02;   // set from the team's time limit in render(): cooldowns start 0.4s and cost regen 1.98s after the clock starts (cost regen: measured on 3 recordings, MECHANICS.md)
 // Unique Equipment (UE) per student, set per team: star 1 = Lv 30 ... star 4 = Lv 60. Star 2 unlocks the '+' passive (Buff Retention for the students
 // that have one). Star 4 on a Special raises the max cost by 0.5 (two Specials give 11). Sources: Game8 JP, kamigame, bluearchive.wiki (see MECHANICS.md).
 const UELEVELS = [0, 30, 40, 50, 60];
@@ -153,7 +208,9 @@ function fresh(){ return {team:0, lv:{}, cap:{}, rc:{}, wait:{}, ext:{}, first:{
 const $ = s => document.querySelector(s);
 const save = () => localStorage.setItem(KEY, JSON.stringify(state));
 const fmt = t => { const m = Math.floor(t/60), s = (t - m*60); return m + ':' + (s<10?'0':'') + s.toFixed(1); };
-const fmt2 = t => { const m = Math.floor(t/60), s = (t - m*60); return m + ':' + (s<10?'0':'') + s.toFixed(2); };
+const fmt2 = t => { const ms = Math.round(t*1000), m = Math.floor(ms/60000), s = (ms - m*60000)/1000; return m + ':' + (s<10?'0':'') + s.toFixed(3); };   // like the in-game timer: three decimals
+let hlRow = null;   // id of the rotation row the player clicked to keep their place
+const timed = c => c.cb == null && !c.after;   // a time you typed or dragged; the others are placed by cost or by the chain
 const parse = v => { v = String(v).trim(); if(v.includes(':')){const [m,s]=v.split(':');return (+m)*60+(+s);} return +v; };
 const STATNAME = {AttackPower_Coefficient:'ATK', DefensePower_Coefficient:'DEF', CriticalDamageRate_Coefficient:'Crit DMG',
   EnhanceExDamageRate_Base:'EX Skill DMG', RegenCost_Base:'Cost Recovery', ReduceWeakDamagedRate_Base:'Weakness DMG Taken',
@@ -181,8 +238,8 @@ function regenInfo(t){
   const base = units.reduce((a,d)=>a+(d.regenStat||700),0)/10000;
   let boost = 0; const parts = [];
   t.roster.forEach(id=>{ const d = SCHALE[id]; if(d.regenBoost){ const L = levelOf(id).sub; if(L>0){ const b = Math.abs(pickv(d.regenBoost.values, L))/10000; boost += b; parts.push(d.name+' Sub Lv'+L+' +'+(b*100).toFixed(1)+'%'); } } });
-  const auto = base*(1+boost);
-  return {auto, text:`${units.length} students x 700 / 10000 = ${base.toFixed(3)}${parts.length ? ' x (1 + '+parts.join(' + ')+')' : ', no cost-recovery Sub Skill in the team'} = ${auto.toFixed(3)}/s`};
+  const auto = base*(1+boost);   // (boost is also used by boss effects)
+  return {auto, boost, text:`${units.length} students x 700 / 10000 = ${base.toFixed(3)}${parts.length ? ' x (1 + '+parts.join(' + ')+')' : ', no cost-recovery Sub Skill in the team'} = ${auto.toFixed(3)}/s`};
 }
 const team = () => state.teams[state.team];
 const pxs = () => +$('#zoom').value;
@@ -220,18 +277,132 @@ function simBasics(t, id){
 }
 // Cost over time: regen (per team), spends per cast, capped at 10. Cost Overload (Nagisa Swimsuit's buff) lets the carry
 // spend up to 5 more than it has, which leaves the total negative (seen in the video: 1 -> -5 for a 6-cost Mika cast).
+// Boss data (SchaleDB) and the boss events the player placed on the timeline.
+const bossOf = t => t.boss ? BOSSES.find(b=>b.id===t.boss.raid) : null;
+const bossDiff = t => { const b = bossOf(t); return b ? (b.diffs.find(d=>d.k===t.boss.diff) || null) : null; };
+const evOf = t => t.events || (t.events = []);
+// Windows in which the team gets extra cost recovery because of a boss effect (e.g. Binah Lunatic: all Strikers +600 for 10 s after Binah goes groggy).
+const winCache = {ok:false, t:null, w:[]};   // cleared at the start of every render(); events and roster only change through a handler that ends in render()
+function regenWindows(t){
+  const bd = bossDiff(t), evs = t.events || [];
+  if(!bd || !evs.length) return [];
+  if(winCache.ok && winCache.t === t) return winCache.w;
+  const fxs = bd.skills.flatMap(sk=>(sk.fx||[]).map(f=>({...f, skill:sk.name}))), units = t.roster.slice(0,6), boost = regenInfo(t).boost, w = [];
+  for(const ev of evs) if(ev.type === 'groggy') for(const f of fxs) if(f.on === 'groggy' && f.stat === 'RegenCost'){
+    const n = f.who === 'Main' ? units.filter(id=>SCHALE[id].squad === 'Main').length : units.length;
+    w.push({a:ev.t, b:ev.t - (f.sec || 10), extra:f.value*n/10000*(1+boost), name:f.skill});
+  }
+  winCache.ok = true; winCache.t = t; winCache.w = w;
+  return w;
+}
+// Pieces of the clock between a and b (a later in the fight = smaller), each with its own regen rate.
+function regenSegs(t, a, b, rate){
+  const W = regenWindows(t), cuts = [a, b];
+  W.forEach(w=>[w.a, w.b].forEach(x=>{ if(x < a && x > b) cuts.push(x); }));
+  cuts.sort((x,y)=>y-x);
+  const out = [];
+  for(let i = 0; i + 1 < cuts.length; i++){
+    const hi = cuts[i], lo = cuts[i+1]; if(hi - lo <= 0) continue;
+    const mid = (hi + lo)/2;
+    out.push({hi, lo, rate: rate + W.reduce((sum,w)=>sum + ((mid <= w.a && mid > w.b) ? w.extra : 0), 0)});
+  }
+  return out;
+}
+function regenAdv(t, cost, a, b, rate, CAP){
+  if(a <= b) return cost;
+  const W = regenWindows(t);
+  if(!W.some(w => (w.a < a && w.a > b) || (w.b < a && w.b > b))){   // no window starts or ends inside: one piece, no allocation (this runs tens of thousands of times)
+    const mid = (a + b)/2; let r = rate; for(const w of W) if(mid <= w.a && mid > w.b) r += w.extra;
+    return Math.min(CAP, cost + r*(a - b));
+  }
+  for(const sg of regenSegs(t, a, b, rate)) cost = Math.min(CAP, cost + sg.rate*(sg.hi - sg.lo));
+  return cost;
+}
 function costModel(t, list){
   const rate = +(t.regen ?? regenInfo(t).auto), CAP = capOf(t), ev = [];
   let cost = +(t.startCost ?? 0), last = COST0;
   const od = (tm, who) => list.some(x=>(x.c.target || t.carry) === who && x.r.buffs.some(b=>b.stat==='CostOverload' && b.start>=tm && b.end<tm));
   [...list].sort((a,b)=>b.c.t-a.c.t).forEach(({c,i})=>{
     const spend = c.cost ?? SCHALE[c.who].cost;
-    const before = Math.min(CAP, cost + rate*(last - c.t));
+    const before = regenAdv(t, cost, last, c.t, rate, CAP);
     const overload = before < spend && before + 5 >= spend && od(c.t, c.who);   // the Cost Over target may spend up to 5 beyond what it holds
     ev.push({i, t:c.t, before, after:before-spend, spend, ok: before >= spend || overload, overload});
     cost = before - spend; last = c.t;
   });
   return {ev, rate, cap:CAP, startCost:+(t.startCost ?? 0), tail:{cost, last}};
+}
+// Cost the team would have at clock time T if cast `skip` were not in the rotation (casts before T are paid, regen in between, capped).
+function costAt(t, skip, T, sorted){
+  const rate = +(t.regen ?? regenInfo(t).auto), CAP = capOf(t);
+  let cost = +(t.startCost ?? 0), last = COST0;
+  for(const {c} of sorted){
+    if(c.t <= T) break;                                   // later casts do not affect the cost at T
+    cost = regenAdv(t, cost, last, c.t, rate, CAP) - (c.cost ?? SCHALE[c.who].cost); last = c.t;
+  }
+  return regenAdv(t, cost, last, T, rate, CAP);
+}
+// All casts but `skip`, and but the casts tied (directly or through other ties) to it: those follow `skip`, so their old times must not count against it.
+const castsExcept = (t, skip) => {
+  const gone = new Set(); if(skip >= 0){ const todo = [t.casts[skip]]; while(todo.length){ const x = todo.pop(); if(x.id) t.casts.forEach(y=>{ if(y.after === x.id && !gone.has(y)){ gone.add(y); todo.push(y); } }); } }
+  return t.casts.map((c,i)=>({c,i})).filter(x=>x.i!==skip && !gone.has(x.c)).sort((a,b)=>b.c.t-a.c.t);
+};
+// True if, at clock time T, cast c's student holds Cost Over (it may then spend up to 5 beyond what it holds).
+const overOnFor = (t, c, T) => t.casts.some(x => x !== c && (x.target || t.carry) === c.who && SCHALE[x.who].buffs.some(b=>b.stat==='CostOverload')
+  && resolve(x).buffs.some(b=>b.stat==='CostOverload' && b.start>=T && b.end<T));
+// Time at which cast i sees `want` cost before it. If several moments qualify (cost passes the same value again after other casts) the one nearest to
+// where the cast already is wins; at the cost cap the first moment it is reached counts.
+function timeForCost(t, i, want, maxT = TOTAL, accept){   // maxT: the cast must not come before this clock time (it stays after the cast above it)
+  const T0 = t.casts[i].t, sorted = castsExcept(t, i), X = Math.min(want, capOf(t));
+  const hits = []; let bestErr = 1e9, bestT = T0;
+  // One sweep from late-fight to early: the cost after each other cast is carried along, so a step costs one short regen piece instead of a replay of the fight.
+  const rate = +(t.regen ?? regenInfo(t).auto), CAP = capOf(t); let cost = +(t.startCost ?? 0), last = COST0, k = 0;
+  for(let T = Math.min(TOTAL, maxT); T >= 0; T = +(T - 0.01).toFixed(2)){
+    while(k < sorted.length && sorted[k].c.t > T){ const c = sorted[k++].c; cost = regenAdv(t, cost, last, c.t, rate, CAP) - (c.cost ?? SCHALE[c.who].cost); last = c.t; }
+    const err = Math.abs(regenAdv(t, cost, last, T, rate, CAP) - X);
+    if(err <= 0.012 && (!accept || accept(T))) hits.push([T, err]);
+    if(err < bestErr){ bestErr = err; bestT = T; }
+  }
+  if(!hits.length) return accept ? timeForCost(t, i, want, maxT) : bestT;
+  hits.sort((a,b)=>Math.abs(a[0]-T0) - Math.abs(b[0]-T0));
+  const near = hits.filter(h=>Math.abs(h[0]-hits[0][0]) <= 0.05).sort((a,b)=>a[1]-b[1]);
+  return near[0][0];
+}
+// Earliest moment after `fromT` (going later in the fight) at which the team can afford `spend`.
+function firstAffordable(t, spend, fromT){
+  const sorted = castsExcept(t, -1);
+  for(let T = fromT; T >= 0; T = +(T - 0.01).toFixed(2)) if(costAt(t, -1, T, sorted) >= spend - 1e-9) return T;
+  return Math.max(0, fromT);
+}
+// "Right after": a cast can be tied to the cast before it. It then sits where that cast's EX animation ends, and follows it when it moves.
+const cid = c => c.id || (c.id = Math.random().toString(36).slice(2, 8));
+// Casts are placed by cost (c.cb = cost wanted before the cast) or tied to the cast above (c.after); only a cast you timed by hand keeps its own time.
+// So when the cost model changes, the planned costs stay and the times follow.
+const cbSig = new WeakMap();
+function applyChains(t){
+  for(let pass = 0; pass <= t.casts.length; pass++){
+    let moved = false;
+    const byTime = [...t.casts].sort((a,b)=>b.t-a.t);
+    byTime.forEach((c, k)=>{
+      const idx = t.casts.indexOf(c);
+      if(c.after){
+        const p = t.casts.find(x=>x.id === c.after);
+        if(!p || p === c){ delete c.after; return; }
+        // Right after = the first moment the team can pay for it. EX skills of different students can overlap their animations, so the animation length is not a gap.
+        let nt = Math.max(0, +(p.t - 0.01).toFixed(2));
+        // The Cost Over target may go up to 5 below zero while the buff runs, so such a cast needs only (cost - 5) held.
+        const need = c.cost ?? SCHALE[c.who].cost, others = castsExcept(t, idx);
+        const overOn = T => t.casts.some(x => x !== c && (x.target || t.carry) === c.who && SCHALE[x.who].buffs.some(b=>b.stat==='CostOverload')
+                            && resolve(x).buffs.some(b=>b.stat==='CostOverload' && b.start>=T && b.end<T));
+        while(nt > 0){ const held = costAt(t, -1, nt, others); if(held >= need - 1e-9 || (held + 5 >= need - 1e-9 && overOn(nt))) break; nt = +(nt - 0.01).toFixed(2); }
+        if(nt !== c.t){ c.t = nt; moved = true; }
+      } else if(c.cb != null){
+        const others = castsExcept(t, idx);
+        const sig = JSON.stringify([c.cb, c.cost ?? null, c.who, +(t.regen ?? regenInfo(t).auto), capOf(t), COST0, regenWindows(t).map(w=>[w.a, w.b, w.extra]), others.map(o=>[o.c.t, o.c.cost ?? null, o.c.who])]);
+        if(cbSig.get(c) !== sig){ cbSig.set(c, sig); const spendC = c.cost ?? SCHALE[c.who].cost, nt = timeForCost(t, idx, c.cb, k ? byTime[k-1].t - 0.01 : TOTAL, c.cb < spendC ? T => overOnFor(t, c, T) : undefined); if(nt !== c.t){ c.t = nt; moved = true; } }
+      }
+    });
+    if(!moved) break;
+  }
 }
 function allResolved(){
   const t = team(); const list = t.casts.map((c,i)=>({c,i,r:resolve(c)}));
@@ -248,8 +419,9 @@ function allResolved(){
 }
 
 function render(){
+  winCache.ok = false;
+  { const t0 = team(); TOTAL = +(t0.limit ?? 180); BATTLE0 = TOTAL - 0.4; COST0 = TOTAL - 1.98; applyChains(t0); }
   const t = team(), list = allResolved(), px = pxs();
-  TOTAL = +(t.limit ?? 180); BATTLE0 = TOTAL - 0.4; COST0 = TOTAL - 1.6;
   t.roster.sort((a,b)=> (SCHALE[a].squad==='Main'?0:1) - (SCHALE[b].squad==='Main'?0:1));   // strikers first, as in the game
   $('#tabs').innerHTML = state.teams.map((x,i)=>`<button class="tab ${i===state.team?'on':''}" data-i="${i}" title="${(x.source||'').replace(/"/g,'&quot;')}">${x.name}</button>`).join('');
   document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{state.team=+b.dataset.i;save();render();});
@@ -300,7 +472,13 @@ function render(){
   });
   // stack overlapping uses of the same skill into extra rows
   const pack = items => { const rows = []; items.sort((a,b)=>b.start-a.start).forEach(it=>{ let k = rows.findIndex(e=>it.start <= e); if(k<0){ k = rows.length; rows.push(it.end); } else rows[k] = it.end; it.row = k; }); return Math.max(1, rows.length); };
-  let y = HEAD;
+  // boss lane: events the player placed (groggy, boss skills, phase changes, notes)
+  const evs = evOf(t), bd = bossDiff(t), bb = bossOf(t);
+  const evItems = evs.map((e,k)=>{ const label = e.label || (e.type==='groggy' ? 'Groggy' : e.type==='phase' ? 'Phase change' : e.type==='skill' ? 'Boss skill' : 'Note');
+    const dur = +(e.dur || 0), wpx = Math.max(dur*px, Math.min(260, label.length*7.2 + 18));
+    return {k, e, label, dur, wpx, start:e.t, end:e.t - wpx/px}; });
+  const BOSSL = (bb || evs.length) ? pack(evItems)*30 + 10 : 0;
+  let y = HEAD + BOSSL;
   lanes.forEach(L=>{ L.exRows = pack(L.ex); L.bsRows = showBasic() ? pack(L.bs) : 0; L.top = y; L.h = PAD*2 + (L.exRows+L.bsRows)*(ROW+GAP) - GAP; y += L.h; });
   const CL = 130, costTop = y; y += CL;
   const w = LEFT + TOTAL*px + 40, h = y + AXIS;
@@ -311,6 +489,17 @@ function render(){
     const maj = k % Math.round(majT*100) === 0, lab = k % Math.round(labelT*100) === 0;
     const mm = Math.floor(sec/60), ss = sec - mm*60, txt = mm + ':' + (labelT<1 ? ss.toFixed(1).padStart(4,'0') : String(Math.round(ss)).padStart(2,'0'));
     html += `<div class="tick ${maj?'maj':''}" style="left:${x}px">${lab?`<span>${txt}</span>`:''}</div>`;
+  }
+  if(BOSSL){
+    const nm = bb ? bb.name + (bd ? ' ' + bd.name : '') : 'Boss events';
+    html += `<div class="lane bosslane" style="top:${HEAD}px;height:${BOSSL}px"><div class="lname"><b>${nm}</b></div></div>`;
+    evItems.forEach(it=>{
+      const e = it.e, x = X(e.t), full = y + 0;
+      if(e.type === 'groggy' && it.dur > 0) html += `<div class="evband" style="left:${x}px;top:${HEAD}px;width:${it.dur*px}px;height:${full - HEAD}px"></div>`;
+      html += `<div class="evline ${e.type}" style="left:${x}px;top:${HEAD}px;height:${full - HEAD}px"></div>`;
+      const tip = `${it.label} @ ${fmt2(e.t)}${it.dur ? ' for ' + it.dur + 's (until ' + fmt2(e.t - it.dur) + ')' : ''}${e.cancel ? '\nthe boss skill is cancelled' : ''}`;
+      html += `<div class="evpill ${e.type} ${e.cancel?'cancel':''}" data-ev="${it.k}" title="${tip.replace(/"/g,'&quot;')}" style="left:${x}px;top:${HEAD + 5 + it.row*30}px;width:${it.wpx}px">${it.label}</div>`;
+    });
   }
   lanes.forEach(L=>{
     const d = SCHALE[L.id];
@@ -336,14 +525,19 @@ function render(){
   {
     const lo = -5, hi = cm.cap, yy = c => costTop + 10 + (hi - c)/(hi - lo)*(CL - 20);
     const pts = [[COST0, cm.startCost]];
-    const climb = (t0, c0, t1) => {            // regen from (t0,c0) until t1, flattening at the cap
-      const c1 = c0 + cm.rate*(t0 - t1);
-      if(c1 > cm.cap && c0 < cm.cap) pts.push([t0 - (cm.cap - c0)/cm.rate, cm.cap]);
-      return Math.min(cm.cap, c1);
+    const climb = (t0, c0, t1) => {            // regen from (t0,c0) until t1, flattening at the cap (the rate changes inside boss effect windows)
+      let c = c0;
+      for(const sg of regenSegs(t, t0, t1, cm.rate)){
+        const c1 = c + sg.rate*(sg.hi - sg.lo);
+        if(c1 > cm.cap && c < cm.cap) pts.push([sg.hi - (cm.cap - c)/sg.rate, cm.cap]);
+        c = Math.min(cm.cap, c1);
+        if(sg.lo !== t1) pts.push([sg.lo, c]);
+      }
+      return c;
     };
     let ct = COST0, cc = cm.startCost;
     cm.ev.forEach(e=>{ cc = climb(ct, cc, e.t); pts.push([e.t, e.before]); pts.push([e.t, e.after]); ct = e.t; cc = e.after; });
-    climb(ct, cc, 0); pts.push([0, Math.min(cm.cap, cc + cm.rate*ct)]);
+    pts.push([0, climb(ct, cc, 0)]);
     const refPts = (typeof COST_REF!=='undefined' && t.ref && COST_REF[t.ref]) ? COST_REF[t.ref] : null;
     const refLine = refPts ? `<polyline points="${refPts.map(q=>X(q[0]).toFixed(1)+','+yy(q[1]).toFixed(1)).join(' ')}" fill="none" stroke="#8aa0c8" stroke-width="1.5" stroke-dasharray="4 3"><title>Cost bar read from your video</title></polyline>` : '';
     const path = pts.map(q=>`${X(q[0]).toFixed(1)},${yy(q[1]).toFixed(1)}`).join(' ');
@@ -362,22 +556,9 @@ function render(){
   html += '</div>';
   $('#tl').innerHTML = html;
   bindDrag(list);
+  bindEventDrag(t);
+  renderBoss(t);
 
-
-  // carry check
-  const carryCasts = list.filter(x=>x.c.who===t.carry).sort((a,b)=>b.c.t-a.c.t);
-  let ch = '<table><tr><th>#</th><th>Carry cast</th><th>Buffs on target</th><th>Missing</th></tr>';
-  const toCarry = (x,b) => b.target==='Enemy' || (b.target==='AllyMain' && (x.c.target || t.carry) === t.carry);   // single-target buffs only count if aimed at the carry
-  const wanted = [...new Set(list.filter(x=>x.c.who!==t.carry).flatMap(x=>x.r.buffs.filter(b=>toCarry(x,b)).map(b=>b.label+'|'+b.stat+'|'+x.c.who)))];
-  carryCasts.forEach((cc,n)=>{
-    const hit = x => x.r.buffs.filter(b=>toCarry(x,b) && b.start>=cc.c.t && b.end<cc.c.t);
-    const active = list.flatMap(x=>hit(x).map(b=>({b,who:x.c.who})));
-    const have = new Set(active.map(a=>a.b.label+'|'+a.b.stat+'|'+a.who));
-    const pills = active.map(a=>`<span class="pill" style="background:${COLORS[a.b.stat]}">${SCHALE[a.who].name}: ${a.b.label}${a.b.stat==='CostOverload'||a.b.stat==='Summon'?'':' '+a.b.val+'%'} (${(cc.c.t-a.b.end).toFixed(1)}s left)</span>`).join('');
-    const miss = wanted.filter(k=>!have.has(k)).map(k=>{const [l,,w]=k.split('|');return `${SCHALE[w].name}: ${l}`;});
-    ch += `<tr><td>${n+1}</td><td>${fmt(cc.c.t)}${cc.c.tag?' '+cc.c.tag:''}</td><td>${pills||'<span class="w">none</span>'}</td><td class="${miss.length?'w':'ok'}">${miss.length?miss.join(', '):'all covered'}</td></tr>`;
-  });
-  $('#carry').innerHTML = carryCasts.length ? ch+'</table>' : 'No carry casts in this rotation.';
 
   // roster
   $('#tname').value = t.name;
@@ -427,45 +608,185 @@ function render(){
   document.querySelectorAll('[data-ext]').forEach(i=>i.onchange=()=>{tset(t).ext[i.dataset.ext]=+i.value;save();render();});
 
   // rotation table
-  const ri = regenInfo(t); $('#regen').value = +(t.regen ?? ri.auto).toFixed(3); $('#scost').value = +(t.startCost ?? 0); $('#limit').value = fmt(TOTAL).replace(/\.0$/,''); $('#regentext').textContent = (t.regen != null ? 'manual. ' : 'auto: ') + ri.text + '. Max cost ' + capOf(t) + '.';
-  let rt = '<tr><th>#</th><th>Time</th><th>Student</th><th>Target</th><th>Cost before</th><th>Spend</th><th>After</th><th>Note</th><th></th></tr>';
-  [...t.casts.keys()].sort((a,b)=>t.casts[b].t-t.casts[a].t).forEach((i,n)=>{
-    const c = t.casts[i];
-    rt += `<tr><td>${n+1}</td><td><input type="text" value="${fmt2(c.t)}" data-t="${i}"></td>
+  const ri = regenInfo(t); $('#regen').value = +(t.regen ?? ri.auto).toFixed(3); $('#scost').value = +(t.startCost ?? 0); $('#limit').value = fmt(TOTAL).replace(/\.0$/,''); $('#regentext').textContent = (t.regen != null ? 'Set by hand (Reset returns to ' + ri.auto.toFixed(3) + '/s). Calculated: ' : 'Calculated: ') + ri.text + '. Max cost ' + capOf(t) + '.';
+  $('#regenauto').disabled = t.regen == null;
+  let rt = '<tr><th>#</th><th>Cost</th><th title="Chain: tie this cast to the cast above it, so it goes off the moment the team has the cost.">Chain</th><th>Student</th><th>Target</th><th title="Cost this EX spends. Leave blank for the normal cost of the skill; type a number for cost reductions (Kokona stamps, a Rio copy, ...).">EX cost</th><th>Note</th><th>Time</th><th></th></tr>';
+  const order = [...t.casts.keys()].sort((a,b)=>t.casts[b].t-t.casts[a].t);
+  order.forEach((i,n)=>{
+    const c = t.casts[i], ce = costOf[i];
+    const cls = ce && !ce.ok ? 'cost-bad' : (ce && ce.overload ? 'cost-od' : '');
+    const tip = ce ? `Cost ${ce.before.toFixed(1)} -> ${ce.after.toFixed(1)} (spend ${ce.spend})${!ce.ok ? ' - NOT ENOUGH COST' : (ce.overload ? ' - paid with Cost Over' : '')}. Type the cost you want before this cast and the time moves to match. Up/Down: +-1 (Shift: 0.1)` : '';
+    rt += `<tr data-row="${i}" class="${hlRow === cid(c) ? 'hl' : ''}"><td>${n+1}</td>
+      <td class="${cls}"><input type="number" step="1" min="-5" max="${capOf(t)}" data-cb="${i}" value="${ce ? (c.cb != null && Math.abs(ce.before - c.cb) <= 0.02 ? c.cb : +ce.before.toFixed(1)) : ''}" style="width:70px" title="${tip}"></td>
+      <td style="text-align:center"><button class="btn ${c.after?'chain-on':''}" data-ch="${i}" ${n===0?'disabled':''} title="${c.after?'Tied to the cast above: it follows that cast and goes off the moment the team has the cost for it. Click to untie.':'Cast right after the cast above, the moment the team has the cost for it. Click again to untie.'}">&#9193;</button></td>
       <td><select data-w="${i}">${t.roster.map(id=>`<option value="${id}" ${id==c.who?'selected':''}>${SCHALE[id].name}</option>`).join('')}</select></td>
-      <td>${SCHALE[c.who].buffs.some(b=>b.target==='AllyMain') ? `<select data-tg="${i}"><option value="">${t.carry?'carry':'(none)'}</option>${t.roster.filter(id=>id!==c.who).map(id=>`<option value="${id}" ${c.target==id?'selected':''}>${SCHALE[id].name}</option>`).join('')}</select>` : ''}</td>
-      <td class="${costOf[i]&&!costOf[i].ok?'cost-bad':''}">${costOf[i]?costOf[i].before.toFixed(1):''}</td>
-      <td><input type="number" step="1" min="0" style="width:54px" data-cost="${i}" value="${c.cost ?? ''}" placeholder="${SCHALE[c.who].cost}"></td>
-      <td class="${costOf[i]&&!costOf[i].ok?'cost-bad':costOf[i]&&costOf[i].overload?'cost-od':''}">${costOf[i]?costOf[i].after.toFixed(1):''}${costOf[i]&&!costOf[i].ok?' (not enough)':costOf[i]&&costOf[i].overload?' (overload)':''}</td>
-      <td><input type="text" style="width:160px" value="${c.tag||''}" data-g="${i}"></td><td><button class="btn" data-x="${i}">✕</button></td></tr>`;
+      <td>${(SCHALE[c.who].buffs.some(b=>b.target==='AllyMain') || /one ally|an ally|target ally|designated ally/i.test(SCHALE[c.who].desc)) ? `<select data-tg="${i}"><option value="">${t.carry?'carry':'(none)'}</option>${t.roster.filter(id=>id!==c.who).map(id=>`<option value="${id}" ${c.target==id?'selected':''}>${SCHALE[id].name}</option>`).join('')}</select>` : ''}</td>
+      <td><input type="number" step="1" min="0" style="width:58px" class="${c.cost!=null?'ovr':''}" data-cost="${i}" value="${c.cost ?? ''}" placeholder="${SCHALE[c.who].cost}" title="Cost this EX spends. Blank = normal cost (${SCHALE[c.who].cost}). Type a number to override, e.g. for Kokona's stamp reduction."></td>
+      <td><input type="text" style="width:160px" value="${c.tag||''}" data-g="${i}"></td><td style="white-space:nowrap"><input type="text" class="${timed(c) ? 'ovr' : ''}" value="${fmt2(c.t)}" data-t="${i}" title="${timed(c) ? 'A time you set (orange). Clear the box to let the cost place this cast again.' : 'Where the cost (or the chain) puts this cast. Type a time, for example 2:30.866, to pin it.'}"></td>
+      <td><button class="btn" data-x="${i}">✕</button></td></tr>`;
   });
+  const keepScroll = $('#rotbox').scrollTop;
   $('#rot').innerHTML = rt;
+  // Click a row (not one of its boxes or buttons) to mark the cast you just did; click it again to clear. Kept while you edit, not saved.
+  $('#rot').onclick = e => {
+    const tr = e.target.closest('tr[data-row]'); if(!tr || e.target.closest('input,select,button,label,textarea')) return;
+    const c = t.casts[+tr.dataset.row]; hlRow = hlRow === cid(c) ? null : cid(c);
+    document.querySelectorAll('#rot tr[data-row]').forEach(r => r.classList.toggle('hl', hlRow !== null && cid(t.casts[+r.dataset.row]) === hlRow));
+  };
+  $('#rotbox').scrollTop = keepScroll;
+  $('#addbar').innerHTML = '<b style="color:var(--dim)">Add cast:</b>' + t.roster.map(id=>`<button class="btn addq" data-aq="${id}" title="Add ${SCHALE[id].name}'s EX at the first moment the team can pay for it"><img src="https://schaledb.com/images/student/icon/${id}.webp" onerror="this.style.visibility='hidden'" draggable="false">${SCHALE[id].name} <small>${SCHALE[id].cost}</small></button>`).join('')
+    + `<label title="When ticked, each new cast is tied to the cast above it (the &#9193; button): it goes off as soon as the team has the cost, instead of waiting for you to set a time. Use it for back-to-back EX skills."><input type="checkbox" id="chainnew" ${state.chainNew?'checked':''}> Chain: cast as soon as affordable &#9193;</label>`;
+  $('#chainnew').onchange = e=>{ state.chainNew = e.target.checked; save(); };
+  document.querySelectorAll('[data-aq]').forEach(b=>b.onclick=()=>addCast(+b.dataset.aq));
+  fitRot();
   const ch2 = (sel,fn)=>document.querySelectorAll(sel).forEach(e=>e.onchange=()=>{fn(e);save();render();});
-  ch2('[data-t]',e=>{const c=t.casts[e.dataset.t];c.t=Math.max(0,Math.min(TOTAL,+parse(e.value).toFixed(2)));t.estimated=false;});
+  document.querySelectorAll('[data-ch]').forEach(b=>b.onclick=()=>{
+    const c = t.casts[+b.dataset.ch], n = order.indexOf(+b.dataset.ch);
+    if(c.after) delete c.after; else if(n > 0){ c.after = cid(t.casts[order[n-1]]); delete c.cb; }
+    t.estimated = false; save(); render(); });
+  ch2('[data-t]',e=>{const i=+e.dataset.t, c=t.casts[i];
+    if(e.value.trim()===''){ if(timed(c)) c.cb = +Math.max(0, costAt(t, -1, c.t, castsExcept(t, i))).toFixed(1); return; }   // emptied: back to being placed by cost
+    delete c.after;delete c.cb;c.t=Math.max(0,Math.min(TOTAL,+parse(e.value).toFixed(3)));t.estimated=false;});
+  // Cost before: type or step a value and the cast moves to the moment the team has that much cost.
+  const applyCost = (i, want) => { if(!isFinite(want)) return; delete t.casts[i].after;
+    { const sp = t.casts[i].cost ?? SCHALE[t.casts[i].who].cost; want = Math.max(want, t.casts.some(x=>x!==t.casts[i] && (x.target || t.carry) === t.casts[i].who && SCHALE[x.who].buffs.some(b=>b.stat==='CostOverload')) ? sp - 5 : sp); }   // less cost than it spends is only possible with Cost Over (up to 5 short)
+    want = Math.min(want, capOf(t)); t.casts[i].cb = want; { const above = t.casts.filter(x=>x!==t.casts[i] && x.t >= t.casts[i].t).sort((a,b)=>a.t-b.t)[0]; t.casts[i].t = timeForCost(t, i, want, above ? above.t - 0.01 : TOTAL, want < (t.casts[i].cost ?? SCHALE[t.casts[i].who].cost) ? T => overOnFor(t, t.casts[i], T) : undefined); } t.estimated = false; save(); render();
+    const n = document.querySelector('[data-cb="'+i+'"]'); if(n){ n.focus(); n.select(); } };
+  document.querySelectorAll('[data-cb]').forEach(inp=>{
+    inp.oninput = ()=>{ const cap = capOf(t); if(inp.value !== '' && +inp.value > cap) inp.value = cap; if(inp.value !== '' && +inp.value < -5) inp.value = -5; };   // never above the max cost
+    inp.onchange = ()=>applyCost(+inp.dataset.cb, +inp.value);
+    inp.onkeydown = e=>{ if(e.key!=='ArrowUp' && e.key!=='ArrowDown') return; e.preventDefault();
+      applyCost(+inp.dataset.cb, +(+inp.value + (e.key==='ArrowUp'?1:-1)*(e.shiftKey?0.1:1)).toFixed(2)); };
+  });
   // Up / Down arrows in a time box: +1 s / -1 s (Shift: 0.1 s). The cost columns update straight away.
   document.querySelectorAll('[data-t]').forEach(inp=>{
     inp.onkeydown = e=>{
       if(e.key!=='ArrowUp' && e.key!=='ArrowDown') return;
       e.preventDefault();
       const i = +inp.dataset.t, c = t.casts[i], step = e.shiftKey ? 0.1 : 1;
-      c.t = +Math.max(0, Math.min(TOTAL, c.t + (e.key==='ArrowUp' ? step : -step))).toFixed(2);
+      delete c.after; delete c.cb; c.t = +Math.max(0, Math.min(TOTAL, c.t + (e.key==='ArrowUp' ? step : -step))).toFixed(3);
       t.estimated = false; save(); render();
       const n = document.querySelector('[data-t="'+i+'"]'); if(n){ n.focus(); n.select(); }
     };
   });
-  ch2('[data-w]',e=>t.casts[e.dataset.w].who=+e.value);
+  ch2('[data-w]',e=>{ const c = t.casts[e.dataset.w]; c.who = +e.value; delete c.cost; });   // an EX-cost override belongs to the student it was set for
   ch2('[data-tg]',e=>{ const c=t.casts[e.dataset.tg]; if(e.value==='') delete c.target; else c.target=+e.value; });
   ch2('[data-g]',e=>t.casts[e.dataset.g].tag=e.value);
   ch2('[data-cost]',e=>{const c=t.casts[e.dataset.cost]; if(e.value==='') delete c.cost; else c.cost=+e.value;});
   document.querySelectorAll('[data-x]').forEach(b=>b.onclick=()=>{t.casts.splice(+b.dataset.x,1);save();render();});
 }
 
+const rid = () => Math.random().toString(36).slice(2, 8);
+const EVNAME = {groggy:'Groggy', skill:'Boss skill', phase:'Phase change', note:'Note'};
+function bindEventDrag(t){
+  const px = pxs();
+  document.querySelectorAll('.evpill[data-ev]').forEach(el=>{
+    el.onmousedown = ev=>{
+      ev.preventDefault();
+      const e = evOf(t)[+el.dataset.ev], x0 = ev.clientX, t0 = e.t, st = STEP(px);
+      const mv = m=>{ e.t = Math.max(0, Math.min(TOTAL, +(Math.round((t0 - (m.clientX - x0)/UI()/px)/st)*st).toFixed(2))); render(); };
+      const up = ()=>{ document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up); save(); render(); };
+      document.addEventListener('mousemove', mv); document.addEventListener('mouseup', up);
+    };
+  });
+}
+function setBoss(t, raid, diff, terrain){
+  const b = BOSSES.find(x=>x.id===raid); if(!b) return;
+  const d = b.diffs.find(x=>x.k===diff) || b.diffs[b.diffs.length-1];
+  t.boss = {raid, diff:d.k, terrain: b.terrains.includes(terrain) ? terrain : b.terrains[0]};
+  t.limit = d.sec; save(); render();
+}
+function renderBoss(t){
+  const b = bossOf(t), bd = bossDiff(t);
+  $('#bsel').innerHTML = '<option value="">(no boss)</option>' + BOSSES.map(x=>`<option value="${x.id}" ${b&&b.id===x.id?'selected':''}>${x.name}${x.global ? '' : ' (JP only)'}</option>`).join('');
+  $('#bdiff').innerHTML = b ? b.diffs.map(d=>`<option value="${d.k}" ${bd&&bd.k===d.k?'selected':''}>${d.name}</option>`).join('') : '';
+  const TERR = {Street:'Urban', Outdoor:'Outdoor', Indoor:'Indoor'};
+  $('#bterr').innerHTML = b ? b.terrains.map(x=>`<option value="${x}" ${t.boss.terrain===x?'selected':''}>${TERR[x]||x}</option>`).join('') : '';
+  const ti = $('#bterricon'); ti.style.display = b ? '' : 'none'; if(b){ ti.src = 'https://schaledb.com/images/ui/Terrain_' + t.boss.terrain + '.png'; ti.title = TERR[t.boss.terrain] || t.boss.terrain; }
+  $('#bdiff').disabled = $('#bterr').disabled = !b; $('#bclear').disabled = !b;
+  const mm = s => Math.floor(s/60) + ':' + String(Math.round(s%60)).padStart(2,'0');
+  const ARM = {HeavyArmor:['Heavy','#c08a2b'], LightArmor:['Light','#b4403f'], Unarmed:['Special','#3a82c4'], ElasticArmor:['Elastic','#8a5fc7'], CompositeArmor:['Composite','#4f9b6b'], Normal:['Normal','#77808f']};
+  const ATK = {Explosion:['Explosive','#b4403f'], Pierce:['Piercing','#c08a2b'], Mystic:['Mystic','#3a82c4'], Sonic:['Sonic','#8a5fc7'], Chemical:['Chemical','#4f9b6b'], Normal:['Normal','#77808f']};
+  const badge = (lab, [name, col]) => `<span class="tbadge" style="background:${col}"><i>${lab}</i>${name}</span>`;
+  const esc = x => String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+  if(b && bd){
+    const e = bd.enemies[0], phases = (e.phases||[]).map(h=>Math.round(h/e.hp*100)+'%').join(', ');
+    const bt = bd.k>=5 && b.bulletInsane ? b.bulletInsane : b.bullet;
+    const fx = bd.skills.filter(sk=>sk.fx).map(sk=>sk.fx.map(f=>`<div class="fxrow" title="${esc(sk.name + ': ' + sk.desc)}"><b>Cost Recovery</b> <span>${f.value>0?'+':''}${f.value} for ${f.who==='Main'?'Strikers':'all students'}${f.sec ? ', ' + f.sec + ' s' : ''}, when the boss is groggy</span> <small style="color:var(--dim)">(counted in the cost model &middot; ${esc(sk.name)})</small></div>`).join('')).join('');
+    const passive = bd.skills.filter(sk=>sk.type==='Passive');
+    $('#binfo').innerHTML = `<div class="row" style="gap:8px;flex-wrap:wrap">${badge('ATK', ATK[bt]||[bt,'#77808f'])}${badge('DEF', ARM[b.armor]||[b.armor,'#77808f'])}`
+        + `<span class="chip">Time limit <b>${mm(bd.sec)}</b></span><span class="chip">HP <b>${(e.hp/1e6).toFixed(1)}M</b></span>`
+        + (e.groggyMs ? `<span class="chip">Groggy <b>${e.groggyMs/1000} s</b></span>` : '') + (phases ? `<span class="chip">Phase changes at HP <b>${phases}</b></span>` : '') + '</div>'
+      + fx
+      + (passive.length ? `<details style="margin-top:8px"><summary style="cursor:pointer;color:var(--dim)">Passive skills (${passive.length})</summary><ul style="margin:6px 0 0 18px;padding:0;font-size:12.5px">${passive.map(sk=>`<li><b>${esc(sk.name)}</b> ${esc(sk.desc)}</li>`).join('')}</ul></details>` : '');
+  } else $('#binfo').innerHTML = '<small style="color:var(--dim)">Pick a boss to set the time limit and see its skills. Events can be added without a boss too.</small>';
+  // add events: one card per kind, then the boss's own skills to click onto the timeline
+  const EVINFO = {groggy:['Groggy','The boss is stunned and takes extra damage: a red band on the timeline (length from the boss data).'],
+    skill:['Boss skill','A boss attack landing at a moment you choose. Pick it from the list below, or add a blank one.'],
+    phase:['Phase change','A moment the boss changes pattern (at an HP threshold).'],
+    note:['Note','Any marker of your own, for example "use Ui here".']};
+  const SKP = bd ? bd.skills.filter(sk=>sk.type!=='Passive') : [];
+  $('#evadd').innerHTML = '<div style="width:100%"><b style="color:var(--dim)">Add event</b></div><div class="evcards" style="width:100%">'
+    + ['groggy','phase','note'].concat(bd ? [] : ['skill']).map(k=>`<button class="btn evcard ${k}" data-add="${k}"><b>+ ${EVINFO[k][0]}</b><small>${EVINFO[k][1]}</small></button>`).join('') + '</div>'
+    + (SKP.length ? `<div style="width:100%;margin-top:6px"><b style="color:var(--dim)">Boss skills</b> <small style="color:var(--dim)">click one to put it on the timeline, then drag it to when it is cast (the game data has no cast times)</small></div><div class="sklist" style="width:100%">`
+        + SKP.map(sk=>`<div class="skcard"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><b>${esc(sk.name)}</b><button class="btn" data-addsk="${sk.id}">+ Add</button></div><div class="d" title="${esc(sk.desc)}">${esc(sk.desc)}</div></div>`).join('') + '</div>' : '')
+    + (state.teams.length > 1 ? `<div style="width:100%;margin-top:6px"><select id="evcopysel">${state.teams.map((x,i)=>i===state.team?'':`<option value="${i}">${x.name}</option>`).join('')}</select> <button class="btn" id="evcopy" title="Copy the boss events of that team into this one">Copy events from</button></div>` : '');
+  // table
+  const evs = evOf(t), order = evs.map((e,k)=>k).sort((a,c)=>evs[c].t - evs[a].t);
+  let h = '<tr><th>#</th><th>Time</th><th>Type</th><th>Label</th><th>Length (s)</th><th>Boss skill</th><th title="The boss skill never lands (e.g. interrupted by a groggy)">Cancelled</th><th></th></tr>';
+  order.forEach((k,n)=>{ const e = evs[k];
+    h += `<tr><td>${n+1}</td><td><input type="text" value="${fmt2(e.t)}" data-et="${k}"></td>
+      <td><select data-ety="${k}">${Object.keys(EVNAME).map(x=>`<option value="${x}" ${e.type===x?'selected':''}>${EVNAME[x]}</option>`).join('')}</select></td>
+      <td><input type="text" style="width:190px" value="${(e.label||'').replace(/"/g,'&quot;')}" data-elb="${k}" placeholder="${EVNAME[e.type]}"></td>
+      <td><input type="number" step="1" min="0" value="${e.dur ?? ''}" data-edu="${k}" ${e.type==='groggy' && bd && bd.enemies[0].groggyMs ? `placeholder="${bd.enemies[0].groggyMs/1000}"` : ''}></td>
+      <td>${e.type==='skill' && bd ? `<select data-esk="${k}"><option value="">(none)</option>${bd.skills.filter(sk=>sk.type!=='Passive').map(sk=>`<option value="${sk.id}" ${e.skill===sk.id?'selected':''}>${sk.name}</option>`).join('')}</select>` : ''}</td>
+      <td>${e.type==='skill' ? `<input type="checkbox" data-eca="${k}" ${e.cancel?'checked':''} style="width:18px;height:18px">` : ''}</td>
+      <td style="white-space:nowrap"><button class="btn" data-edup="${k}" title="Duplicate">&#10064;</button> <button class="btn" data-edel="${k}" title="Delete">&#10005;</button></td></tr>`;
+  });
+  $('#evt').innerHTML = h;
+  // handlers
+  const upd = fn => { fn(); save(); render(); };
+  $('#bsel').onchange = e=>upd(()=>{ if(!e.target.value){ delete t.boss; return; } const nb = BOSSES.find(x=>x.id===+e.target.value); setBossQuiet(t, nb.id, t.boss && t.boss.raid===nb.id ? t.boss.diff : nb.diffs[nb.diffs.length-1].k, t.boss && t.boss.terrain); });
+  $('#bdiff').onchange = e=>upd(()=>setBossQuiet(t, t.boss.raid, +e.target.value, t.boss.terrain));
+  $('#bterr').onchange = e=>upd(()=>{ t.boss.terrain = e.target.value; });
+  $('#bclear').onclick = ()=>upd(()=>{ delete t.boss; });
+  document.querySelectorAll('[data-add]').forEach(btn=>btn.onclick = ()=>upd(()=>{
+    const type = btn.dataset.add, es = evOf(t), tt = es.length ? Math.max(0, Math.min(...es.map(x=>x.t)) - 10) : Math.max(0, TOTAL - 60);
+    const ev = {id:rid(), type, t:+tt.toFixed(2)};
+    if(type === 'groggy' && bd && bd.enemies[0].groggyMs) ev.dur = bd.enemies[0].groggyMs/1000;
+    es.push(ev);
+  }));
+  document.querySelectorAll('[data-addsk]').forEach(btn=>btn.onclick = ()=>upd(()=>{
+    const es = evOf(t), sk = bd.skills.find(x=>x.id===btn.dataset.addsk), tt = es.length ? Math.max(0, Math.min(...es.map(x=>x.t)) - 10) : Math.max(0, TOTAL - 60);
+    es.push({id:rid(), type:'skill', t:+tt.toFixed(2), skill:sk.id, label:sk.name});
+  }));
+  if($('#evcopy')) $('#evcopy').onclick = ()=>upd(()=>{ const src = state.teams[+$('#evcopysel').value]; evOf(t).push(...(src.events||[]).map(x=>({...x, id:rid()}))); });
+  document.querySelectorAll('[data-et]').forEach(inp=>{
+    const k = +inp.dataset.et;
+    inp.onchange = ()=>upd(()=>{ evs[k].t = Math.max(0, Math.min(TOTAL, +parse(inp.value).toFixed(3))); });
+    inp.onkeydown = e=>{ if(e.key!=='ArrowUp' && e.key!=='ArrowDown') return; e.preventDefault();
+      evs[k].t = +Math.max(0, Math.min(TOTAL, evs[k].t + (e.key==='ArrowUp'?1:-1)*(e.shiftKey?0.1:1))).toFixed(3); save(); render();
+      const n = document.querySelector('[data-et="'+k+'"]'); if(n){ n.focus(); n.select(); } };
+  });
+  document.querySelectorAll('[data-ety]').forEach(el=>el.onchange = ()=>upd(()=>{ const e = evs[+el.dataset.ety]; e.type = el.value;
+    if(e.type==='groggy' && e.dur == null && bd && bd.enemies[0].groggyMs) e.dur = bd.enemies[0].groggyMs/1000; if(e.type!=='skill'){ delete e.cancel; delete e.skill; } }));
+  document.querySelectorAll('[data-elb]').forEach(el=>el.onchange = ()=>upd(()=>{ evs[+el.dataset.elb].label = el.value; }));
+  document.querySelectorAll('[data-edu]').forEach(el=>el.onchange = ()=>upd(()=>{ const e = evs[+el.dataset.edu]; if(el.value==='') delete e.dur; else e.dur = +el.value; }));
+  document.querySelectorAll('[data-esk]').forEach(el=>el.onchange = ()=>upd(()=>{ const e = evs[+el.dataset.esk]; e.skill = el.value || undefined; if(el.value && !e.label) e.label = bd.skills.find(x=>x.id===el.value).name; }));
+  document.querySelectorAll('[data-eca]').forEach(el=>el.onchange = ()=>upd(()=>{ evs[+el.dataset.eca].cancel = el.checked; }));
+  document.querySelectorAll('[data-edup]').forEach(el=>el.onclick = ()=>upd(()=>{ const e = evs[+el.dataset.edup]; evs.push({...e, id:rid(), t:+Math.max(0, e.t - 5).toFixed(2)}); }));
+  document.querySelectorAll('[data-edel]').forEach(el=>el.onclick = ()=>upd(()=>{ evs.splice(+el.dataset.edel, 1); }));
+}
+function setBossQuiet(t, raid, diff, terrain){
+  const b = BOSSES.find(x=>x.id===raid), d = b.diffs.find(x=>x.k===diff) || b.diffs[b.diffs.length-1];
+  t.boss = {raid, diff:d.k, terrain: b.terrains.includes(terrain) ? terrain : b.terrains[0]}; t.limit = d.sec;
+}
 function bindDrag(list){
   const t = team(), px = pxs();
   document.querySelectorAll('.bar[data-i],.carry').forEach(el=>{
     el.onmousedown = ev=>{
       ev.preventDefault();
-      const i = +el.dataset.i, c = t.casts[i], x0 = ev.clientX, t0 = c.t;
+      const i = +el.dataset.i, c = t.casts[i], x0 = ev.clientX, t0 = c.t; delete c.after; delete c.cb;
       const st = STEP(px), mv = e=>{ c.t = Math.max(0,Math.min(TOTAL, +(Math.round((t0 - (e.clientX-x0)/UI()/px)/st)*st).toFixed(2))); render(); };
       const up = ()=>{ document.removeEventListener('mousemove',mv); document.removeEventListener('mouseup',up); t.estimated=false; save(); render(); };
       document.addEventListener('mousemove',mv); document.addEventListener('mouseup',up);
@@ -480,7 +801,9 @@ const addTo = (sq, sel, max, label) => { const t = team(), id = +$(sel).value; i
   t.roster.push(id); save(); render(); };
 $('#addstrbtn').onclick = ()=>addTo('Main', '#addstr', 4, 'striker');
 $('#addspcbtn').onclick = ()=>addTo('Support', '#addspc', 2, 'special');
-$('#regen').onchange = ()=>{team().regen=+$('#regen').value;save();render();}; $('#regenauto').onclick = ()=>{delete team().regen;save();render();}; $('#limit').onchange = ()=>{ const v = parse($('#limit').value); if(v>=30 && v<=600){ team().limit = v; save(); } render(); }; $('#scost').onchange = ()=>{team().startCost=+$('#scost').value;save();render();};
+$('#regen').onchange = ()=>{team().regen=+$('#regen').value;save();render();}; $('#regenauto').onclick = ()=>{delete team().regen;save();render();};
+$('#reginfo').onclick = e=>{ e.stopPropagation(); $('#regentext').hidden = !$('#regentext').hidden; };
+document.addEventListener('click', e=>{ if(!e.target.closest('#regentext')) $('#regentext').hidden = true; }); $('#limit').onchange = ()=>{ const v = parse($('#limit').value); if(v>=30 && v<=600){ team().limit = v; save(); } render(); }; $('#scost').onchange = ()=>{team().startCost=+$('#scost').value;save();render();};
 const UIKEY = 'ba-ui-size';
 $('#uisize').value = localStorage.getItem(UIKEY) || '100%';
 const applyUI = () => { document.documentElement.style.zoom = (parseInt($('#uisize').value)/100); };
@@ -498,7 +821,7 @@ $('.tl-wrap').addEventListener('wheel', e=>{
 (() => {
   const wrap = $('.tl-wrap');
   wrap.addEventListener('mousedown', e=>{
-    if(e.button!==0 || e.target.closest('.bar,.carry,circle,.lname')) return;
+    if(e.button!==0 || e.target.closest('.bar,.carry,circle,.lname,.evpill')) return;
     if(e.target===wrap && (e.offsetX > wrap.clientWidth || e.offsetY > wrap.clientHeight)) return;      // scrollbar
     const x0 = e.clientX, s0 = wrap.scrollLeft; wrap.classList.add('panning'); e.preventDefault();
     const mv = ev => { wrap.scrollLeft = s0 - (ev.clientX - x0)/UI(); };
@@ -529,11 +852,95 @@ $('#bcreate').onclick = ()=>{
   state.teams.push({name:$('#bname').value.trim()||('Team '+(state.teams.length+1)), carry:+$('#bcarry').value||0, estimated:false, source:'Your own rotation: add casts in the Rotation table or drag bars.', roster:ids, casts:[], custom:true});
   state.team = state.teams.length-1; $('#builder').style.display='none'; save(); render();
 };
-$('#add').onclick = ()=>{const t=team(), last=t.casts.length?t.casts[t.casts.length-1].t:179;t.casts.push({t:+Math.max(0,last-3).toFixed(2),who:t.roster[0]});save();render();};
+// The add buttons and settings stay pinned under the page header; the cast list takes the rest of the window and scrolls on its own.
+function fitRot(){
+  const hh = $('header').offsetHeight, vh = innerHeight / UI();
+  document.documentElement.style.setProperty('--hh', hh + 'px');
+  $('#rotbox').style.maxHeight = Math.max(160, vh - hh - $('#rotbar').offsetHeight - 24) + 'px';
+}
+addEventListener('resize', fitRot);
+function addCast(who){
+  const t = team(), prev = t.casts.length ? t.casts.reduce((a,c)=>c.t<a.t?c:a) : null, last = prev ? prev.t : TOTAL;
+  const c = {t:+firstAffordable(t, SCHALE[who].cost, +(last - 0.01).toFixed(2)).toFixed(2), who};
+  if(prev && state.chainNew) c.after = cid(prev); else c.cb = SCHALE[who].cost;   // plans by cost: it keeps that cost if the cost model changes
+  t.casts.push(c); save(); render();
+  const box = $('#rotbox'); box.scrollTop = box.scrollHeight;     // show the new row
+}
 $('#delteam').onclick = ()=>{ if(state.teams.length<2){alert('Keep at least one team.');return;} if(confirm('Delete team "'+team().name+'"?')){state.teams.splice(state.team,1);state.team=0;save();render();} };
 $('#reset').onclick = ()=>{ if(confirm('Discard all edits and reload the bundled rotations?')){state=fresh();save();render();} };
-$('#exp').onclick = ()=>{ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify(state,null,1)],{type:'application/json'})); a.download='ba-timeline.json'; a.click(); };
-$('#imp').onclick = ()=>{ const i=document.createElement('input'); i.type='file'; i.onchange=()=>i.files[0].text().then(x=>{state=JSON.parse(x);save();render();}); i.click(); };
+// Small dialog built from DOM nodes (team names are text, never HTML).
+function dialog(title, body, okLabel, onOk){
+  const bg = document.createElement('div'); bg.className = 'dlg-bg';
+  const d = document.createElement('div'); d.className = 'dlg';
+  const h = document.createElement('h3'); h.textContent = title; d.append(h, body);
+  const acts = document.createElement('div'); acts.className = 'acts';
+  const no = document.createElement('button'); no.className = 'btn'; no.textContent = 'Cancel';
+  const ok = document.createElement('button'); ok.className = 'btn'; ok.textContent = okLabel; ok.style.background = 'var(--accent,#4a7fd4)'; ok.style.color = '#fff';
+  const close = () => bg.remove();
+  no.onclick = close; bg.onmousedown = e => { if(e.target === bg) close(); };
+  ok.onclick = () => { if(onOk() !== false) close(); };
+  acts.append(no, ok); d.append(acts); bg.append(d); document.body.append(bg);
+  return d;
+}
+// A list of teams with a tick box each (all ticked), plus "all / none" links.
+function teamPicker(teams){
+  const box = document.createElement('div'), boxes = [];
+  teams.forEach((tm, i) => {
+    const l = document.createElement('label'), c = document.createElement('input'); c.type = 'checkbox'; c.checked = true; boxes.push(c);
+    const n = (tm.casts || []).length, sp = document.createElement('span'); sp.textContent = (tm.name || 'Team ' + (i+1)) + ' (' + n + ' casts)';
+    l.append(c, sp); box.append(l);
+  });
+  const all = document.createElement('div'); all.style.cssText = 'font-size:12px;color:var(--dim);margin:2px 0 8px';
+  const mk = (txt, v) => { const a = document.createElement('a'); a.textContent = txt; a.href = '#'; a.style.marginRight = '10px'; a.onclick = e => { e.preventDefault(); boxes.forEach(b => b.checked = v); }; return a; };
+  all.append(mk('Select all', true), mk('Select none', false)); box.prepend(all);
+  return {box, picked: () => teams.filter((_, i) => boxes[i].checked)};
+}
+// Save as: Chrome and Edge open a Save dialog and, because of the fixed id, start in the folder used last time. Other browsers just download the file.
+async function saveJson(name, text){
+  if(window.showSaveFilePicker){
+    try {
+      const h = await window.showSaveFilePicker({suggestedName: name, id: 'ba-timeline-export', types: [{description: 'Timeline export (JSON)', accept: {'application/json': ['.json']}}]});
+      const w = await h.createWritable(); await w.write(text); await w.close(); return;
+    } catch(e){ if(e && e.name === 'AbortError') return; /* picker unavailable here: fall back to a plain download */ }
+  }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], {type:'application/json'})); a.download = name; a.click();
+}
+$('#exp').onclick = () => {
+  const pk = teamPicker(state.teams), body = document.createElement('div');
+  const fl = document.createElement('label'), fi = document.createElement('input'); fi.type = 'text'; fi.value = 'ba-timeline'; fi.style.width = '200px';
+  fl.append('File name ', fi, '.json'); body.append(pk.box, fl);
+  dialog('Export teams', body, 'Download', () => {
+    const picked = pk.picked(); if(!picked.length){ alert('Tick at least one team.'); return false; }
+    const name = (fi.value.trim().replace(/\.json$/i, '').replace(/[\\/:*?"<>|]+/g, '-') || 'ba-timeline') + '.json';
+    const out = {...state, teams: picked, team: Math.max(0, picked.indexOf(team()))};   // the open team stays the open one if it is exported
+    saveJson(name, JSON.stringify(out, null, 1));
+  });
+};
+$('#imp').onclick = () => { const i = document.createElement('input'); i.type = 'file'; i.accept = '.json,application/json'; i.onchange = () => i.files[0].text().then(x => {
+  let d; try { d = JSON.parse(x); } catch(e){ alert('That file is not valid JSON.'); return; }
+  if(!d || !Array.isArray(d.teams) || !d.teams.length || d.teams.some(tm => !tm || !Array.isArray(tm.roster) || !Array.isArray(tm.casts))){ alert('That file does not look like a timeline export.'); return; }
+  const pk = teamPicker(d.teams), body = document.createElement('div');
+  const mode = document.createElement('div'), mk = (v, txt, on) => { const l = document.createElement('label'), r = document.createElement('input'); r.type = 'radio'; r.name = 'impmode'; r.value = v; r.checked = on; l.append(r, txt); return l; };
+  mode.style.marginTop = '8px'; mode.append(mk('add', 'Add to my teams', true), mk('replace', 'Replace all my teams (cannot be undone)', false)); body.append(pk.box, mode);
+  dialog('Import teams', body, 'Import', () => {
+    const picked = pk.picked(); if(!picked.length){ alert('Tick at least one team.'); return false; }
+    if(mode.querySelector('input:checked').value === 'replace'){
+      if(!confirm('Replace all ' + state.teams.length + ' of your teams with ' + picked.length + ' from the file?')) return false;
+      state = {...d, teams: picked, team: 0};
+    } else {
+      const names = new Set(state.teams.map(tm => tm.name)), first = state.teams.length;
+      picked.forEach(tm => { let n = tm.name || 'Team', k = 2; while(names.has(n)) n = (tm.name || 'Team') + ' (' + k++ + ')'; tm.name = n; names.add(n); state.teams.push(tm); });
+      state.team = first;
+    }
+    save(); render();
+  });
+}); i.click(); };
+if(!state.cbMig){
+  const keepTeam = state.team, keepTotal = [TOTAL, COST0];
+  state.teams.forEach((t,k)=>{ state.team = k; TOTAL = +(t.limit ?? 180); COST0 = TOTAL - 1.6;
+    t.casts.forEach((c,i)=>{ if(!c.after && c.cb == null) c.cb = +Math.max(0, costAt(t, -1, c.t, castsExcept(t, i))).toFixed(1); }); });
+  state.team = keepTeam; TOTAL = keepTotal[0]; COST0 = keepTotal[1]; state.cbMig = 1; save();
+}
 render();
 </script>
 </body>
