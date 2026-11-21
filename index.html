@@ -160,6 +160,13 @@ input,select{background:#0f1520;color:var(--text);border:1px solid var(--line);b
 .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 header .row{gap:14px 18px;justify-content:flex-end}
 header .row label{display:flex;align-items:center;gap:8px;white-space:nowrap}
+header .sep{width:1px;align-self:stretch;background:var(--line)}
+header #savedot{display:none;width:7px;height:7px;border-radius:50%;background:#ffb347;margin-left:7px;vertical-align:middle}
+header #savebtn.dirty #savedot{display:inline-block}
+header .row{position:relative}
+#setpop{display:none;position:absolute;top:calc(100% + 10px);right:0;z-index:60;flex-direction:column;align-items:stretch;gap:14px;padding:14px 16px;background:#141e2e;border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px #000a}
+#setpop.on{display:flex}
+#setpop label{justify-content:space-between}
 header #zoom{width:150px;margin:0}
 header #zlabel{display:inline-block;min-width:104px;font-size:12px;line-height:1.2;white-space:nowrap}
 header .btn,header select{padding:4px 12px}
@@ -176,14 +183,20 @@ header .btn,header select{padding:4px 12px}
   <h1>Blue Archive <span>Boss Timeline Viewer</span></h1>
   <div class="tabs" id="tabs"></div><button class="btn" id="newteam">+ New team</button>
   <div class="row" style="margin-left:auto">
-    <label>Zoom <input type="range" id="zoom" min="4" max="400" value="16"> <small id="zlabel" style="color:var(--dim)"></small></label>
-    <label>Basic skills <select id="basic"><option value="off">off</option><option value="predicted" selected>predicted (rules)</option></select></label>
-    <label>UI size <select id="uisize"><option>100%</option><option>115%</option><option>125%</option><option>150%</option><option>175%</option></select></label>
-    <button class="btn" id="sbtoggle" title="Show Team, Boss and Rotation as tabs in a panel on the right (drag its edge to resize) or stacked under the timeline">Sidebar</button>
     <button class="btn" id="undobtn" title="Undo (Ctrl+Z)">&#8630;</button><button class="btn" id="redobtn" title="Redo (Ctrl+Y)">&#8631;</button>
-    <button class="btn" id="exp">Export</button>
+    <span class="sep"></span>
+    <button class="btn" id="savebtn" title="Save all teams to a file (Ctrl+S)">Save<i id="savedot"></i></button>
+    <button class="btn" id="exp" title="Save a copy of some or all teams under a new name">Export</button>
     <button class="btn" id="imp">Import</button>
-    <button class="btn" id="reset">Reset</button>
+    <span class="sep"></span>
+    <button class="btn" id="sbtoggle" title="Show Team, Boss and Rotation as tabs in a panel on the right (drag its edge to resize) or stacked under the timeline">Sidebar</button>
+    <button class="btn" id="gear" title="Settings: zoom, UI size, basic skills">&#9881;</button>
+    <button class="btn" id="reset" title="Discard all edits and reload the bundled rotations">Reset</button>
+    <div id="setpop">
+      <label>Zoom <input type="range" id="zoom" min="4" max="400" value="16"> <small id="zlabel" style="color:var(--dim)"></small></label>
+      <label>Basic skills <select id="basic"><option value="off">off</option><option value="predicted" selected>predicted (rules)</option></select></label>
+      <label>UI size <select id="uisize"><option>100%</option><option>115%</option><option>125%</option><option>150%</option><option>175%</option></select></label>
+    </div>
   </div>
 </header>
 <main>
@@ -255,9 +268,11 @@ const $ = s => document.querySelector(s);
 // Undo / redo: every edit that is saved first pushes the settled state from before it. A drag is one step (the state is only re-read when the mouse is released).
 const undoStack = [], redoStack = []; let baseline = null, gesture = false;
 const snap = () => JSON.stringify(state);
+let lastSaved = null;
+const markDirty = () => { const b = document.getElementById('savebtn'); if(b && lastSaved != null) b.classList.toggle('dirty', snap() !== lastSaved); };
 const save = () => {
   if(baseline != null && snap() !== baseline){ undoStack.push(baseline); if(undoStack.length > 100) undoStack.shift(); redoStack.length = 0; }
-  localStorage.setItem(KEY, JSON.stringify(state));
+  localStorage.setItem(KEY, JSON.stringify(state)); markDirty();
 };
 const fmt = t => { const m = Math.floor(t/60), s = (t - m*60); return m + ':' + (s<10?'0':'') + s.toFixed(1); };
 const fmt2 = t => { const ms = Math.round(t*1000), m = Math.floor(ms/60000), s = (ms - m*60000)/1000; return m + ':' + (s<10?'0':'') + s.toFixed(3); };   // like the in-game timer: three decimals
@@ -1193,6 +1208,46 @@ async function saveJson(name, text){
   }
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], {type:'application/json'})); a.download = name; a.click();
 }
+// Save (Ctrl+S): all teams into one file. Chrome and Edge keep the file chosen the first time (remembered between visits) and overwrite it; other browsers download a copy.
+const FILEPICK = {suggestedName: 'ba-timeline.json', id: 'ba-timeline-export', types: [{description: 'Timeline export (JSON)', accept: {'application/json': ['.json']}}]};
+const idb = (mode, fn) => new Promise((ok, no) => { const r = indexedDB.open('ba-timeline-file', 1); r.onupgradeneeded = () => r.result.createObjectStore('h'); r.onerror = () => no(r.error);
+  r.onsuccess = () => { const q = fn(r.result.transaction('h', mode).objectStore('h')); q.onsuccess = () => ok(q.result); q.onerror = () => no(q.error); }; });
+let fileHandle = null;
+async function saveAll(forceAsk){
+  const text = JSON.stringify({...state}, null, 1);
+  try {
+    if(window.showSaveFilePicker){
+      if(!fileHandle && !forceAsk) fileHandle = await idb('readonly', st => st.get('main')).catch(() => null);
+      if(fileHandle && !forceAsk){
+        let perm = await fileHandle.queryPermission({mode:'readwrite'});
+        if(perm !== 'granted') perm = await fileHandle.requestPermission({mode:'readwrite'});
+        if(perm !== 'granted') fileHandle = null;
+      }
+      if(!fileHandle || forceAsk){
+        fileHandle = await window.showSaveFilePicker(FILEPICK);
+        idb('readwrite', st => st.put(fileHandle, 'main')).catch(() => {});
+      }
+      const w = await fileHandle.createWritable(); await w.write(text); await w.close();
+      flash('Saved ' + fileHandle.name);
+    } else {
+      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], {type:'application/json'})); a.download = 'ba-timeline.json'; a.click();
+      flash('Downloaded ba-timeline.json');
+    }
+    lastSaved = snap(); markDirty();
+  } catch(e){
+    if(e && e.name === 'AbortError') return;
+    if(window.showSaveFilePicker && !forceAsk){ fileHandle = null; idb('readwrite', st => st.delete('main')).catch(() => {}); return saveAll(true); }   // the old file is gone or not writable: ask for a new one
+    alert('Could not save: ' + (e && e.message || e));
+  }
+}
+function flash(msg){ let n = document.getElementById('flash'); if(!n){ n = document.createElement('div'); n.id = 'flash'; n.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#1f3a5f;color:#fff;padding:8px 16px;border-radius:8px;z-index:300;font-size:14px'; document.body.append(n); }
+  n.textContent = msg; n.style.display = 'block'; clearTimeout(n.t); n.t = setTimeout(() => n.style.display = 'none', 2200); }
+$('#savebtn').onclick = () => saveAll(false);
+document.addEventListener('keydown', e => { if((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 's'){ e.preventDefault(); saveAll(false); } });
+// Settings panel (zoom, UI size, basic skills): opens under the gear, closes on a click elsewhere or Esc.
+$('#gear').onclick = e => { e.stopPropagation(); $('#setpop').classList.toggle('on'); };
+document.addEventListener('mousedown', e => { if(!e.target.closest('#setpop, #gear')) $('#setpop').classList.remove('on'); });
+document.addEventListener('keydown', e => { if(e.key === 'Escape') $('#setpop').classList.remove('on'); });
 $('#exp').onclick = () => {
   const pk = teamPicker(state.teams), body = document.createElement('div');
   const fl = document.createElement('label'), fi = document.createElement('input'); fi.type = 'text'; fi.value = 'ba-timeline'; fi.style.width = '200px';
@@ -1230,6 +1285,7 @@ if(!state.cbMig){
   state.team = keepTeam; TOTAL = keepTotal[0]; COST0 = keepTotal[1]; state.cbMig = 1; save();
 }
 render();
+lastSaved = snap(); markDirty();
 </script>
 </body>
 </html>
