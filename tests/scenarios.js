@@ -87,4 +87,11 @@ t = team(['Ui', 'Mika', 'Aru']); { const u = cast(t, 'Ui', 170); u.target = id('
   const old = { name: 'old', carry: id('Mika'), roster: [id('Ui'), id('Mika')], casts: [{ t: 170, who: id('Ui') }, { t: 160, who: id('Mika') }], set: { lv: {}, ext: {}, ue: {}, wait: {} } };
   E.dropCarry(old); eq('an old team with a carry: the carry becomes the target of the casts that needed one', [old.carry, old.casts[0].target, old.casts[1].target], [undefined, id('Mika'), undefined]); }
 
+// Cost reduction markers placed by the player
+{ t = team(['Kokona', 'Mika', 'Aru']); cast(t, 'Mika', 160); cast(t, 'Mika', 140); cast(t, 'Kokona', 140.5); cast(t, 'Aru', 139); t.reds = [{ id: 'a', t: 150, n: 1, except: id('Kokona') }];
+  eq('marker: the next EX of everyone but Kokona costs 1 less, once each', [spends(t, 'Mika'), spends(t, 'Kokona'), spends(t, 'Aru')], [[6, 5], [2], [3]]);
+  t.reds = [{ id: 'b', t: 150, n: 2, to: id('Mika') }]; eq('marker for one student, 2 less', [spends(t, 'Mika'), spends(t, 'Aru')], [[6, 4], [4]]);
+  t.reds = [{ id: 'c', t: 150, n: 9, to: id('Aru') }]; eq('a marker never takes the price below 0', spends(t, 'Aru'), [0]);
+  t.reds = []; eq('no markers: normal prices', spends(t, 'Mika'), [6, 6]); }
+
 console.log(bad ? `\n${bad} scenario(s) failed` : '\nALL SCENARIOS PASS'); process.exit(bad ? 1 : 0);

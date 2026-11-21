@@ -119,6 +119,9 @@ body.side .rotbar{top:0}
 .chain-on{background:var(--accent,#4a7fd4);color:#fff}
 .cost-bad input{color:var(--warn);border-color:var(--warn)}.cost-od input{color:#ff7de0;border-color:#ff7de0}
 .notg{border-color:var(--warn)}
+.redmk{position:absolute;z-index:6;height:20px;line-height:18px;padding:0 7px;border-radius:5px;background:#1f8f8a;border:1px solid #0008;color:#fff;font-size:12px;font-weight:700;cursor:grab;white-space:nowrap}
+.redchip{display:inline-flex;align-items:center;gap:5px;background:var(--panel2);border:1px solid #1f8f8a;border-radius:8px;padding:2px 8px;font-size:12.5px}
+.redchip input{width:54px}.redchip input.n{width:36px}.redchip select{max-width:110px}
 .carry{position:absolute;width:14px;height:14px;background:#fff;transform:rotate(45deg);border:2px solid #000;cursor:grab}
 .cline{position:absolute;top:0;bottom:0;border-left:1px dashed #ffffff40;pointer-events:none}
 .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--dim);margin-top:8px}
@@ -210,6 +213,7 @@ header .btn,header select{padding:4px 12px}
   </div>
   <div class="card" id="rotcard"><h2>Rotation</h2>
     <div class="rotbar" id="rotbar"><div class="row addbar" id="addbar"></div>
+    <div class="row" id="redbar" style="margin-bottom:6px"></div>
     <div class="row" style="margin-bottom:8px"><label>Cost regen /s <input type="number" id="regen" step="0.001" min="0" style="width:78px"></label><button class="btn" id="regenauto" title="Set the cost regen back to the value calculated from the team">Reset</button><span class="info" id="reginfo" tabindex="0" title="How the cost regen is calculated">&#9432;</span><div class="pop" id="regentext" hidden></div><label>Start cost <input type="number" id="scost" step="0.5" style="width:60px"></label><label>Time limit <input type="text" id="limit" style="width:62px" title="In-battle clock. Binah is 3:00; some other raid bosses start at 4:00."></label></div></div>
     <div class="rotbox" id="rotbox"><table id="rot"></table></div>
   </div>
@@ -258,7 +262,7 @@ const fmt = t => { const m = Math.floor(t/60), s = (t - m*60); return m + ':' + 
 const fmt2 = t => { const ms = Math.round(t*1000), m = Math.floor(ms/60000), s = (ms - m*60000)/1000; return m + ':' + (s<10?'0':'') + s.toFixed(3); };   // like the in-game timer: three decimals
 // Short student names for the narrow drop-downs: "Nagisa (Swimsuit)" -> "S. Nagisa", "Fuuka (New Year)" -> "NY Fuuka".
 const OUTFIT = {'Swimsuit':'S.','Dress':'D.','Armed':'A.','New Year':'NY','Hot Spring':'HS','Bunny':'B.','Cheer Squad':'CS','Track':'T.','Christmas':'X.','Maid':'M.',
-  'Camp':'C.','Band':'Bd','Qipao':'Q.','Pop Idol':'PI','Pajamas':'P.','School':'Sc','Casual':'Ca','Part-Timer':'PT','Magical':'Mg','Racing':'R.','Guide':'G.','Cycling':'Cy','Small':'Sm'};
+  'Camp':'C.','Band':'Bd','Qipao':'Q.','Pop Idol':'I.','Pajamas':'P.','School':'U.','Casual':'Ca','Part-Timer':'PT','Magical':'Mg','Racing':'R.','Guide':'G.','Cycling':'Cy','Small':'Sm'};
 // Two different students can share a name (both Hoshino (Armed)s): the EX name is added so they can be told apart in every list.
 { const by = {}; Object.values(SCHALE).forEach(d => (by[d.name] = by[d.name] || []).push(d)); Object.values(by).filter(a => a.length > 1).forEach(a => a.forEach(d => { d.name = d.name.replace(/\)$/, ' · ' + d.exName + ')'); })); }
 const shortName = n => { const m = n.match(/^(.*?)\s*\(([^)]*)\)$/); if(!m) return n; const [o, ...x] = m[2].split(' · '); return OUTFIT[o] ? OUTFIT[o] + ' ' + m[1] + (x.length ? ' · ' + x.join(' · ') : '') : n; };
@@ -432,11 +436,15 @@ function spendMap(t, list){   // price of every cast in the list, in the order t
   const sorted = [...list].sort((a, b) => b.t - a.t || list.indexOf(a) - list.indexOf(b)), pend = {}, out = new Map();
   const give = (g, spec, who) => { const uses = typeof spec.uses === 'function' ? spec.uses(exLv(t, g.who)) : spec.uses; (pend[who] = pend[who] || []).push({kind:spec.kind, n:spec.n, uses}); };
   t.roster.forEach(id => { const sp = CRED[id]; if(sp && sp.start) t.roster.forEach(x => { if(x !== id) give({who:id}, sp, x); }); });
-  const grants = sorted.filter(g => CRED[g.who] && !CRED[g.who].start && formIdx(t, g, list) == null).map(g => ({at:g.t - CRED[g.who].frames/FPS, g})).sort((a, b) => b.at - a.at);
+  const grants = sorted.filter(g => CRED[g.who] && !CRED[g.who].start && formIdx(t, g, list) == null).map(g => ({at:g.t - CRED[g.who].frames/FPS, g}));
+  (t.reds || []).forEach(r => grants.push({at:r.t, mk:r}));   // cost reductions the player placed on the timeline (Kokona's stamps and the other ones the tool cannot see coming)
+  grants.sort((a, b) => b.at - a.at);
   let gi = 0;
   sorted.forEach(c => {
-    while(gi < grants.length && grants[gi].at >= c.t){
-      const {g} = grants[gi++], sp = CRED[g.who];
+    while(gi < grants.length && grants[gi].at >= c.t - 1e-6){   // (a cast exactly on the moment a reduction lands gets it; the tolerance keeps rounding from flipping that)
+      const gr = grants[gi++];
+      if(gr.mk){ t.roster.forEach(x => { if((!gr.mk.to || x === gr.mk.to) && x !== gr.mk.except) (pend[x] = pend[x] || []).push({kind:'minus', n:+gr.mk.n || 1, uses:1}); }); continue; }
+      const g = gr.g, sp = CRED[g.who];
       if(sp.to === 'target'){ const tg = g.target; if(tg != null && tg !== g.who) give(g, sp, tg); }
       else if(sp.to === 'strikers') t.roster.forEach(x => { if(x !== g.who && SCHALE[x].squad === 'Main') give(g, sp, x); });
     }
@@ -497,24 +505,26 @@ function timeForCost(t, i, want, maxT = TOTAL, accept, minT = 0){
 }
 function timeForCost0(t, i, want, maxT = TOTAL, accept, minT = 0){   // maxT: the cast must not come before this clock time (it stays after the cast above it)
   const T0 = t.casts[i].t, sorted = castsExcept(t, i), X = Math.min(want, capOf(t));
-  const hits = []; let bestErr = 1e9, bestT = T0;
+  const hits = []; let bestErr = 1e9, bestT = T0, bestAccErr = 1e9, bestAccT = null;
   // One sweep from late-fight to early: the cost after each other cast is carried along, so a step costs one short regen piece instead of a replay of the fight.
   const rate = +(t.regen ?? regenInfo(t).auto), CAP = capOf(t), sm = spendMap(t, sorted.map(x => x.c)); let cost = +(t.startCost ?? 0), last = COST0, k = 0;
   for(let T = Math.min(TOTAL, maxT); T >= 0; T = +(T - 0.01).toFixed(2)){
     while(k < sorted.length && sorted[k].c.t > T){ const c = sorted[k++].c; cost = regenAdv(t, cost, last, c.t, rate, CAP) - sm.get(c); last = c.t; }
     const err = Math.abs(regenAdv(t, cost, last, T, rate, CAP) - X);
     if(err <= 0.012 && T >= minT && (!accept || accept(T))) hits.push([T, err]);
+    if(accept && T >= minT && err < bestAccErr && accept(T)){ bestAccErr = err; bestAccT = T; }   // closest moment the cast could really be paid for
     if(err < bestErr && T >= minT){ bestErr = err; bestT = T; }   // the closest miss may not hop over the cast below (that made casts drift later on every re-render)
   }
-  if(!hits.length) return accept ? timeForCost0(t, i, want, maxT, undefined, minT) : bestT;
+  if(!hits.length) return accept ? (bestAccT !== null ? bestAccT : bestT) : bestT;
   hits.sort((a,b)=>Math.abs(a[0]-T0) - Math.abs(b[0]-T0));
   const near = hits.filter(h=>Math.abs(h[0]-hits[0][0]) <= 0.05).sort((a,b)=>a[1]-b[1]);
   return near[0][0];
 }
 // Earliest moment after `fromT` (going later in the fight) at which the team can afford `spend`.
-function firstAffordable(t, spend, fromT){
+function firstAffordable(t, spend, fromT, who){   // who: the price may change with the moment (cost reductions), so it is looked up per moment
   const sorted = castsExcept(t, -1), win = allWindows(t, sorted.map(x => x.c)), sm = spendMap(t, sorted.map(x => x.c));
-  for(let T = fromT; T >= 0; T = +(T - 0.01).toFixed(2)) if(costAt(t, -1, T, sorted, sm, win) >= spend - 1e-9) return T;
+  const oc = sorted.map(x => x.c), redPlay = who != null && ((t.reds && t.reds.length) || oc.some(x => CRED[x.who]) || t.roster.some(id => CRED[id] && CRED[id].start));
+  for(let T = fromT; T >= 0; T = +(T - 0.01).toFixed(2)) if(costAt(t, -1, T, sorted, sm, win) >= (redPlay ? spendAt(t, {who}, T, oc) : spend) - 1e-9) return T;
   return Math.max(0, fromT);
 }
 // "Right after": a cast can be tied to the cast before it. It then sits where that cast's EX animation ends, and follows it when it moves.
@@ -566,7 +576,10 @@ function applyChains(t){
         if(cbSig.get(c) !== sig){ cbSig.set(c, sig); const spendC = spendOf(t, c);
           // Already sitting where it sees the planned cost: leave it. (Searching again could pick another moment with the same cost and hop over the casts below it, which made tightly packed casts creep later on every re-render.)
           if(Math.abs(costAt(t, idx, c.t, others) - Math.min(c.cb, capOf(t))) <= 0.012 && (c.cb >= spendC || overOnFor(t, c, c.t))) return;
-          const nt = timeForCost(t, idx, c.cb, k ? byTime[k-1].t - 0.01 : TOTAL, c.cb < spendC ? T => overOnFor(t, c, T) : undefined, ownSame && k + 1 < byTime.length ? byTime[k+1].t : 0); if(nt !== c.t){ c.t = nt; moved = true; } }
+          // With cost reductions around the price depends on the moment: only moments where the cost seen is enough for the price at that moment count.
+          const oc = others.map(x => x.c), redPlay = (t.reds && t.reds.length) || oc.some(x => CRED[x.who]) || t.roster.some(id => CRED[id] && CRED[id].start);
+          const acc = (c.cb < spendC || redPlay) ? T => { const X = Math.min(c.cb, capOf(t)), sp = redPlay ? spendAt(t, c, T, oc) : spendC; return X >= sp - 0.012 || (X + 5 >= sp - 0.012 && overOnFor(t, c, T)); } : undefined;
+          const nt = timeForCost(t, idx, c.cb, k ? byTime[k-1].t - 0.01 : TOTAL, acc, ownSame && k + 1 < byTime.length ? byTime[k+1].t : 0); if(nt !== c.t){ c.t = nt; moved = true; } }
       }
     });
     if(!moved) break;
@@ -723,8 +736,20 @@ function render0(){
       + `</div></div><svg style="position:absolute;left:0;top:0;pointer-events:none" width="${w}" height="${costTop+CL}">${g}${refLine}<polyline points="${path}" fill="none" stroke="#7bd88f" stroke-width="2"/>${dots}</svg>`;
   }
   winOverride = null;
+  (t.reds || []).forEach(r => {
+    const nmOf = id => SCHALE[id] ? SCHALE[id].name : '?', tip = `Cost reduction -${r.n || 1} @ ${fmt(r.t)}
+The next EX of ${r.to ? nmOf(r.to) : 'everyone'}${r.except ? ' (not ' + nmOf(r.except) + ')' : ''} costs ${r.n || 1} less.
+Drag to move it; change or remove it in the Rotation tab.`;
+    html += `<div class="redmk" data-redm="${r.id}" data-tip="${tip.replace(/"/g, '&quot;')}" style="left:${X(r.t)}px;top:${costTop + 3}px">&minus;${r.n || 1}</div>`;
+  });
   html += '</div>';
   $('#tl').innerHTML = html;
+  document.querySelectorAll('#tl .redmk').forEach(el => el.addEventListener('mousedown', e => {   // drag a cost-reduction marker sideways; it is committed when the mouse is released
+    if(e.button !== 0) return; const r = t.reds.find(x => x.id === el.dataset.redm), x0 = e.clientX, t0 = r.t; let nt = t0;
+    const mv = ev => { nt = +Math.max(0, Math.min(TOTAL, t0 - (ev.clientX - x0)/UI()/px)).toFixed(2); el.style.left = X(nt) + 'px'; };
+    const up = () => { document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up); if(Math.abs(nt - t0) > 0.005){ r.t = nt; save(); render(); } };
+    document.addEventListener('mousemove', mv); document.addEventListener('mouseup', up);
+  }));
   bindDrag(list);
   bindEventDrag(t);
   renderBoss(t);
@@ -803,6 +828,16 @@ function render0(){
     document.querySelectorAll('#rot tr[data-row]').forEach(r => r.classList.toggle('hl', hlRow !== null && cid(t.casts[+r.dataset.row]) === hlRow));
   };
   $('#rotbox').scrollTop = keepScroll;
+  { const reds = t.reds || [], nameOpt = (sel, blank) => `<option value="">${blank}</option>` + t.roster.map(id => `<option value="${id}" ${sel == id ? 'selected' : ''}>${sname(id)}</option>`).join('');
+    $('#redbar').innerHTML = `<button class="btn" id="redadd" title="Put a cost reduction on the timeline at the moment it happens in the game (for example Kokona's stamp reduction): the next EX of everyone it names costs that much less. Drag its teal marker on the cost graph to move it.">&#8722; Cost reduction</button>`
+      + [...reds].sort((a, b) => b.t - a.t).map(r => `<span class="redchip" data-red="${r.id}"><b>&#8722;</b><input class="n" type="number" min="1" max="10" value="${r.n || 1}" data-rn title="Cost taken off the next EX"> at <input type="text" value="${fmt2(r.t)}" data-rt style="width:76px"> for <select data-rto>${nameOpt(r.to, 'everyone')}</select> not <select data-rex>${nameOpt(r.except, 'nobody')}</select><button class="btn" data-rx title="Remove">&#10005;</button></span>`).join('');
+    const upd = fn => { fn(); save(); render(); }, find = el => (t.reds || []).find(r => r.id === el.closest('[data-red]').dataset.red);
+    $('#redadd').onclick = () => upd(() => { const last = t.casts.length ? Math.min(...t.casts.map(c => c.t)) : TOTAL - 30; (t.reds = t.reds || []).push({id:Math.random().toString(36).slice(2, 8), t:+Math.max(1, last - 3).toFixed(2), n:1}); });
+    document.querySelectorAll('#redbar [data-rn]').forEach(el => el.onchange = () => upd(() => { find(el).n = Math.max(1, Math.round(+el.value || 1)); }));
+    document.querySelectorAll('#redbar [data-rt]').forEach(el => el.onchange = () => upd(() => { const v = parse(el.value); if(v >= 0 && v <= TOTAL) find(el).t = +v.toFixed(3); }));
+    document.querySelectorAll('#redbar [data-rto]').forEach(el => el.onchange = () => upd(() => { const r = find(el); if(el.value) r.to = +el.value; else delete r.to; }));
+    document.querySelectorAll('#redbar [data-rex]').forEach(el => el.onchange = () => upd(() => { const r = find(el); if(el.value) r.except = +el.value; else delete r.except; }));
+    document.querySelectorAll('#redbar [data-rx]').forEach(el => el.onclick = () => upd(() => { const r = find(el); t.reds = t.reds.filter(x => x !== r); })); }
   $('#addbar').innerHTML = '<b style="color:var(--dim)">Add cast:</b>' + t.roster.map(id=>`<button class="btn addq" data-aq="${id}" title="Add ${SCHALE[id].name}'s EX at the first moment the team can pay for it"><img src="https://schaledb.com/images/student/icon/${id}.webp" onerror="this.style.visibility='hidden'" draggable="false">${sname(id)} <small>${baseCost(t, id)}</small></button>`).join('')
     + `<label title="When ticked, each new cast is tied to the cast above it (the &#9193; button): it goes off as soon as the team has the cost, instead of waiting for you to set a time. Use it for back-to-back EX skills."><input type="checkbox" id="chainnew" ${state.chainNew?'checked':''}> Chain: cast as soon as affordable &#9193;</label>`;
   $('#chainnew').onchange = e=>{ state.chainNew = e.target.checked; save(); };
@@ -1067,7 +1102,7 @@ $('.tl-wrap').addEventListener('wheel', e=>{
 (() => {
   const wrap = $('.tl-wrap');
   wrap.addEventListener('mousedown', e=>{
-    if(e.button!==0 || e.target.closest('.bar,.carry,circle,.lname,.evpill')) return;
+    if(e.button!==0 || e.target.closest('.bar,.carry,circle,.lname,.evpill,.redmk')) return;
     if(e.target===wrap && (e.offsetX > wrap.clientWidth || e.offsetY > wrap.clientHeight)) return;      // scrollbar
     const x0 = e.clientX, s0 = wrap.scrollLeft; wrap.classList.add('panning'); e.preventDefault();
     const mv = ev => { wrap.scrollLeft = s0 - (ev.clientX - x0)/UI(); };
@@ -1111,7 +1146,7 @@ addEventListener('resize', () => { fitRot(); if(document.body.classList.contains
 function addCast(who){
   const t = team(), prev = t.casts.length ? t.casts.reduce((a,c)=>c.t<a.t?c:a) : null, last = prev ? prev.t : TOTAL;
   const sp = spendOf(t, {who, t:+(last - 0.01).toFixed(2)});
-  const c = {t:+firstAffordable(t, sp, +(last - 0.01).toFixed(2)).toFixed(2), who};
+  const c = {t:+firstAffordable(t, sp, +(last - 0.01).toFixed(2), who).toFixed(2), who};
   if(prev && (state.chainNew || sp === 0)) c.after = cid(prev); else c.cb = spendOf(t, c);   // a free EX (Hina Dress's follow-ups) has no cost to wait for: it follows the cast before   // plans by cost: it keeps that cost if the cost model changes
   if(targetsAlly(who)){ const lastC = t.casts.filter(x => x.who === who && x.target != null).sort((a, b) => a.t - b.t)[0]; if(lastC) c.target = lastC.target; }   // same target as last time
   t.casts.push(c); save(); render();

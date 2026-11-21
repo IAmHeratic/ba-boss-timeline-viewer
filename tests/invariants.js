@@ -30,7 +30,7 @@ function mkTeam(opts = {}) {
 function addCast(t, who, mode) {
   const prev = t.casts.length ? t.casts.reduce((a, c) => c.t < a.t ? c : a) : null, last = prev ? prev.t : E.clock().TOTAL;
   const sp = E.spendOf(t, { who, t: +(last - 0.01).toFixed(2) });
-  const c = { t: +E.firstAffordable(t, sp, +(last - 0.01).toFixed(2)).toFixed(2), who };
+  const c = { t: +E.firstAffordable(t, sp, +(last - 0.01).toFixed(2), who).toFixed(2), who };
   if (prev && (mode === 'after' || sp === 0)) c.after = E.cid(prev); else c.cb = E.spendOf(t, c);
   t.casts.push(c); return c;
 }
@@ -49,6 +49,7 @@ function randomRotation(t, n) {
   const bd = bossFx(t);
   if (bd && rnd() < .7) { const g = ri(0, 3); for (let i = 0; i < g; i++) t.events.push({ id: 'e' + i, type: 'groggy', t: +(E.clock().TOTAL - rnd() * (E.clock().TOTAL - 20)).toFixed(2), dur: 10 }); }
   if (rnd() < .2) t.startCost = ri(0, 6);
+  if (rnd() < .4) t.reds = Array.from({ length: ri(1, 2) }, (_, i) => ({ id: 'r' + i, t: +(E.clock().TOTAL - rnd() * (E.clock().TOTAL - 20)).toFixed(2), n: ri(1, 2), ...(rnd() < .5 ? { to: pick(t.roster) } : {}) }));   // cost reduction markers
 }
 
 const t0 = Date.now(); let worst = 0;
