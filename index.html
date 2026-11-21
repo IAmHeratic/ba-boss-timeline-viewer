@@ -88,7 +88,12 @@ body.side .rotbar{top:0}
 .bar .cut{position:absolute;top:0;bottom:0;width:2px;background:#000}
 .bar .btext{position:sticky;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bar.waste{border-color:var(--warn);box-shadow:0 0 0 2px #ff6b5e55}
+.rowmenu-x{}
+#rowmenu{position:fixed;z-index:400;background:#141e2e;border:1px solid var(--line);border-radius:8px;padding:4px;box-shadow:0 8px 24px #000a;display:flex;flex-direction:column}
+#rowmenu button{background:none;border:0;color:var(--text);font:inherit;padding:7px 16px;text-align:left;cursor:pointer;border-radius:5px}
+#rowmenu button:hover{background:var(--panel2)}
 .bar.est{outline:1px dashed #ffd98a}
+.bar.sel{outline:3px solid #ffd54a !important;outline-offset:1px;z-index:4;box-shadow:0 0 12px #ffd54a99}   /* below the sticky student names (5), so a marked bar slides under them */
 .bar.cancelled{background:transparent !important;border:2px dashed var(--warn);color:var(--warn);cursor:default}
 .bar.startup{background:repeating-linear-gradient(45deg,#4a5670,#4a5670 4px,#39445c 4px,#39445c 8px) !important;color:#cbd5e1;border-radius:6px 0 0 6px;border-color:#2b3548}
 .bar.startup.solo{border-radius:6px}
@@ -200,6 +205,7 @@ header .btn,header select{padding:4px 12px}
     <div id="setpop">
       <label>Zoom <input type="range" id="zoom" min="4" max="400" value="16"> <small id="zlabel" style="color:var(--dim)"></small></label>
       <label>Student Basic Skills <select id="basic"><option value="off">off</option><option value="predicted" selected>predicted (rules)</option></select></label>
+      <label>Follow selected cast <input type="checkbox" id="followsel" title="Clicking a cast in the Rotation table scrolls the timeline to its bar"></label>
       <label>UI size <select id="uisize"><option>100%</option><option>115%</option><option>125%</option><option>150%</option><option>175%</option></select></label>
     </div>
   </div>
@@ -290,6 +296,19 @@ const shortName = n => { const m = n.match(/^(.*?)\s*\(([^)]*)\)$/); if(!m) retu
 const sname = id => shortName(SCHALE[id].name);
 // SchaleDB names boss portraits by the boss's internal name, which differs from its path for some bosses.
 const BOSS_DEV = {binah:'Binah',chesed:'Chesed',shirokuro:'Shirokuro',hieronymus:'Hieronymus',kaiten:'KaitenFxMk0',perorodzilla:'Perorozilla',hod:'HOD',goz:'Goz',gregorius:'EN0005',hovercraft:'RaidHoverCraft',kurokage:'EN0006',geburah:'EN0010',yesod:'EN0013',drumbarka:'EN0022',nightmare:'EN0023'};
+// The cast marked in the Rotation table is outlined on the timeline, and (if the setting is on) the timeline scrolls to centre it.
+const FOLLOW = 'ba-ui-follow', followOn = () => localStorage.getItem(FOLLOW) !== 'off';
+function markSel(scroll){
+  const t = team(); document.querySelectorAll('#tl .bar.sel').forEach(b => b.classList.remove('sel'));
+  if(hlRow === null || !t) return;
+  const i = t.casts.findIndex(c => cid(c) === hlRow); if(i < 0) return;
+  const bars = [...document.querySelectorAll('#tl .bar[data-i="' + i + '"]')]; if(!bars.length) return;
+  bars.forEach(b => b.classList.add('sel'));
+  if(scroll && followOn()){
+    const w = $('.tl-wrap'), l = Math.min(...bars.map(b => b.offsetLeft)), r = Math.max(...bars.map(b => b.offsetLeft + b.offsetWidth));
+    w.scrollTo({left: Math.max(0, (l + r)/2 - (LEFT + (w.clientWidth - LEFT)/2)), behavior: 'smooth'});
+  }
+}
 let hlRow = null, costGeo = null;   // costGeo: where the cost graph is on the timeline (set by render) for the hover read-out   // id of the rotation row the player clicked to keep their place
 const timed = c => c.cb == null && !c.after;   // a time you typed or dragged; the others are placed by cost or by the chain
 const parse = v => { v = String(v).trim(); if(v.includes(':')){const [m,s]=v.split(':');return (+m)*60+(+s);} return +v; };
@@ -627,7 +646,7 @@ function allResolved(){
   return list;
 }
 
-function render(){ render0(); if(!gesture) baseline = snap(); updateUndoUI(); }
+function render(){ render0(); if(!gesture) baseline = snap(); updateUndoUI(); markSel(false); }
 function render0(){
   winCache.ok = false;
   { const t0 = team(); TOTAL = +(t0.limit ?? 180); BATTLE0 = TOTAL - 0.4; COST0 = TOTAL - 1.98; applyChains(t0); }
@@ -856,6 +875,15 @@ Drag to move it; change or remove it in the Rotation tab.`;
     const tr = e.target.closest('tr[data-row]'); if(!tr || e.target.closest('input,select,button,label,textarea')) return;
     const c = t.casts[+tr.dataset.row]; hlRow = hlRow === cid(c) ? null : cid(c);
     document.querySelectorAll('#rot tr[data-row]').forEach(r => r.classList.toggle('hl', hlRow !== null && cid(t.casts[+r.dataset.row]) === hlRow));
+    markSel(true);
+  };
+  // Right-click a row: add a new cast just above (earlier) or just below (later) it, same student to start with; the neighbours stay chained in order.
+  $('#rot').oncontextmenu = e => {
+    const tr = e.target.closest('tr[data-row]'); if(!tr) return; e.preventDefault();
+    const row = t.casts[+tr.dataset.row]; document.getElementById('rowmenu')?.remove();
+    const m = document.createElement('div'); m.id = 'rowmenu'; m.style.cssText = `left:${e.clientX}px;top:${e.clientY}px`;
+    [['Add row above', 'above'], ['Add row below', 'below']].forEach(([txt, where]) => { const b = document.createElement('button'); b.textContent = txt; b.onclick = () => { m.remove(); insertCast(row, where); }; m.append(b); });
+    document.body.append(m);
   };
   $('#rotbox').scrollTop = keepScroll;
   { const reds = t.reds || [], nameOpt = (sel, blank) => `<option value="">${blank}</option>` + t.roster.map(id => `<option value="${id}" ${sel == id ? 'selected' : ''}>${sname(id)}</option>`).join('');
@@ -1173,6 +1201,21 @@ function fitRot(){
     : Math.max(160, vh - hh - $('#rotbar').offsetHeight - 24)) + 'px';
 }
 addEventListener('resize', () => { fitRot(); if(document.body.classList.contains('side')) render(); });
+document.addEventListener('mousedown', e => { if(!e.target.closest('#rowmenu')) document.getElementById('rowmenu')?.remove(); });
+document.addEventListener('keydown', e => { if(e.key === 'Escape') document.getElementById('rowmenu')?.remove(); });
+function insertCast(row, where){
+  const t = team(), sorted = [...t.casts].sort((a, b) => b.t - a.t), k = sorted.indexOf(row), n = {who: row.who};
+  if(targetsAlly(n.who) && row.target != null) n.target = row.target;
+  if(where === 'below'){
+    n.after = cid(row);
+    t.casts.forEach(c => { if(c.after === cid(row)) c.after = cid(n); });   // what followed the row now follows the new cast
+  } else {
+    const prev = sorted[k - 1];
+    if(prev){ n.after = cid(prev); t.casts.forEach(c => { if(c.after === cid(prev)) c.after = cid(n); }); }   // the row (and anything else chained to prev) now comes after the new cast
+    else { n.cb = spendOf(t, {who: n.who, t: TOTAL}); }
+  }
+  cid(n); t.casts.push(n); hlRow = cid(n); save(); render(); markSel(true);
+}
 function addCast(who){
   const t = team(), prev = t.casts.length ? t.casts.reduce((a,c)=>c.t<a.t?c:a) : null, last = prev ? prev.t : TOTAL;
   const sp = spendOf(t, {who, t:+(last - 0.01).toFixed(2)});
@@ -1258,6 +1301,7 @@ function flash(msg){ let n = document.getElementById('flash'); if(!n){ n = docum
 $('#savebtn').onclick = () => saveAll(false);
 document.addEventListener('keydown', e => { if((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 's'){ e.preventDefault(); saveAll(false); } });
 // Settings panel (zoom, UI size, basic skills): opens under the gear, closes on a click elsewhere or Esc.
+$('#followsel').checked = followOn(); $('#followsel').onchange = e => localStorage.setItem(FOLLOW, e.target.checked ? 'on' : 'off');
 $('#gear').onclick = e => { e.stopPropagation(); $('#setpop').classList.toggle('on'); };
 document.addEventListener('mousedown', e => { if(!e.target.closest('#setpop, #gear')) $('#setpop').classList.remove('on'); });
 document.addEventListener('keydown', e => { if(e.key === 'Escape') $('#setpop').classList.remove('on'); });
