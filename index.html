@@ -281,7 +281,7 @@ const pickv = (vals, level) => vals[Math.min(level, vals.length) - 1];
 // cost point is 10,000, so the squad fills (sum of stats)/10,000 cost per second; cost-recovery Sub Skills (Kisaki, Himari (Armed), ...)
 // multiply that. Checked in four mock-battle runs (bar scaled by each team's max cost): 0.4185 / 0.4184 without a booster (formula 0.420)
 // and 0.5042 / 0.5035 with Kisaki / Himari (Armed) at max Sub Skill (formula 0.505).
-const PERM_REGEN = {10017: d => d.school === 'RedWinter', 10126: d => d.armor === 'HeavyArmor' && d.squad === 'Main'};
+const PERM_REGEN = {10017: d => d.school === 'RedWinter', 10126: d => d.armor === 'HeavyArmor' && d.squad === 'Main', 10140: () => false};   // Kurumi: her flat part only
 function regenInfo(t){
   const units = t.roster.map(id=>SCHALE[id]).slice(0,6);
   const base = units.reduce((a,d)=>a+(d.regenStat||700),0)/10000;
@@ -379,7 +379,7 @@ function regenAdv(t, cost, a, b, rate, CAP){
 // Cost Recovery the casts give the team for a while: the EX of Azusa Racing / Seia / Kisaki Swimsuit (own Cost Recovery up for 5-25 s), and passives that start after an EX
 // (Hifumi, Reijo: 5 s; Suzumi Magical: 35 s; Yukari Swimsuit: every 2nd EX, 10 s; Noa Pajamas: after the 2nd EX of 3, 30 s, at her Basic level). Not modelled: Hoshino Swimsuit
 // (while her EX lasts), Miyako Swimsuit (every 50 dodges), Kurumi (conditions). A +X on one student adds X/10000 to the team's cost per second.
-const TIMED_REGEN = {10003:{}, 10104:{}, 10129:{}, 10121:{every:2}, 10109:{every:3, at:2, lvl:'basic'}};
+const TIMED_REGEN = {10003:{}, 10104:{}, 10129:{}, 10121:{every:2}, 10109:{every:3, at:2, lvl:'basic'}, 10045:{ms:50000}, 10140:{fx:1, arr:1}};   // Hoshino Swimsuit: as long as her 50 s EX lasts; Kurumi: while her shield is up (10 s, assumed unbroken)
 function castWindows(t, casts){
   const boost = regenInfo(t).boost, w = [], ord = {};
   [...casts].sort((a, b) => b.t - a.t).forEach(c => {
@@ -387,9 +387,10 @@ function castWindows(t, casts){
     if(d.buffs.some(b => b.stat === 'RegenCost_Base') || (d.forms || []).some(f => f.buffs.some(b => b.stat === 'RegenCost_Base')))
       resolve(c).buffs.forEach(b => { if(b.stat === 'RegenCost_Base' && b.target === 'Self') w.push({a:b.start, b:b.end, extra:b.val*100/10000*(1+boost), name:d.name}); });
     const r = TIMED_REGEN[c.who];
-    if(r && d.regenFx && d.regenFx[0] && d.regenFx[0].ms){
+    const fx = r && d.regenFx && d.regenFx[r.fx || 0], ms = fx && (r.ms || fx.ms);
+    if(fx && ms){
       const every = r.every || 1, at = (r.at || every) % every, L = levelOf(c.who)[r.lvl || 'sub'];
-      if(L > 0 && n % every === at) w.push({a:c.t, b:c.t - d.regenFx[0].ms/1000, extra:pickv(d.regenFx[0].values[0], L)/10000*(1+boost), name:d.name});
+      if(L > 0 && n % every === at) w.push({a:c.t, b:c.t - ms/1000, extra:pickv(fx.values[r.arr || 0], L)/10000*(1+boost), name:d.name});
     }
   });
   return w;

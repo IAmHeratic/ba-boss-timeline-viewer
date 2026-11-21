@@ -64,6 +64,10 @@ t = team(['Ui', 'Mika', 'Aru']); { const u = cast(t, 'Ui', 170); u.target = id('
   eq('Yukari (Swimsuit): every 2nd EX only', w.map(x => x.a).sort((a, b) => b - a), [150, 110]);
   t = team(['Noa (Pajamas)', 'Mika', 'Aru']); [170, 150, 130, 110, 90, 70].forEach(x => cast(t, 'Noa (Pajamas)', x)); w = E.castWindows(t, t.casts);
   eq('Noa (Pajamas): after the 2nd EX of every 3 (30 s, Basic Lv 10)', [w.map(x => x.a).sort((a, b) => b - a), near(w[0].a - w[0].b, 30), near(w[0].extra, 803/10000)], [[150, 90], true, true]);
+  t = team(['Hoshino (Swimsuit)', 'Mika', 'Aru']); cast(t, 'Hoshino (Swimsuit)', 170); w = E.castWindows(t, t.casts);
+  eq('Hoshino (Swimsuit): +684 for the 50 s her EX lasts', [w.length, near(w[0].a - w[0].b, 50), near(w[0].extra, 684/10000)], [1, true, true]);
+  t = team(['Kurumi', 'Mika', 'Aru']); cast(t, 'Kurumi', 170); w = E.castWindows(t, t.casts);
+  eq('Kurumi: flat part always, +854 for the 10 s of her shield', [near(E.regenInfo(t).flat, 183/10000), w.length, near(w[0].a - w[0].b, 10), near(w[0].extra, 854/10000)], [true, 1, true, true]);
   t = team(['Mika', 'Aru']); eq('no cost-recovery passive: no extra windows', [E.castWindows(t, []).length, E.regenInfo(t).flat], [0, 0]);
   const red = Object.keys(D).filter(k => D[k].school === 'RedWinter' && +k !== 10017 && D[k].squad === 'Main').slice(0, 2).map(k => D[k].name);
   t = team(['Cherino', ...red, 'Aru']); eq('Cherino with two other Red Winter students: third value of her list', near(E.regenInfo(t).flat, D[10017].regenFx[0].values[2][9]/10000), true);
