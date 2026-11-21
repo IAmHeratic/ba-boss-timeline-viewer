@@ -63,6 +63,7 @@ body.side .rotbar{top:0}
 #costtip{position:fixed;z-index:60;pointer-events:none;background:#0b111b;border:1px solid var(--line);border-radius:6px;padding:3px 8px;font-size:12px;font-weight:700;display:none;white-space:nowrap}
 .lane{position:absolute;left:0;right:0;border-bottom:1px solid #1d2a3f}
 .lname{position:sticky;left:0;z-index:5;width:210px;height:100%;display:flex;align-items:center;gap:12px;padding:0 12px;background:#141e2e;border-right:1px solid var(--line);font-weight:700;font-size:17px;line-height:1.2}
+.lname .nm{display:flex;flex-direction:column;min-width:0}.lname .nm small{font-size:13px;font-weight:600;color:var(--dim)}
 .lname img{width:52px;height:52px;border-radius:9px;flex:none}
 .tl-wrap.panning{cursor:grabbing;user-select:none}
 .stu .lvls{display:flex;gap:6px 10px;flex-wrap:wrap;margin:6px 0 2px}
@@ -662,10 +663,11 @@ function render0(){
   const BOSSL = (bb || evs.length) ? pack(evItems)*30 + 10 : 0;
   let y = HEAD + BOSSL;
   lanes.forEach(L=>{ L.exRows = pack(L.ex); L.bsRows = showBasic() ? pack(L.bs) : 0; });
+  const maxRows = Math.max(1, ...lanes.map(L => L.exRows + L.bsRows));   // every student row is as tall as the busiest one, so the rows all look alike
   // Sidebar mode: the timeline card fills the window height. The cost graph shrinks to half and the student rows share the space, so the bars get taller (up to 46 px).
-  const side = document.body.classList.contains('side'), avail = side ? $('.tl-wrap').offsetHeight - 2 - 20 : 0, CLmin = side && avail > 0 ? 65 : 130;   // avail: box height minus border and the horizontal scrollbar (always counted, so nothing causes a vertical scrollbar)
-  if(side && avail > 0){ const rows = lanes.reduce((a, L) => a + L.exRows + L.bsRows, 0); if(rows) ROW = Math.max(24, Math.min(46, Math.floor((avail - HEAD - BOSSL - CLmin - AXIS - lanes.length*(2*PAD - GAP))/rows - GAP))); }
-  lanes.forEach(L=>{ L.top = y; L.h = PAD*2 + (L.exRows+L.bsRows)*(ROW+GAP) - GAP; y += L.h; });
+  const side = document.body.classList.contains('side'), avail = side ? $('.tl-wrap').offsetHeight - 2 - 20 : 0, CLmin = side && avail > 0 ? 50 : 130;   // avail: box height minus border and the horizontal scrollbar (always counted, so nothing causes a vertical scrollbar)
+  if(side && avail > 0){ const rows = lanes.length*maxRows; if(rows) ROW = Math.max(14, Math.min(46, Math.floor((avail - HEAD - BOSSL - CLmin - AXIS - lanes.length*(2*PAD - GAP))/rows - GAP))); }
+  lanes.forEach(L=>{ L.top = y; L.h = PAD*2 + maxRows*(ROW+GAP) - GAP; y += L.h; });
   const CL = Math.max(CLmin, avail > 0 ? avail - y - AXIS : 0), costTop = y; y += CL; costGeo = {top:costTop, h:CL, px};
   const w = LEFT + TOTAL*px + 40, h = y + AXIS;
   let html = `<div style="position:relative;width:${w}px;height:${h}px">`;
@@ -689,7 +691,7 @@ function render0(){
   }
   lanes.forEach(L=>{
     const d = SCHALE[L.id];
-    html += `<div class="lane" style="top:${L.top}px;height:${L.h}px"><div class="lname"><img src="https://schaledb.com/images/student/icon/${L.id}.webp" onerror="this.style.visibility='hidden'">${d.name}</div></div>`;
+    html += `<div class="lane" style="top:${L.top}px;height:${L.h}px"><div class="lname"><img src="https://schaledb.com/images/student/icon/${L.id}.webp" onerror="this.style.visibility='hidden'"><div class="nm">${(m => m ? `${m[1]}<small>${m[2]}</small>` : d.name)(d.name.match(/^(.*?)\s*\(([^)]*)\)$/))}</div></div></div>`;
   });
   const bars = (it, top) => {
     const hasStart = it.landing - it.start < -0.005 || !it.effect;           // is there a startup segment?
