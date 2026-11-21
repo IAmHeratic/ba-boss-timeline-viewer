@@ -1,0 +1,57 @@
+// Hand-written cases with known answers (from SchaleDB and what the player confirmed in game).
+const { load } = require('./load');
+const E = load(), D = E.SCHALE;
+let bad = 0;
+const eq = (name, got, want) => { const ok = JSON.stringify(got) === JSON.stringify(want); if (!ok) bad++; console.log((ok ? 'ok   ' : 'FAIL ') + name + (ok ? '' : `: got ${JSON.stringify(got)}, want ${JSON.stringify(want)}`)); };
+const id = n => +Object.keys(D).find(k => D[k].name === n);
+function team(names, lv) {
+  const roster = names.map(id), t = { name: 'T', carry: roster[0], custom: true, roster, casts: [], set: { lv: lv || {}, ext: {}, ue: {}, wait: {} }, events: [] };
+  E.state.teams.length = 0; E.state.teams.push(t); E.state.team = 0; E.setTotal(180); return t;
+}
+const cast = (t, who, tm) => { const c = { t: tm, who: id(who), after: undefined }; delete c.after; t.casts.push(c); return c; };
+const spends = (t, who) => t.casts.filter(c => c.who === id(who)).sort((a, b) => b.t - a.t).map(c => E.spendOf(t, c));
+
+let t = team(['Ibuki (Swimsuit)', 'Aru']); [170, 150, 130].forEach(x => cast(t, 'Ibuki (Swimsuit)', x));
+eq('Ibuki (Swimsuit): first EX is free, then 3', spends(t, 'Ibuki (Swimsuit)'), [0, 3, 3]);
+
+t = team(['Hina (Dress)', 'Aru']); [170, 160, 150, 140, 130].forEach(x => cast(t, 'Hina (Dress)', x));
+eq('Hina (Dress): 6, then three free follow-ups, then 6 again', spends(t, 'Hina (Dress)'), [6, 0, 0, 0, 6]);
+
+t = team(['Toki', 'Aru']); [170, 160, 150, 140, 130].forEach(x => cast(t, 'Toki', x));
+eq('Toki: 2, then three Abi-Eshuh EX at 5, then 2 again', spends(t, 'Toki'), [2, 5, 5, 5, 2]);
+
+t = team(['Kisaki (Swimsuit)', 'Aru']); [170, 160, 150, 140].forEach(x => cast(t, 'Kisaki (Swimsuit)', x));
+eq('Kisaki (Swimsuit): 2, two free Banzai, then 2', spends(t, 'Kisaki (Swimsuit)'), [2, 0, 0, 2]);
+
+t = team(['Noa (Pajamas)', 'Aru']); [170, 160, 150, 140].forEach(x => cast(t, 'Noa (Pajamas)', x));
+eq('Noa (Pajamas): 5, 5, then Shh at 3, then 5', spends(t, 'Noa (Pajamas)'), [5, 5, 3, 5]);
+
+t = team(['Mika (Swimsuit)', 'Aru']); const m = cast(t, 'Mika (Swimsuit)', 170);
+eq('Mika (Swimsuit): normal EX 4', E.spendOf(t, m), 4); E.setForm(m, '0'); eq('Mika (Swimsuit): Silent Resolve 2', E.spendOf(t, m), 2); E.setForm(m, '1'); eq('Mika (Swimsuit): Relax a Little 0', E.spendOf(t, m), 0);
+
+t = team(['Ui', 'Aru'], { [id('Ui')]: { ex: 1, basic: 10, sub: 10 } }); const u = cast(t, 'Ui', 170);
+eq('Ui at EX 1 costs 5', E.spendOf(t, u), 5); t.set.lv[id('Ui')].ex = 4; eq('Ui at EX 4 costs 4', E.spendOf(t, u), 4); t.set.lv[id('Ui')].ex = 5; eq('Ui at EX 5 costs 3', E.spendOf(t, u), 3);
+E.setSpend(u, 2); eq('a typed cost wins over the level', E.spendOf(t, u), 2);
+
+t = team(['Hoshino (Armed · Fortification)'.replace(' · Fortification', ' · Fortification'), 'Aru']); eq('the two Hoshino (Armed) are told apart', [D[10098].name, D[10099].name], ['Hoshino (Armed · Fortification)', 'Hoshino (Armed · Targeted Breakthrough)']);
+
+// Cost reductions
+t = team(['Ui', 'Mika', 'Aru']); { const u = cast(t, 'Ui', 170); u.target = id('Mika'); [160, 150, 140].forEach(x => cast(t, 'Mika', x));
+  eq('Ui halves Mika next two EX (Mika 6 -> 3, 3, then 6)', spends(t, 'Mika'), [3, 3, 6]); }
+t = team(['Ui', 'Mika', 'Aru']); { const u = cast(t, 'Ui', 170); u.target = id('Mika'); cast(t, 'Mika', 171);
+  eq('a cast before the reduction lands is not reduced', spends(t, 'Mika'), [6]); }
+t = team(['Fuuka (New Year)', 'Mika', 'Aru']); { const f = cast(t, 'Fuuka (New Year)', 170); f.target = id('Mika'); [160, 150].forEach(x => cast(t, 'Mika', x));
+  eq('Fuuka (New Year): one reduced EX, then normal', spends(t, 'Mika'), [3, 6]); }
+t = team(['Seia', 'Mika', 'Aru'], { [id('Seia')]: { ex: 5, basic: 10, sub: 10 } }); { const s1 = cast(t, 'Seia', 170); s1.target = id('Mika'); [160, 150, 140].forEach(x => cast(t, 'Mika', x));
+  eq('Seia at EX 5: two reduced EX', spends(t, 'Mika'), [3, 3, 6]); }
+t = team(['Seia', 'Mika', 'Aru'], { [id('Seia')]: { ex: 3, basic: 10, sub: 10 } }); { const s1 = cast(t, 'Seia', 170); s1.target = id('Mika'); [160, 150].forEach(x => cast(t, 'Mika', x));
+  eq('Seia below EX 5: one reduced EX', spends(t, 'Mika'), [3, 6]); }
+t = team(['Yuzu (Armed)', 'Mika', 'Aru']); { const y = cast(t, 'Yuzu (Armed)', 170); y.target = id('Mika'); [160, 150, 140, 130].forEach(x => cast(t, 'Mika', x));
+  eq('Yuzu (Armed): three reduced EX', spends(t, 'Mika'), [3, 3, 3, 6]); }
+t = team(['Kisaki (Swimsuit)', 'Mika', 'Aru']); { cast(t, 'Kisaki (Swimsuit)', 170); [160, 150].forEach(x => cast(t, 'Mika', x)); [160].forEach(x => cast(t, 'Aru', x));
+  eq('Kisaki (Swimsuit): -1 for the other Strikers next EX', [spends(t, 'Mika'), spends(t, 'Aru')], [[5, 6], [3]]); }
+t = team(['Shiroko (Swimsuit)', 'Mika', 'Aru']); { [170, 160].forEach(x => cast(t, 'Mika', x)); cast(t, 'Shiroko (Swimsuit)', 165);
+  eq('Shiroko (Swimsuit): -1 on everyone first EX of the battle (not her own)', [spends(t, 'Mika'), spends(t, 'Shiroko (Swimsuit)')], [[5, 6], [D[20027].cost]]); }
+t = team(['Ui', 'Mika', 'Aru']); { const u = cast(t, 'Ui', 170); u.target = id('Mika'); const m = cast(t, 'Mika', 160); m.cost = 1; eq('a hand-typed cost beats a reduction', spends(t, 'Mika'), [1]); }
+
+console.log(bad ? `\n${bad} scenario(s) failed` : '\nALL SCENARIOS PASS'); process.exit(bad ? 1 : 0);

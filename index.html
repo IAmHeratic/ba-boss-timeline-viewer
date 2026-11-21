@@ -17,6 +17,26 @@ header h1 span{color:var(--accent)}
 .btn:hover,.tab:hover{filter:brightness(1.15)}
 main{padding:16px 18px;display:grid;gap:16px;grid-template-columns:minmax(0,1fr)}
 .card{min-width:0}
+/* Sidebar mode (header switch): Team / Boss / Rotation become tabs in a resizable panel on the right. Off = the old single column. */
+#side{display:contents}#sidetabs,#sbhandle{display:none}
+@media (min-width:900px){
+body.side main{height:calc(100vh / var(--ui,1) - var(--hh,56px));padding:12px 18px;grid-template-columns:minmax(0,1fr) 8px min(var(--sbw,560px), 62vw);grid-template-rows:auto minmax(0,1fr);align-items:stretch;gap:0 6px;overflow:hidden}
+body.side main>#builder{grid-column:1;grid-row:1;margin-bottom:12px}
+body.side main>.card:not(#builder){grid-column:1;grid-row:2;display:flex;flex-direction:column;min-height:0}
+body.side main>.card:not(#builder) .tl-wrap{flex:1 1 auto;min-height:0;overflow:auto}
+body.side #side{display:flex;flex-direction:column;gap:10px;grid-column:3;grid-row:1 / span 2;min-height:0;min-width:0;overflow:hidden}
+body.side #sidetabs{display:flex;gap:6px;flex:none}
+body.side #sidetabs .tab{flex:1}
+body.side #side>.card{display:none}
+body.side #side>.card.pane-on{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;overflow:auto}
+body.side #side>.card.pane-on>*{flex:none}
+body.side #side>#rotcard.pane-on{overflow:hidden}
+body.side #side>#rotcard.pane-on>.rotbox{flex:1 1 auto;min-height:0;max-height:none !important}
+body.side #bosscard .rotbox{max-height:none !important;overflow:visible}
+body.side #sbhandle{display:block;grid-column:2;grid-row:1 / span 2;cursor:col-resize;border-radius:4px;background:var(--line);opacity:.45}
+body.side #sbhandle:hover,body.side #sbhandle.drag{opacity:1;background:var(--accent)}
+body.side .rotbar{top:0}
+}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
 .card h2{margin:0 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.8px;color:var(--dim)}
 .banner{background:#3a2d17;border:1px solid #8a6a2b;color:#ffd98a;border-radius:8px;padding:8px 12px;font-size:13px}
@@ -39,6 +59,8 @@ main{padding:16px 18px;display:grid;gap:16px;grid-template-columns:minmax(0,1fr)
 .stu input{width:54px;background:#0f1520;color:var(--text);border:1px solid var(--line);border-radius:5px;padding:2px 4px}
 .tl-wrap{overflow-x:auto;position:relative;cursor:grab;border:1px solid var(--line);border-radius:8px;background:#101826}
 .tl{position:relative}
+.costcur{position:absolute;width:0;border-left:1px dashed #cfe3ff;pointer-events:none;z-index:7}
+#costtip{position:fixed;z-index:60;pointer-events:none;background:#0b111b;border:1px solid var(--line);border-radius:6px;padding:3px 8px;font-size:12px;font-weight:700;display:none;white-space:nowrap}
 .lane{position:absolute;left:0;right:0;border-bottom:1px solid #1d2a3f}
 .lname{position:sticky;left:0;z-index:5;width:210px;height:100%;display:flex;align-items:center;gap:12px;padding:0 12px;background:#141e2e;border-right:1px solid var(--line);font-weight:700;font-size:17px;line-height:1.2}
 .lname img{width:52px;height:52px;border-radius:9px;flex:none}
@@ -69,11 +91,11 @@ main{padding:16px 18px;display:grid;gap:16px;grid-template-columns:minmax(0,1fr)
 .bar.main{border-radius:0 6px 6px 0}
 .bar.main.alone{border-radius:6px}
 .costlane svg{position:absolute;left:0;top:0;overflow:visible}
-.costlane .lname{display:block}
+.costlane .lname{display:flex;align-items:center;justify-content:center;text-align:center}.costlane .lname .tc{font-size:22px;line-height:1.15;font-weight:800}
 .costlane .lname span{position:absolute;right:8px;font-size:12px;color:var(--dim);font-weight:400}
 .cost-bad{color:var(--warn);font-weight:700}.cost-od{color:#ff7de0;font-weight:700}
 .ovr{border-color:#ffd54a !important;color:#ffd54a}
-.evpill{position:absolute;height:26px;line-height:26px;padding:0 8px;border-radius:5px;font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:grab;color:#fff;border:1px solid #0008;z-index:6}
+.evpill{position:absolute;height:26px;line-height:26px;padding:0 8px;border-radius:5px;font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:grab;color:#fff;border:1px solid #0008;z-index:4}
 .evpill.groggy{background:#c0392bcc}.evpill.skill{background:#8e5bd6cc}.evpill.phase{background:#2f7fb8cc}.evpill.note{background:#6b7a99cc}
 .evpill.cancel{text-decoration:line-through;opacity:.75}
 .evline{position:absolute;border-left:2px solid;pointer-events:none;z-index:3}
@@ -92,7 +114,7 @@ main{padding:16px 18px;display:grid;gap:16px;grid-template-columns:minmax(0,1fr)
 .evcard small{color:var(--dim);font-weight:400;font-size:12px;white-space:normal}
 .evcard.groggy{border-color:#ff6b5e}.evcard.skill{border-color:#b98cff}.evcard.phase{border-color:#5dade2}.evcard.note{border-color:#8fa0c0}
 .evband{position:absolute;pointer-events:none;background:#ff6b5e1c;z-index:1}
-.bosslane .lname{font-size:14px}
+.bosslane .lname{flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:0;font-size:15px;line-height:1.2;background-size:cover;background-position:right center;background-repeat:no-repeat;text-shadow:0 1px 3px #000}
 #evt input[type=number]{width:62px}
 .chain-on{background:var(--accent,#4a7fd4);color:#fff}
 .cost-bad input{color:var(--warn);border-color:var(--warn)}.cost-od input{color:#ff7de0;border-color:#ff7de0}
@@ -136,6 +158,12 @@ header .row label{display:flex;align-items:center;gap:8px;white-space:nowrap}
 header #zoom{width:150px;margin:0}
 header #zlabel{display:inline-block;min-width:104px;font-size:12px;line-height:1.2;white-space:nowrap}
 header .btn,header select{padding:4px 12px}
+.bosslane .lname .bd{font-size:12px;font-weight:600;color:#cfe3ff}
+#tipwin{position:fixed;z-index:70;display:none;min-width:240px;max-width:460px;background:#0f1724;border:1px solid var(--accent);border-radius:10px;box-shadow:0 8px 30px #000a;padding:12px 16px 14px;cursor:move;user-select:none;font-size:15px;line-height:1.5;white-space:pre-wrap}
+#tipwin b{display:block;font-size:17px;margin-bottom:4px;padding-right:22px}
+#tipwin .x{position:absolute;top:6px;right:8px;cursor:pointer;color:var(--dim);font-size:16px;padding:0 4px}
+#tipwin .x:hover{color:#fff}
+[data-tip]{cursor:pointer}
 </style>
 </head>
 <body>
@@ -146,6 +174,7 @@ header .btn,header select{padding:4px 12px}
     <label>Zoom <input type="range" id="zoom" min="4" max="400" value="16"> <small id="zlabel" style="color:var(--dim)"></small></label>
     <label>Basic skills <select id="basic"><option value="off">off</option><option value="predicted" selected>predicted (rules)</option></select></label>
     <label>UI size <select id="uisize"><option>100%</option><option>115%</option><option>125%</option><option>150%</option><option>175%</option></select></label>
+    <button class="btn" id="sbtoggle" title="Show Team, Boss and Rotation as tabs in a panel on the right (drag its edge to resize) or stacked under the timeline">Sidebar</button>
     <button class="btn" id="exp">Export</button>
     <button class="btn" id="imp">Import</button>
     <button class="btn" id="reset">Reset</button>
@@ -161,7 +190,9 @@ header .btn,header select{padding:4px 12px}
   <div class="card"><h2>Timeline <small style="text-transform:none;letter-spacing:0">(time counts down; drag a bar to move that cast; Ctrl+scroll to zoom; hatched = cast animation, coloured = buff active)</small></h2>
     <div class="tl-wrap"><div class="tl" id="tl"></div></div>
   </div>
-  <div class="card"><h2>Team</h2>
+  <div id="sbhandle" title="Drag to resize the sidebar"></div>
+  <aside id="side"><div id="sidetabs"></div>
+  <div class="card" id="teamcard"><h2>Team</h2>
     <div class="row" style="margin-bottom:12px"><label>Name <input type="text" id="tname" style="width:220px"></label><button class="btn" id="delteam">Delete team</button>
       <small style="color:var(--dim)">Drag a card onto another in the same row to reorder. &#9733; marks the carry.</small></div>
     <div class="rowhead"><b>Strikers <span id="nstr"></span></b><select id="addstr"></select><button class="btn" id="addstrbtn">Add</button></div>
@@ -169,20 +200,21 @@ header .btn,header select{padding:4px 12px}
     <div class="rowhead"><b>Specials <span id="nspc"></span></b><select id="addspc"></select><button class="btn" id="addspcbtn">Add</button></div>
     <div class="roster" id="rosterSpc"></div></div>
   <div class="card" id="bosscard"><h2>Boss</h2>
-    <div class="row" style="margin-bottom:8px"><label>Boss <select id="bsel"></select></label><label>Difficulty <select id="bdiff"></select></label><label>Terrain <img id="bterricon" class="terr" alt="" style="display:none"> <select id="bterr"></select></label>
+    <div class="row" style="margin-bottom:8px"><label>Boss <select id="bsel"></select></label><label>Difficulty <select id="bdiff"></select></label><label>Terrain <img id="bterricon" class="terr" alt="" style="display:none"> <select id="bterr"></select></label><label title="Total Assault bosses have one armor type. In Grand Assault you pick the armor type per season: choose it here. HP and skills below are the Total Assault ones.">Armor <select id="barm"></select></label>
       <button class="btn" id="bclear">Clear boss</button></div>
     <div id="binfo" style="margin-bottom:10px"></div>
     <div class="row addbar" id="evadd"></div>
     <div class="rotbox" style="max-height:260px;min-height:0"><table id="evt"></table></div>
   </div>
-  <div class="card"><h2>Rotation</h2>
+  <div class="card" id="rotcard"><h2>Rotation</h2>
     <div class="rotbar" id="rotbar"><div class="row addbar" id="addbar"></div>
-    <div class="row" style="margin-bottom:8px"><label>Cost regen /s <input type="number" id="regen" step="0.001" min="0" style="width:78px"></label><button class="btn" id="regenauto" title="Set the cost regen back to the value calculated from the team">Reset</button><span class="info" id="reginfo" tabindex="0" title="How the cost regen is calculated">&#9432;</span><div class="pop" id="regentext" hidden></div><label>Start cost <input type="number" id="scost" step="0.5" style="width:60px"></label><label>Time limit <input type="text" id="limit" style="width:62px" title="In-battle clock. Binah is 3:00; some other raid bosses start at 4:00."></label><span style="color:var(--dim)">Times are the in-game countdown clock.</span></div></div>
+    <div class="row" style="margin-bottom:8px"><label>Cost regen /s <input type="number" id="regen" step="0.001" min="0" style="width:78px"></label><button class="btn" id="regenauto" title="Set the cost regen back to the value calculated from the team">Reset</button><span class="info" id="reginfo" tabindex="0" title="How the cost regen is calculated">&#9432;</span><div class="pop" id="regentext" hidden></div><label>Start cost <input type="number" id="scost" step="0.5" style="width:60px"></label><label>Time limit <input type="text" id="limit" style="width:62px" title="In-battle clock. Binah is 3:00; some other raid bosses start at 4:00."></label></div></div>
     <div class="rotbox" id="rotbox"><table id="rot"></table></div>
   </div>
+  </aside>
 </main>
 <script src="data.js"></script>
-<script src="bosses.js?v=2"></script>
+<script src="bosses.js?v=4"></script>
 <script src="rotations.js"></script>
 <script>
 const FPS = 30, LH = 100, HEAD = 6, AXIS = 24, LEFT = 210;
@@ -212,9 +244,13 @@ const fmt2 = t => { const ms = Math.round(t*1000), m = Math.floor(ms/60000), s =
 // Short student names for the narrow drop-downs: "Nagisa (Swimsuit)" -> "S. Nagisa", "Fuuka (New Year)" -> "NY Fuuka".
 const OUTFIT = {'Swimsuit':'S.','Dress':'D.','Armed':'A.','New Year':'NY','Hot Spring':'HS','Bunny':'B.','Cheer Squad':'CS','Track':'T.','Christmas':'X.','Maid':'M.',
   'Camp':'C.','Band':'Bd','Qipao':'Q.','Pop Idol':'PI','Pajamas':'P.','School':'Sc','Casual':'Ca','Part-Timer':'PT','Magical':'Mg','Racing':'R.','Guide':'G.','Cycling':'Cy','Small':'Sm'};
-const shortName = n => { const m = n.match(/^(.*?)\s*\(([^)]*)\)$/); return m && OUTFIT[m[2]] ? OUTFIT[m[2]] + ' ' + m[1] : n; };
+// Two different students can share a name (both Hoshino (Armed)s): the EX name is added so they can be told apart in every list.
+{ const by = {}; Object.values(SCHALE).forEach(d => (by[d.name] = by[d.name] || []).push(d)); Object.values(by).filter(a => a.length > 1).forEach(a => a.forEach(d => { d.name = d.name.replace(/\)$/, ' · ' + d.exName + ')'); })); }
+const shortName = n => { const m = n.match(/^(.*?)\s*\(([^)]*)\)$/); if(!m) return n; const [o, ...x] = m[2].split(' · '); return OUTFIT[o] ? OUTFIT[o] + ' ' + m[1] + (x.length ? ' · ' + x.join(' · ') : '') : n; };
 const sname = id => shortName(SCHALE[id].name);
-let hlRow = null;   // id of the rotation row the player clicked to keep their place
+// SchaleDB names boss portraits by the boss's internal name, which differs from its path for some bosses.
+const BOSS_DEV = {binah:'Binah',chesed:'Chesed',shirokuro:'Shirokuro',hieronymus:'Hieronymus',kaiten:'KaitenFxMk0',perorodzilla:'Perorozilla',hod:'HOD',goz:'Goz',gregorius:'EN0005',hovercraft:'RaidHoverCraft',kurokage:'EN0006',geburah:'EN0010',yesod:'EN0013',drumbarka:'EN0022',nightmare:'EN0023'};
+let hlRow = null, costGeo = null;   // costGeo: where the cost graph is on the timeline (set by render) for the hover read-out   // id of the rotation row the player clicked to keep their place
 const timed = c => c.cb == null && !c.after;   // a time you typed or dragged; the others are placed by cost or by the chain
 const parse = v => { v = String(v).trim(); if(v.includes(':')){const [m,s]=v.split(':');return (+m)*60+(+s);} return +v; };
 const STATNAME = {AttackPower_Coefficient:'ATK', DefensePower_Coefficient:'DEF', CriticalDamageRate_Coefficient:'Crit DMG',
@@ -252,9 +288,9 @@ const showBasic = () => $('#basic').value !== 'off';
 
 // resolve a cast into drawable pieces (times are "remaining seconds", so later = smaller)
 function resolve(c){
-  const d = SCHALE[c.who], out = {anim:[c.t, c.t - d.frames/FPS], buffs:[]};
+  const d = SCHALE[c.who], fm = formOfCast(team(), c), out = {anim:[c.t, c.t - (fm ? fm.frames : d.frames)/FPS], buffs:[]};
   const S = tset(team()), ext = 1 + (ueOf(team(), c.who) >= 40 && SCHALE[c.who].extend ? (+(S.ext[c.who] ?? 19)) : 0)/100;
-  for(const b of d.buffs){
+  for(const b of (fm ? fm.buffs : d.buffs)){
     const start = c.t - b.apply/FPS, dur = b.ms/1000 * (b.target==='Enemy'?1:ext);
     out.buffs.push({stat:b.stat,label:buffLabel(b.stat,b.target,b.values),target:b.target,start,end:start-dur,val:Math.abs(pickv(b.values, levelOf(c.who).ex))/100});
   }
@@ -267,13 +303,14 @@ function resolve(c){
 // 'extra wait' per student, default 0 for everyone (Neru looked ~1.0s late on one clip but SchaleDB is the reference).
 function simBasics(t, id){
   const d = SCHALE[id], p = d.public; if(!p || !p.interval) return [];
-  const own = t.casts.filter(c=>c.who===id).map(c=>({s:c.t, e:c.t - d.frames/FPS})).sort((a,b)=>b.s-a.s);
+  const own = t.casts.filter(c=>c.who===id).map(c=>{ const fm = formOfCast(t, c); return {s:c.t, e:c.t - (fm ? fm.frames : d.frames)/FPS}; }).sort((a,b)=>b.s-a.s);
   const wait = +(tset(t).wait[id]||0), land = (p.effects.find(e=>e.ms)||{apply:0}).apply/FPS, out = [];
   let due = BATTLE0 - p.interval;
   while(due > 0){
     let fire = due, held = false;
     for(const c of own){ if(fire <= c.s && fire > c.e){ fire = c.e; held = true; } }
     if(!held) fire -= wait;
+    if(fire < 0) break;   // held past the end of the fight (EX animation near the buzzer, or the extra wait): it never happens
     const cancelled = own.some(c => c.s < fire && c.s > fire - land);
     out.push({t:fire, cancelled});
     due = fire - p.interval;
@@ -323,12 +360,60 @@ function regenAdv(t, cost, a, b, rate, CAP){
   for(const sg of regenSegs(t, a, b, rate)) cost = Math.min(CAP, cost + sg.rate*(sg.hi - sg.lo));
   return cost;
 }
+// What an EX cast spends. The cost falls with EX level for some students (Ui 5 -> 3), and some students have alternate EX skills with their own cost:
+// a second form after the first use (Ibuki Swimsuit 0 then 3, Hina Dress 6 then 0/0/0, Toki, Kisaki Swimsuit, Noa Pajamas) or one that depends on the target (Mika Swimsuit, Rabu, Aris Armed).
+// SEQ is the usual order of the forms for the ones that follow the cast count; a form picked by hand in the table always wins.
+const SEQ = {20060:{head:[null], cycle:[0]}, 10086:{cycle:[null,0,1,2]}, 10062:{cycle:[null,0,0,0]}, 10145:{cycle:[null,0,0]}, 10109:{cycle:[null,null,0]}};
+const exLv = (t, id) => (((tset(t).lv || {})[id] || {}).ex) || LVDEF.ex;
+const atLevel = (arr, lv) => arr[Math.min(lv, arr.length) - 1];
+// Which EX the cast is: null = the normal EX, 0.. = SCHALE[id].forms[n]
+function formIdx(t, c, list = t.casts){
+  if(c.form !== undefined) return c.form;
+  const q = SEQ[c.who]; if(!q) return null;
+  let n = 0; list.forEach(x => { if(x !== c && x.who === c.who && (x.t > c.t || (x.t === c.t && list.indexOf(x) < list.indexOf(c)))) n++; });
+  const head = q.head || []; return n < head.length ? head[n] : q.cycle[(n - head.length) % q.cycle.length];
+}
+function ownSpend(t, c, list){   // the skill's own price: its form, at the student's EX level
+  const d = SCHALE[c.who], f = formIdx(t, c, list), lv = exLv(t, c.who);
+  if(f != null && d.forms && d.forms[f] && d.forms[f].costs) return atLevel(d.forms[f].costs, lv);
+  return d.costs ? atLevel(d.costs, lv) : d.cost;
+}
+// Cost reductions an EX skill grants ("the next N EX skills of an ally cost half / 1 less"). Numbers from SchaleDB (CostChange effects: Uses, Coefficient -5000 = half with the reduction
+// rounded down, BaseAmount -n). 'target' = the cast's Target (the carry when none is picked), 'strikers' = the other Strikers, 'start' = once at the start of the battle for all allies but itself.
+// The ones that depend on stacks, timers or gear (Kokona, Kikyou, Mari Pop Idol, Rei, Konoka, Junko, Saori, Koyuki, Shimiko, Reisa Magical) are not modelled: type the cost by hand.
+const CRED = {10035:{kind:'half', uses:2, to:'target', frames:77}, 20022:{kind:'half', uses:1, to:'target', frames:60}, 10110:{kind:'half', uses:lv => lv >= 5 ? 2 : 1, to:'target', frames:97},
+  20055:{kind:'half', uses:3, to:'target', frames:64}, 10145:{kind:'minus', n:1, uses:1, to:'strikers', frames:57},
+  20027:{kind:'minus', n:1, uses:1, to:'all', start:true}, 20053:{kind:'minus', n:1, uses:1, to:'all', start:true}};
+function spendMap(t, list){   // price of every cast in the list, in the order they happen (a reduction is used up by the next EX of its target)
+  const sorted = [...list].sort((a, b) => b.t - a.t || list.indexOf(a) - list.indexOf(b)), pend = {}, out = new Map();
+  const give = (g, spec, who) => { const uses = typeof spec.uses === 'function' ? spec.uses(exLv(t, g.who)) : spec.uses; (pend[who] = pend[who] || []).push({kind:spec.kind, n:spec.n, uses}); };
+  t.roster.forEach(id => { const sp = CRED[id]; if(sp && sp.start) t.roster.forEach(x => { if(x !== id) give({who:id}, sp, x); }); });
+  const grants = sorted.filter(g => CRED[g.who] && !CRED[g.who].start && formIdx(t, g, list) == null).map(g => ({at:g.t - CRED[g.who].frames/FPS, g})).sort((a, b) => b.at - a.at);
+  let gi = 0;
+  sorted.forEach(c => {
+    while(gi < grants.length && grants[gi].at >= c.t){
+      const {g} = grants[gi++], sp = CRED[g.who];
+      if(sp.to === 'target'){ const tg = g.target || t.carry; if(tg != null && tg !== g.who) give(g, sp, tg); }
+      else if(sp.to === 'strikers') t.roster.forEach(x => { if(x !== g.who && SCHALE[x].squad === 'Main') give(g, sp, x); });
+    }
+    let sp = ownSpend(t, c, list); const q = pend[c.who] || [];
+    q.forEach(r => { sp = r.kind === 'half' ? sp - Math.floor(sp/2) : Math.max(0, sp - r.n); r.uses--; });
+    pend[c.who] = q.filter(r => r.uses > 0);
+    out.set(c, c.cost != null ? c.cost : sp);   // a price typed by hand is the final price (the reduction is still used up)
+  });
+  return out;
+}
+const spendOf = (t, c) => spendMap(t, t.casts.includes(c) ? t.casts : [...t.casts, c]).get(c);
+// price of cast c if it were at clock time T and the other casts were `list`
+const spendAt = (t, c, T, list) => { const tmp = {who:c.who, t:T, form:c.form, cost:c.cost, target:c.target}; return spendMap(t, [...list, tmp]).get(tmp); };
+const baseCost = (t, id) => { const d = SCHALE[id]; return d.costs ? atLevel(d.costs, exLv(t, id)) : d.cost; };
+const formOfCast = (t, c) => { const f = formIdx(t, c); return f != null && SCHALE[c.who].forms ? SCHALE[c.who].forms[f] || null : null; };
 function costModel(t, list){
-  const rate = +(t.regen ?? regenInfo(t).auto), CAP = capOf(t), ev = [];
+  const rate = +(t.regen ?? regenInfo(t).auto), CAP = capOf(t), ev = [], sm = spendMap(t, list.map(x => x.c));
   let cost = +(t.startCost ?? 0), last = COST0;
   const od = (tm, who) => list.some(x=>(x.c.target || t.carry) === who && x.r.buffs.some(b=>b.stat==='CostOverload' && b.start>=tm && b.end<tm));
   [...list].sort((a,b)=>b.c.t-a.c.t).forEach(({c,i})=>{
-    const spend = c.cost ?? SCHALE[c.who].cost;
+    const spend = sm.get(c);
     const before = regenAdv(t, cost, last, c.t, rate, CAP);
     const overload = before < spend && before + 5 >= spend && od(c.t, c.who);   // the Cost Over target may spend up to 5 beyond what it holds
     ev.push({i, t:c.t, before, after:before-spend, spend, ok: before >= spend || overload, overload});
@@ -337,12 +422,12 @@ function costModel(t, list){
   return {ev, rate, cap:CAP, startCost:+(t.startCost ?? 0), tail:{cost, last}};
 }
 // Cost the team would have at clock time T if cast `skip` were not in the rotation (casts before T are paid, regen in between, capped).
-function costAt(t, skip, T, sorted){
+function costAt(t, skip, T, sorted, smap){
   const rate = +(t.regen ?? regenInfo(t).auto), CAP = capOf(t);
-  let cost = +(t.startCost ?? 0), last = COST0;
+  let cost = +(t.startCost ?? 0), last = COST0; const sm = smap || spendMap(t, sorted.map(x => x.c));
   for(const {c} of sorted){
     if(c.t <= T) break;                                   // later casts do not affect the cost at T
-    cost = regenAdv(t, cost, last, c.t, rate, CAP) - (c.cost ?? SCHALE[c.who].cost); last = c.t;
+    cost = regenAdv(t, cost, last, c.t, rate, CAP) - sm.get(c); last = c.t;
   }
   return regenAdv(t, cost, last, T, rate, CAP);
 }
@@ -356,18 +441,18 @@ const overOnFor = (t, c, T) => t.casts.some(x => x !== c && (x.target || t.carry
   && resolve(x).buffs.some(b=>b.stat==='CostOverload' && b.start>=T && b.end<T));
 // Time at which cast i sees `want` cost before it. If several moments qualify (cost passes the same value again after other casts) the one nearest to
 // where the cast already is wins; at the cost cap the first moment it is reached counts.
-function timeForCost(t, i, want, maxT = TOTAL, accept){   // maxT: the cast must not come before this clock time (it stays after the cast above it)
+function timeForCost(t, i, want, maxT = TOTAL, accept, minT = 0){   // maxT: the cast must not come before this clock time (it stays after the cast above it)
   const T0 = t.casts[i].t, sorted = castsExcept(t, i), X = Math.min(want, capOf(t));
   const hits = []; let bestErr = 1e9, bestT = T0;
   // One sweep from late-fight to early: the cost after each other cast is carried along, so a step costs one short regen piece instead of a replay of the fight.
-  const rate = +(t.regen ?? regenInfo(t).auto), CAP = capOf(t); let cost = +(t.startCost ?? 0), last = COST0, k = 0;
+  const rate = +(t.regen ?? regenInfo(t).auto), CAP = capOf(t), sm = spendMap(t, sorted.map(x => x.c)); let cost = +(t.startCost ?? 0), last = COST0, k = 0;
   for(let T = Math.min(TOTAL, maxT); T >= 0; T = +(T - 0.01).toFixed(2)){
-    while(k < sorted.length && sorted[k].c.t > T){ const c = sorted[k++].c; cost = regenAdv(t, cost, last, c.t, rate, CAP) - (c.cost ?? SCHALE[c.who].cost); last = c.t; }
+    while(k < sorted.length && sorted[k].c.t > T){ const c = sorted[k++].c; cost = regenAdv(t, cost, last, c.t, rate, CAP) - sm.get(c); last = c.t; }
     const err = Math.abs(regenAdv(t, cost, last, T, rate, CAP) - X);
-    if(err <= 0.012 && (!accept || accept(T))) hits.push([T, err]);
-    if(err < bestErr){ bestErr = err; bestT = T; }
+    if(err <= 0.012 && T >= minT && (!accept || accept(T))) hits.push([T, err]);
+    if(err < bestErr && T >= minT){ bestErr = err; bestT = T; }   // the closest miss may not hop over the cast below (that made casts drift later on every re-render)
   }
-  if(!hits.length) return accept ? timeForCost(t, i, want, maxT) : bestT;
+  if(!hits.length) return accept ? timeForCost(t, i, want, maxT, undefined, minT) : bestT;
   hits.sort((a,b)=>Math.abs(a[0]-T0) - Math.abs(b[0]-T0));
   const near = hits.filter(h=>Math.abs(h[0]-hits[0][0]) <= 0.05).sort((a,b)=>a[1]-b[1]);
   return near[0][0];
@@ -379,11 +464,28 @@ function firstAffordable(t, spend, fromT){
   return Math.max(0, fromT);
 }
 // "Right after": a cast can be tied to the cast before it. It then sits where that cast's EX animation ends, and follows it when it moves.
+// Change what a cast spends (blank = the student's normal cost). A cast planned as "as soon as I can pay for it" (cost-before = its cost) keeps that meaning:
+// lowering the cost to 2 moves it to "cost before 2", otherwise it would keep waiting for the old, higher number.
+function setSpend(c, v){
+  const t = team(), old = spendOf(t, c);
+  if(v === '' || v == null) delete c.cost; else c.cost = +v;
+  if(c.cb != null && c.cb === old) c.cb = spendOf(t, c);
+}
+// Pick which EX the cast is ('' = by the usual order, 'main' = the normal EX, n = alternate EX n); the planned cost follows the new price like it does for setSpend.
+function setForm(c, v){
+  const t = team(), old = spendOf(t, c);
+  if(v === '' || v == null) delete c.form; else c.form = v === 'main' ? null : +v;
+  if(c.cb != null && c.cb === old) c.cb = spendOf(t, c);
+}
 const cid = c => c.id || (c.id = Math.random().toString(36).slice(2, 8));
 // Casts are placed by cost (c.cb = cost wanted before the cast) or tied to the cast above (c.after); only a cast you timed by hand keeps its own time.
 // So when the cost model changes, the planned costs stay and the times follow.
-const cbSig = new WeakMap();
+const cbSig = new WeakMap(), cbOwn = new WeakMap();
+// Bump when the cost model changes: every team is then settled from scratch once. Otherwise the times saved with a team (or imported with it) are kept as they are:
+// searching again from nothing can pick a different one of several moments with the same cost, so a reload would move casts.
+const MODEL_V = 3;
 function applyChains(t){
+  const trust = t.mv === MODEL_V; t.mv = MODEL_V;
   for(let pass = 0; pass <= t.casts.length; pass++){
     let moved = false;
     const byTime = [...t.casts].sort((a,b)=>b.t-a.t);
@@ -395,15 +497,22 @@ function applyChains(t){
         // Right after = the first moment the team can pay for it. EX skills of different students can overlap their animations, so the animation length is not a gap.
         let nt = Math.max(0, +(p.t - 0.01).toFixed(2));
         // The Cost Over target may go up to 5 below zero while the buff runs, so such a cast needs only (cost - 5) held.
-        const need = c.cost ?? SCHALE[c.who].cost, others = castsExcept(t, idx);
+        const others = castsExcept(t, idx), otherCasts = others.map(x => x.c), smo = spendMap(t, otherCasts);
+        // a cost reduction can only change the price at the few moments reductions are granted; without reduction givers in the team the price is fixed
+        const anyRed = otherCasts.some(x => CRED[x.who]) || t.roster.some(id => CRED[id] && CRED[id].start); let need0 = anyRed ? null : spendAt(t, c, nt, otherCasts);
         const overOn = T => t.casts.some(x => x !== c && (x.target || t.carry) === c.who && SCHALE[x.who].buffs.some(b=>b.stat==='CostOverload')
                             && resolve(x).buffs.some(b=>b.stat==='CostOverload' && b.start>=T && b.end<T));
-        while(nt > 0){ const held = costAt(t, -1, nt, others); if(held >= need - 1e-9 || (held + 5 >= need - 1e-9 && overOn(nt))) break; nt = +(nt - 0.01).toFixed(2); }
+        while(nt > 0){ const held = costAt(t, -1, nt, others, smo), need = need0 ?? spendAt(t, c, nt, otherCasts); if((held >= need - 1e-9 || (held + 5 >= need - 1e-9 && overOn(nt))) && !others.some(o => o.c.t === nt)) break; nt = +(nt - 0.01).toFixed(2); }   // never on the very instant of another cast (it would not count that cast's cost)
         if(nt !== c.t){ c.t = nt; moved = true; }
       } else if(c.cb != null){
         const others = castsExcept(t, idx);
-        const sig = JSON.stringify([c.cb, c.cost ?? null, c.who, +(t.regen ?? regenInfo(t).auto), capOf(t), COST0, regenWindows(t).map(w=>[w.a, w.b, w.extra]), others.map(o=>[o.c.t, o.c.cost ?? null, o.c.who])]);
-        if(cbSig.get(c) !== sig){ cbSig.set(c, sig); const spendC = c.cost ?? SCHALE[c.who].cost, nt = timeForCost(t, idx, c.cb, k ? byTime[k-1].t - 0.01 : TOTAL, c.cb < spendC ? T => overOnFor(t, c, T) : undefined); if(nt !== c.t){ c.t = nt; moved = true; } }
+        const sig = JSON.stringify([c.cb, c.cost ?? null, spendOf(t, c), c.who, +(t.regen ?? regenInfo(t).auto), capOf(t), COST0, +(t.startCost ?? 0), regenWindows(t).map(w=>[w.a, w.b, w.extra]), others.map(o=>[o.c.t, spendOf(t, o.c), o.c.who, o.c.target ?? null]), t.carry ?? null, tset(t).ue, tset(t).ext, tset(t).lv]);   // everything the Cost Over window depends on too
+        const own = JSON.stringify([c.cb, c.cost ?? null, spendOf(t, c), c.who, +(t.regen ?? regenInfo(t).auto), capOf(t), COST0, +(t.startCost ?? 0), regenWindows(t).map(w=>[w.a, w.b, w.extra]), t.carry ?? null, tset(t).ue, tset(t).ext, tset(t).lv]), ownSame = cbOwn.get(c) === own; cbOwn.set(c, own);
+        if(trust && !cbSig.has(c)){ cbSig.set(c, sig); cbOwn.set(c, own); return; }   // a cast loaded as it was saved: leave it where it is
+        if(cbSig.get(c) !== sig){ cbSig.set(c, sig); const spendC = spendOf(t, c);
+          // Already sitting where it sees the planned cost: leave it. (Searching again could pick another moment with the same cost and hop over the casts below it, which made tightly packed casts creep later on every re-render.)
+          if(Math.abs(costAt(t, idx, c.t, others) - Math.min(c.cb, capOf(t))) <= 0.012 && (c.cb >= spendC || overOnFor(t, c, c.t))) return;
+          const nt = timeForCost(t, idx, c.cb, k ? byTime[k-1].t - 0.01 : TOTAL, c.cb < spendC ? T => overOnFor(t, c, T) : undefined, ownSame && k + 1 < byTime.length ? byTime[k+1].t : 0); if(nt !== c.t){ c.t = nt; moved = true; } }
       }
     });
     if(!moved) break;
@@ -429,10 +538,10 @@ function render(){
   const t = team(), list = allResolved(), px = pxs();
   t.roster.sort((a,b)=> (SCHALE[a].squad==='Main'?0:1) - (SCHALE[b].squad==='Main'?0:1));   // strikers first, as in the game
   $('#tabs').innerHTML = state.teams.map((x,i)=>`<button class="tab ${i===state.team?'on':''}" data-i="${i}" title="${(x.source||'').replace(/"/g,'&quot;')}">${x.name}</button>`).join('');
-  document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{state.team=+b.dataset.i;save();render();});
+  document.querySelectorAll('#tabs .tab').forEach(b=>b.onclick=()=>{state.team=+b.dataset.i;save();render();});   // not the sidebar's tabs, which share the class
 
   $('#zlabel').textContent = px.toFixed(0)+' px/s, snap '+STEP(px)+'s';
-  const X = v => LEFT + (TOTAL - v)*px, ROW = 24, GAP = 3, PAD = 6;
+  let ROW = 24; const X = v => LEFT + (TOTAL - v)*px, GAP = 3, PAD = 6;
   const pctText = b => (b.stat==='CostOverload'||b.stat==='Summon') ? '' : ' '+b.val+'%';
   const palette = st => COLORS[st] || '#9aa7c7';
 
@@ -484,8 +593,12 @@ function render(){
     return {k, e, label, dur, wpx, start:e.t, end:e.t - wpx/px}; });
   const BOSSL = (bb || evs.length) ? pack(evItems)*30 + 10 : 0;
   let y = HEAD + BOSSL;
-  lanes.forEach(L=>{ L.exRows = pack(L.ex); L.bsRows = showBasic() ? pack(L.bs) : 0; L.top = y; L.h = PAD*2 + (L.exRows+L.bsRows)*(ROW+GAP) - GAP; y += L.h; });
-  const CL = 130, costTop = y; y += CL;
+  lanes.forEach(L=>{ L.exRows = pack(L.ex); L.bsRows = showBasic() ? pack(L.bs) : 0; });
+  // Sidebar mode: the timeline card fills the window height. The cost graph shrinks to half and the student rows share the space, so the bars get taller (up to 46 px).
+  const side = document.body.classList.contains('side'), avail = side ? $('.tl-wrap').offsetHeight - 2 - 20 : 0, CLmin = side && avail > 0 ? 65 : 130;   // avail: box height minus border and the horizontal scrollbar (always counted, so nothing causes a vertical scrollbar)
+  if(side && avail > 0){ const rows = lanes.reduce((a, L) => a + L.exRows + L.bsRows, 0); if(rows) ROW = Math.max(24, Math.min(46, Math.floor((avail - HEAD - BOSSL - CLmin - AXIS - lanes.length*(2*PAD - GAP))/rows - GAP))); }
+  lanes.forEach(L=>{ L.top = y; L.h = PAD*2 + (L.exRows+L.bsRows)*(ROW+GAP) - GAP; y += L.h; });
+  const CL = Math.max(CLmin, avail > 0 ? avail - y - AXIS : 0), costTop = y; y += CL; costGeo = {top:costTop, h:CL, px};
   const w = LEFT + TOTAL*px + 40, h = y + AXIS;
   let html = `<div style="position:relative;width:${w}px;height:${h}px">`;
   const stepT = px<22?5 : px<60?1 : px<150?0.5 : 0.1, labelT = px<22?30 : px<60?5 : px<150?1 : 0.5, majT = px<22?30 : px<60?30 : px<150?5 : 1;
@@ -497,13 +610,13 @@ function render(){
   }
   if(BOSSL){
     const nm = bb ? bb.name + (bd ? ' ' + bd.name : '') : 'Boss events';
-    html += `<div class="lane bosslane" style="top:${HEAD}px;height:${BOSSL}px"><div class="lname"><b>${nm}</b></div></div>`;
+    html += `<div class="lane bosslane" style="top:${HEAD}px;height:${BOSSL}px"><div class="lname"${bb ? ` style="background-image:linear-gradient(#141e2eb8,#141e2eb8),url(https://schaledb.com/images/raid/Boss_Portrait_${BOSS_DEV[bb.path] || bb.path}_Lobby.png)"` : ''}><b>${bb ? bb.name + (bd ? `<br><span class="bd">${bd.name}</span>` : '') : nm}</b></div></div>`;
     evItems.forEach(it=>{
       const e = it.e, x = X(e.t), full = y + 0;
       if(e.type === 'groggy' && it.dur > 0) html += `<div class="evband" style="left:${x}px;top:${HEAD}px;width:${it.dur*px}px;height:${full - HEAD}px"></div>`;
       html += `<div class="evline ${e.type}" style="left:${x}px;top:${HEAD}px;height:${full - HEAD}px"></div>`;
       const tip = `${it.label} @ ${fmt2(e.t)}${it.dur ? ' for ' + it.dur + 's (until ' + fmt2(e.t - it.dur) + ')' : ''}${e.cancel ? '\nthe boss skill is cancelled' : ''}`;
-      html += `<div class="evpill ${e.type} ${e.cancel?'cancel':''}" data-ev="${it.k}" title="${tip.replace(/"/g,'&quot;')}" style="left:${x}px;top:${HEAD + 5 + it.row*30}px;width:${it.wpx}px">${it.label}</div>`;
+      html += `<div class="evpill ${e.type} ${e.cancel?'cancel':''}" data-ev="${it.k}" data-tip="${tip.replace(/"/g,'&quot;')}" style="left:${x}px;top:${HEAD + 5 + it.row*30}px;width:${it.wpx}px">${it.label}</div>`;
     });
   }
   lanes.forEach(L=>{
@@ -516,9 +629,9 @@ function render(){
     const sw = Math.max(4, (it.start - sEnd)*px), mw = Math.max(4, (it.landing - it.end)*px);
     const di = it.i!=null ? `data-i="${it.i}"` : '';
     let out = '';
-    if(hasStart) out += `<div class="bar startup ${it.effect?'':'solo'} ${it.cls||''}" ${di} title="${it.title}" style="left:${X(it.start)}px;width:${sw}px;top:${top}px;height:${ROW}px">`
+    if(hasStart) out += `<div class="bar startup ${it.effect?'':'solo'} ${it.cls||''}" ${di} data-tip="${it.title}" style="left:${X(it.start)}px;width:${sw}px;top:${top}px;height:${ROW}px">`
       + (!it.effect && sw > 60 ? `<span class="btext" style="margin-left:8px;left:${LEFT+10}px;max-width:${sw-14}px">${it.text}</span>` : '') + `</div>`;
-    if(it.effect) out += `<div class="bar main ${hasStart?'':'alone'} ${it.est?'est':''} ${it.waste?'waste':''}" ${di} title="${it.title}" style="left:${X(it.landing)}px;width:${mw}px;top:${top}px;height:${ROW}px;background:${it.color}">`
+    if(it.effect) out += `<div class="bar main ${hasStart?'':'alone'} ${it.est?'est':''} ${it.waste?'waste':''}" ${di} data-tip="${it.title}" style="left:${X(it.landing)}px;width:${mw}px;top:${top}px;height:${ROW}px;background:${it.color}">`
       + (mw > 40 ? `<span class="btext" style="margin-left:8px;left:${LEFT+10}px;max-width:${mw-14}px">${it.text}</span>` : '') + `</div>`;
     return out;
   };
@@ -549,7 +662,7 @@ function render(){
     let g = '';
     [cm.cap,5,0,-5].forEach(v=> g += `<line x1="${LEFT}" x2="${w}" y1="${yy(v)}" y2="${yy(v)}" stroke="${v===0?'#4a5d80':'#26344d'}" stroke-width="1"${v===0?'':' stroke-dasharray="3 4"'}/>`);
     const dots = cm.ev.map(e=>`<circle style="pointer-events:auto" cx="${X(e.t)}" cy="${yy(e.after)}" r="5" fill="${e.ok?(e.overload?'#ff7de0':'#e8eef7'):'#ff6b5e'}" stroke="#0d1420" stroke-width="2"><title>${SCHALE[t.casts[e.i].who].name} @ ${fmt(e.t)}\nCost ${e.before.toFixed(1)} → ${e.after.toFixed(1)} (spend ${e.spend})${e.ok?(e.overload?' [Cost Overload]':''):' NOT ENOUGH COST'}</title></circle>`).join('');
-    html += `<div class="lane costlane" style="top:${costTop}px;height:${CL}px"><div class="lname"><b style="position:absolute;left:10px;top:8px">Team cost</b>${refPts ? '<small style="position:absolute;left:10px;top:28px;color:#8aa0c8;font-size:10px;font-weight:400">dashed = video<br>green = model</small>' : ''}`
+    html += `<div class="lane costlane" style="top:${costTop}px;height:${CL}px"><div class="lname"><b class="tc">Team<br>Cost</b>${refPts ? '<small style="position:absolute;left:10px;bottom:6px;color:#8aa0c8;font-size:10px;font-weight:400;text-align:left">dashed = video<br>green = model</small>' : ''}`
       + [cm.cap,5,0,-5].map(v=>`<span style="top:${yy(v)-costTop-7}px">${v}</span>`).join('')
       + `</div></div><svg style="position:absolute;left:0;top:0;pointer-events:none" width="${w}" height="${costTop+CL}">${g}${refLine}<polyline points="${path}" fill="none" stroke="#7bd88f" stroke-width="2"/>${dots}</svg>`;
   }
@@ -626,7 +739,7 @@ function render(){
       <td style="text-align:center"><button class="btn ${c.after?'chain-on':''}" data-ch="${i}" ${n===0?'disabled':''} title="${c.after?'Tied to the cast above: it follows that cast and goes off the moment the team has the cost for it. Click to untie.':'Cast right after the cast above, the moment the team has the cost for it. Click again to untie.'}">&#9193;</button></td>
       <td><select data-w="${i}">${t.roster.map(id=>`<option value="${id}" ${id==c.who?'selected':''}>${sname(id)}</option>`).join('')}</select></td>
       <td>${(SCHALE[c.who].buffs.some(b=>b.target==='AllyMain') || /one ally|an ally|target ally|designated ally/i.test(SCHALE[c.who].desc)) ? `<select data-tg="${i}"><option value="">${t.carry?'carry':'(none)'}</option>${t.roster.filter(id=>id!==c.who).map(id=>`<option value="${id}" ${c.target==id?'selected':''}>${sname(id)}</option>`).join('')}</select>` : ''}</td>
-      <td><input type="number" step="1" min="0" style="width:58px" class="${c.cost!=null?'ovr':''}" data-cost="${i}" value="${c.cost ?? ''}" placeholder="${SCHALE[c.who].cost}" title="Cost this EX spends. Blank = normal cost (${SCHALE[c.who].cost}). Type a number to override, e.g. for Kokona's stamp reduction."></td>
+      <td>${SCHALE[c.who].forms && SCHALE[c.who].forms.length ? `<select data-form="${i}" style="max-width:118px" title="This student has more than one EX skill. Auto follows the usual order (e.g. Ibuki Swimsuit: first use, then the second EX); pick one for target-dependent ones.">${(() => { const fi = formIdx(t, c), ds = SCHALE[c.who], nm = f => f === null ? 'Normal' : ds.forms[f].name; return `<option value="" ${c.form === undefined ? 'selected' : ''}>Auto: ${nm(fi)}</option><option value="main" ${c.form === null ? 'selected' : ''}>Normal</option>` + ds.forms.map((f, k) => `<option value="${k}" ${c.form === k ? 'selected' : ''}>${f.name}</option>`).join(''); })()}</select><br>` : ''}<input type="number" step="1" min="0" style="width:58px" class="${c.cost!=null?'ovr':''}" data-cost="${i}" value="${c.cost ?? ''}" placeholder="${spendOf(t, c)}" title="Cost this EX spends: ${spendOf(t, c)}${c.cost!=null ? ' (set by hand)' : ''}. Blank = the skill's own cost at its EX level. Type a number to override, e.g. for Kokona's stamp reduction."></td>
       <td><input type="text" style="width:140px" value="${c.tag||''}" data-g="${i}"></td><td style="white-space:nowrap"><input type="text" class="${timed(c) ? 'ovr' : ''}" value="${fmt2(c.t)}" data-t="${i}" title="${timed(c) ? 'A time you set (orange). Clear the box to let the cost place this cast again.' : 'Where the cost (or the chain) puts this cast. Type a time, for example 2:30.866, to pin it.'}"></td>
       <td><button class="btn" data-x="${i}">✕</button></td></tr>`;
   });
@@ -639,7 +752,7 @@ function render(){
     document.querySelectorAll('#rot tr[data-row]').forEach(r => r.classList.toggle('hl', hlRow !== null && cid(t.casts[+r.dataset.row]) === hlRow));
   };
   $('#rotbox').scrollTop = keepScroll;
-  $('#addbar').innerHTML = '<b style="color:var(--dim)">Add cast:</b>' + t.roster.map(id=>`<button class="btn addq" data-aq="${id}" title="Add ${SCHALE[id].name}'s EX at the first moment the team can pay for it"><img src="https://schaledb.com/images/student/icon/${id}.webp" onerror="this.style.visibility='hidden'" draggable="false">${sname(id)} <small>${SCHALE[id].cost}</small></button>`).join('')
+  $('#addbar').innerHTML = '<b style="color:var(--dim)">Add cast:</b>' + t.roster.map(id=>`<button class="btn addq" data-aq="${id}" title="Add ${SCHALE[id].name}'s EX at the first moment the team can pay for it"><img src="https://schaledb.com/images/student/icon/${id}.webp" onerror="this.style.visibility='hidden'" draggable="false">${sname(id)} <small>${baseCost(t, id)}</small></button>`).join('')
     + `<label title="When ticked, each new cast is tied to the cast above it (the &#9193; button): it goes off as soon as the team has the cost, instead of waiting for you to set a time. Use it for back-to-back EX skills."><input type="checkbox" id="chainnew" ${state.chainNew?'checked':''}> Chain: cast as soon as affordable &#9193;</label>`;
   $('#chainnew').onchange = e=>{ state.chainNew = e.target.checked; save(); };
   document.querySelectorAll('[data-aq]').forEach(b=>b.onclick=()=>addCast(+b.dataset.aq));
@@ -674,10 +787,11 @@ function render(){
       const n = document.querySelector('[data-t="'+i+'"]'); if(n){ n.focus(); n.select(); }
     };
   });
-  ch2('[data-w]',e=>{ const c = t.casts[e.dataset.w]; c.who = +e.value; delete c.cost; });   // an EX-cost override belongs to the student it was set for
+  ch2('[data-w]',e=>{ const c = t.casts[e.dataset.w]; c.who = +e.value; delete c.cost; delete c.form; });   // an EX-cost override belongs to the student it was set for
   ch2('[data-tg]',e=>{ const c=t.casts[e.dataset.tg]; if(e.value==='') delete c.target; else c.target=+e.value; });
   ch2('[data-g]',e=>t.casts[e.dataset.g].tag=e.value);
-  ch2('[data-cost]',e=>{const c=t.casts[e.dataset.cost]; if(e.value==='') delete c.cost; else c.cost=+e.value;});
+  ch2('[data-cost]',e=>setSpend(t.casts[e.dataset.cost], e.value));
+  ch2('[data-form]',e=>setForm(t.casts[e.dataset.form], e.value));
   document.querySelectorAll('[data-x]').forEach(b=>b.onclick=()=>{t.casts.splice(+b.dataset.x,1);save();render();});
 }
 
@@ -708,6 +822,10 @@ function renderBoss(t){
   const TERR = {Street:'Urban', Outdoor:'Outdoor', Indoor:'Indoor'};
   $('#bterr').innerHTML = b ? b.terrains.map(x=>`<option value="${x}" ${t.boss.terrain===x?'selected':''}>${TERR[x]||x}</option>`).join('') : '';
   const ti = $('#bterricon'); ti.style.display = b ? '' : 'none'; if(b){ ti.src = 'https://schaledb.com/images/ui/Terrain_' + t.boss.terrain + '.png'; ti.title = TERR[t.boss.terrain] || t.boss.terrain; }
+  { const ARMN = {HeavyArmor:'Heavy', LightArmor:'Light', Unarmed:'Special', ElasticArmor:'Elastic'}, DN = ['Normal','Hard','Very Hard','Hardcore','Extreme','Insane','Torment','Lunatic'];
+    const opts = b ? [[b.armor, (ARMN[b.armor]||b.armor) + ' (Total Assault)']].concat(Object.entries((b.ga||{}).armors||{}).filter(([a])=>a!==b.armor).map(([a,mx])=>[a, (ARMN[a]||a) + ' (Grand Assault, up to ' + (DN[mx]||mx) + ')'])) : [];
+    const cur = b && t.boss.armor && opts.some(o=>o[0]===t.boss.armor) ? t.boss.armor : (b ? b.armor : '');
+    $('#barm').innerHTML = opts.map(([a,l])=>`<option value="${a}" ${a===cur?'selected':''}>${l}</option>`).join(''); $('#barm').disabled = !b || opts.length < 2; }
   $('#bdiff').disabled = $('#bterr').disabled = !b; $('#bclear').disabled = !b;
   const mm = s => Math.floor(s/60) + ':' + String(Math.round(s%60)).padStart(2,'0');
   const ARM = {HeavyArmor:['Heavy','#c08a2b'], LightArmor:['Light','#b4403f'], Unarmed:['Special','#3a82c4'], ElasticArmor:['Elastic','#8a5fc7'], CompositeArmor:['Composite','#4f9b6b'], Normal:['Normal','#77808f']};
@@ -719,7 +837,7 @@ function renderBoss(t){
     const bt = bd.k>=5 && b.bulletInsane ? b.bulletInsane : b.bullet;
     const fx = bd.skills.filter(sk=>sk.fx).map(sk=>sk.fx.map(f=>`<div class="fxrow" title="${esc(sk.name + ': ' + sk.desc)}"><b>Cost Recovery</b> <span>${f.value>0?'+':''}${f.value} for ${f.who==='Main'?'Strikers':'all students'}${f.sec ? ', ' + f.sec + ' s' : ''}, when the boss is groggy</span> <small style="color:var(--dim)">(counted in the cost model &middot; ${esc(sk.name)})</small></div>`).join('')).join('');
     const passive = bd.skills.filter(sk=>sk.type==='Passive');
-    $('#binfo').innerHTML = `<div class="row" style="gap:8px;flex-wrap:wrap">${badge('ATK', ATK[bt]||[bt,'#77808f'])}${badge('DEF', ARM[b.armor]||[b.armor,'#77808f'])}`
+    $('#binfo').innerHTML = `<div class="row" style="gap:8px;flex-wrap:wrap">${badge('ATK', ATK[bt]||[bt,'#77808f'])}${badge('DEF', ARM[t.boss.armor||b.armor]||[t.boss.armor||b.armor,'#77808f'])}${t.boss.armor && t.boss.armor!==b.armor ? '<span class="chip" title="Grand Assault armor type. HP, skills and the time limit shown are the Total Assault data.">Grand Assault armor</span>' : ''}`
         + `<span class="chip">Time limit <b>${mm(bd.sec)}</b></span><span class="chip">HP <b>${(e.hp/1e6).toFixed(1)}M</b></span>`
         + (e.groggyMs ? `<span class="chip">Groggy <b>${e.groggyMs/1000} s</b></span>` : '') + (phases ? `<span class="chip">Phase changes at HP <b>${phases}</b></span>` : '') + '</div>'
       + fx
@@ -751,9 +869,10 @@ function renderBoss(t){
   $('#evt').innerHTML = h;
   // handlers
   const upd = fn => { fn(); save(); render(); };
-  $('#bsel').onchange = e=>upd(()=>{ if(!e.target.value){ delete t.boss; return; } const nb = BOSSES.find(x=>x.id===+e.target.value); setBossQuiet(t, nb.id, t.boss && t.boss.raid===nb.id ? t.boss.diff : nb.diffs[nb.diffs.length-1].k, t.boss && t.boss.terrain); });
+  $('#bsel').onchange = e=>upd(()=>{ if(!e.target.value){ delete t.boss; return; } const nb = BOSSES.find(x=>x.id===+e.target.value); if(t.boss && t.boss.raid !== nb.id) delete t.boss.armor; setBossQuiet(t, nb.id, t.boss && t.boss.raid===nb.id ? t.boss.diff : nb.diffs[nb.diffs.length-1].k, t.boss && t.boss.terrain); });
   $('#bdiff').onchange = e=>upd(()=>setBossQuiet(t, t.boss.raid, +e.target.value, t.boss.terrain));
   $('#bterr').onchange = e=>upd(()=>{ t.boss.terrain = e.target.value; });
+  $('#barm').onchange = e=>upd(()=>{ if(e.target.value === b.armor) delete t.boss.armor; else t.boss.armor = e.target.value; });
   $('#bclear').onclick = ()=>upd(()=>{ delete t.boss; });
   document.querySelectorAll('[data-add]').forEach(btn=>btn.onclick = ()=>upd(()=>{
     const type = btn.dataset.add, es = evOf(t), tt = es.length ? Math.max(0, Math.min(...es.map(x=>x.t)) - 10) : Math.max(0, TOTAL - 60);
@@ -812,8 +931,63 @@ document.addEventListener('click', e=>{ if(!e.target.closest('#regentext')) $('#
 const UIKEY = 'ba-ui-size';
 $('#uisize').value = localStorage.getItem(UIKEY) || '100%';
 const applyUI = () => { document.documentElement.style.zoom = (parseInt($('#uisize').value)/100); };
-$('#uisize').onchange = ()=>{ localStorage.setItem(UIKEY, $('#uisize').value); applyUI(); render(); };
+$('#uisize').onchange = ()=>{ localStorage.setItem(UIKEY, $('#uisize').value); applyUI(); fitRot(); render(); };
 applyUI();
+// Sidebar switch, its width (drag the edge) and the open tab are remembered in this browser, not in the teams.
+const SBKEY = 'ba-ui-sidebar', SBW = 'ba-ui-sbw', SBTAB = 'ba-ui-sbtab';
+let sbOn = localStorage.getItem(SBKEY) !== 'off', sbTab = localStorage.getItem(SBTAB) || 'rotcard';
+function applySide(){
+  document.body.classList.toggle('side', sbOn); $('#sbtoggle').textContent = 'Sidebar: ' + (sbOn ? 'on' : 'off');
+  document.documentElement.style.setProperty('--sbw', (+localStorage.getItem(SBW) || 560) + 'px');
+  $('#sidetabs').innerHTML = [['teamcard','Team'],['bosscard','Boss'],['rotcard','Rotation']].map(([id, l]) => `<button class="tab ${id === sbTab ? 'on' : ''}" data-pane="${id}">${l}</button>`).join('');
+  ['teamcard','bosscard','rotcard'].forEach(id => $('#' + id).classList.toggle('pane-on', id === sbTab));
+  document.querySelectorAll('#sidetabs .tab').forEach(b => b.onclick = () => { sbTab = b.dataset.pane; localStorage.setItem(SBTAB, sbTab); applySide(); });
+  fitRot();
+}
+$('#sbtoggle').onclick = () => { sbOn = !sbOn; localStorage.setItem(SBKEY, sbOn ? 'on' : 'off'); applySide(); render(); };
+$('#sbhandle').onpointerdown = e => {
+  const h = e.currentTarget; h.setPointerCapture(e.pointerId); h.classList.add('drag');
+  const mv = ev => { const w = Math.round(Math.max(320, Math.min(innerWidth / UI() - 320, (innerWidth - ev.clientX) / UI()))); document.documentElement.style.setProperty('--sbw', w + 'px'); localStorage.setItem(SBW, w); };
+  const up = () => { h.classList.remove('drag'); h.removeEventListener('pointermove', mv); h.removeEventListener('pointerup', up); fitRot(); };
+  h.addEventListener('pointermove', mv); h.addEventListener('pointerup', up);
+};
+applySide();
+// Hover anywhere on the cost graph to read the team's cost at that moment (the model's estimate, not only at casts).
+{ const tip = document.createElement('div'); tip.id = 'costtip'; document.body.append(tip); const tl = $('#tl');
+  const off = () => { tip.style.display = 'none'; const c = tl.querySelector('.costcur'); if(c) c.remove(); };
+  tl.addEventListener('mouseleave', off);
+  tl.addEventListener('mousemove', e => {
+    if(!costGeo) return;
+    const r = tl.getBoundingClientRect(), z = UI(), x = (e.clientX - r.left)/z, yy = (e.clientY - r.top)/z;
+    if(x < LEFT || yy < costGeo.top || yy > costGeo.top + costGeo.h) return off();
+    const T = TOTAL - (x - LEFT)/costGeo.px; if(T < 0 || T > TOTAL) return off();
+    const t = team(), c = costAt(t, -1, T, castsExcept(t, -1));
+    tip.textContent = c.toFixed(1) + ' cost at ' + fmt(T); tip.style.display = 'block'; tip.style.left = (e.clientX/z + 14) + 'px'; tip.style.top = (e.clientY/z - 30) + 'px';
+    let cur = tl.querySelector('.costcur'); if(!cur){ cur = document.createElement('div'); cur.className = 'costcur'; tl.firstElementChild.append(cur); }
+    cur.style.left = x + 'px'; cur.style.top = costGeo.top + 'px'; cur.style.height = costGeo.h + 'px';
+  }); }
+// Click a bar on the timeline for its details in a bigger window you can drag around (X or Esc closes it). A drag of the bar itself does not open it.
+{ const win = document.createElement('div'); win.id = 'tipwin'; document.body.append(win);
+  let down = null, mv = null;
+  const show = (txt, cx, cy) => {
+    const [head, ...rest] = String(txt).split('\n'); win.innerHTML = ''; const b = document.createElement('b'); b.textContent = head;
+    const x = document.createElement('span'); x.className = 'x'; x.textContent = '✕'; x.onclick = () => { win.style.display = 'none'; }; x.onmousedown = e => e.stopPropagation();
+    win.append(x, b, document.createTextNode(rest.join('\n'))); win.style.display = 'block';
+    const z = UI(), w = win.offsetWidth, h = win.offsetHeight, vw = innerWidth/z, vh = innerHeight/z;
+    win.style.left = Math.max(8, Math.min(vw - w - 8, cx/z + 14)) + 'px'; win.style.top = Math.max(8, Math.min(vh - h - 8, cy/z + 14)) + 'px';
+  };
+  document.addEventListener('mousedown', e => {
+    const bar = e.target.closest && e.target.closest('#tl [data-tip]');
+    down = bar && e.button === 0 ? {x:e.clientX, y:e.clientY, tip:bar.dataset.tip} : null;
+    if(e.target.closest && e.target.closest('#tipwin') && e.button === 0){ const z = UI(), r = win.getBoundingClientRect(); mv = {dx:e.clientX/z - r.left/z, dy:e.clientY/z - r.top/z}; e.preventDefault(); }
+  }, true);
+  document.addEventListener('mousemove', e => { if(mv){ const z = UI(); win.style.left = (e.clientX/z - mv.dx) + 'px'; win.style.top = (e.clientY/z - mv.dy) + 'px'; } });
+  document.addEventListener('mouseup', e => {
+    mv = null;
+    if(down && Math.hypot(e.clientX - down.x, e.clientY - down.y) < 4) show(down.tip, e.clientX, e.clientY);
+    down = null;
+  });
+  document.addEventListener('keydown', e => { if(e.key === 'Escape') win.style.display = 'none'; }); }
 $('#basic').onchange = render; $('#zoom').oninput = render;
 $('.tl-wrap').addEventListener('wheel', e=>{
   if(!e.ctrlKey) return; e.preventDefault();
@@ -861,13 +1035,17 @@ $('#bcreate').onclick = ()=>{
 function fitRot(){
   const hh = $('header').offsetHeight, vh = innerHeight / UI();
   document.documentElement.style.setProperty('--hh', hh + 'px');
-  $('#rotbox').style.maxHeight = Math.max(160, vh - hh - $('#rotbar').offsetHeight - 24) + 'px';
+  document.documentElement.style.setProperty('--ui', UI());
+  $('#rotbox').style.maxHeight = (document.body.classList.contains('side')
+    ? Math.max(160, $('#side').clientHeight - $('#sidetabs').offsetHeight - $('#rotbar').offsetHeight - 70)
+    : Math.max(160, vh - hh - $('#rotbar').offsetHeight - 24)) + 'px';
 }
-addEventListener('resize', fitRot);
+addEventListener('resize', () => { fitRot(); if(document.body.classList.contains('side')) render(); });
 function addCast(who){
   const t = team(), prev = t.casts.length ? t.casts.reduce((a,c)=>c.t<a.t?c:a) : null, last = prev ? prev.t : TOTAL;
-  const c = {t:+firstAffordable(t, SCHALE[who].cost, +(last - 0.01).toFixed(2)).toFixed(2), who};
-  if(prev && state.chainNew) c.after = cid(prev); else c.cb = SCHALE[who].cost;   // plans by cost: it keeps that cost if the cost model changes
+  const sp = spendOf(t, {who, t:+(last - 0.01).toFixed(2)});
+  const c = {t:+firstAffordable(t, sp, +(last - 0.01).toFixed(2)).toFixed(2), who};
+  if(prev && (state.chainNew || sp === 0)) c.after = cid(prev); else c.cb = spendOf(t, c);   // a free EX (Hina Dress's follow-ups) has no cost to wait for: it follows the cast before   // plans by cost: it keeps that cost if the cost model changes
   t.casts.push(c); save(); render();
   const box = $('#rotbox'); box.scrollTop = box.scrollHeight;     // show the new row
 }
