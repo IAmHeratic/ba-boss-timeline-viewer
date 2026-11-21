@@ -112,7 +112,7 @@ td input[type=text]{width:92px}
 .dlg-bg{position:fixed;inset:0;background:#000a;z-index:100;display:flex;align-items:center;justify-content:center}
 .dlg{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 20px;min-width:340px;max-width:92vw;max-height:86vh;overflow:auto;box-shadow:0 10px 40px #000a}
 .dlg a{color:var(--accent,#6aa6ff);text-decoration:underline;cursor:pointer}.dlg h3{margin:0 0 12px}.dlg label{display:flex;gap:8px;align-items:center;padding:4px 0}.dlg .acts{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
-#rot td{padding:3px 8px}
+#rot td,#evt td{padding:3px 6px}
 #rot tr[data-row]{cursor:pointer}
 #rot tr.hl td{background:#2f5a9a}
 #rot tr.hl td:first-child{box-shadow:inset 4px 0 0 #ffd54a}
@@ -209,6 +209,11 @@ const $ = s => document.querySelector(s);
 const save = () => localStorage.setItem(KEY, JSON.stringify(state));
 const fmt = t => { const m = Math.floor(t/60), s = (t - m*60); return m + ':' + (s<10?'0':'') + s.toFixed(1); };
 const fmt2 = t => { const ms = Math.round(t*1000), m = Math.floor(ms/60000), s = (ms - m*60000)/1000; return m + ':' + (s<10?'0':'') + s.toFixed(3); };   // like the in-game timer: three decimals
+// Short student names for the narrow drop-downs: "Nagisa (Swimsuit)" -> "S. Nagisa", "Fuuka (New Year)" -> "NY Fuuka".
+const OUTFIT = {'Swimsuit':'S.','Dress':'D.','Armed':'A.','New Year':'NY','Hot Spring':'HS','Bunny':'B.','Cheer Squad':'CS','Track':'T.','Christmas':'X.','Maid':'M.',
+  'Camp':'C.','Band':'Bd','Qipao':'Q.','Pop Idol':'PI','Pajamas':'P.','School':'Sc','Casual':'Ca','Part-Timer':'PT','Magical':'Mg','Racing':'R.','Guide':'G.','Cycling':'Cy','Small':'Sm'};
+const shortName = n => { const m = n.match(/^(.*?)\s*\(([^)]*)\)$/); return m && OUTFIT[m[2]] ? OUTFIT[m[2]] + ' ' + m[1] : n; };
+const sname = id => shortName(SCHALE[id].name);
 let hlRow = null;   // id of the rotation row the player clicked to keep their place
 const timed = c => c.cb == null && !c.after;   // a time you typed or dragged; the others are placed by cost or by the chain
 const parse = v => { v = String(v).trim(); if(v.includes(':')){const [m,s]=v.split(':');return (+m)*60+(+s);} return +v; };
@@ -619,10 +624,10 @@ function render(){
     rt += `<tr data-row="${i}" class="${hlRow === cid(c) ? 'hl' : ''}"><td>${n+1}</td>
       <td class="${cls}"><input type="number" step="1" min="-5" max="${capOf(t)}" data-cb="${i}" value="${ce ? (c.cb != null && Math.abs(ce.before - c.cb) <= 0.02 ? c.cb : +ce.before.toFixed(1)) : ''}" style="width:70px" title="${tip}"></td>
       <td style="text-align:center"><button class="btn ${c.after?'chain-on':''}" data-ch="${i}" ${n===0?'disabled':''} title="${c.after?'Tied to the cast above: it follows that cast and goes off the moment the team has the cost for it. Click to untie.':'Cast right after the cast above, the moment the team has the cost for it. Click again to untie.'}">&#9193;</button></td>
-      <td><select data-w="${i}">${t.roster.map(id=>`<option value="${id}" ${id==c.who?'selected':''}>${SCHALE[id].name}</option>`).join('')}</select></td>
-      <td>${(SCHALE[c.who].buffs.some(b=>b.target==='AllyMain') || /one ally|an ally|target ally|designated ally/i.test(SCHALE[c.who].desc)) ? `<select data-tg="${i}"><option value="">${t.carry?'carry':'(none)'}</option>${t.roster.filter(id=>id!==c.who).map(id=>`<option value="${id}" ${c.target==id?'selected':''}>${SCHALE[id].name}</option>`).join('')}</select>` : ''}</td>
+      <td><select data-w="${i}">${t.roster.map(id=>`<option value="${id}" ${id==c.who?'selected':''}>${sname(id)}</option>`).join('')}</select></td>
+      <td>${(SCHALE[c.who].buffs.some(b=>b.target==='AllyMain') || /one ally|an ally|target ally|designated ally/i.test(SCHALE[c.who].desc)) ? `<select data-tg="${i}"><option value="">${t.carry?'carry':'(none)'}</option>${t.roster.filter(id=>id!==c.who).map(id=>`<option value="${id}" ${c.target==id?'selected':''}>${sname(id)}</option>`).join('')}</select>` : ''}</td>
       <td><input type="number" step="1" min="0" style="width:58px" class="${c.cost!=null?'ovr':''}" data-cost="${i}" value="${c.cost ?? ''}" placeholder="${SCHALE[c.who].cost}" title="Cost this EX spends. Blank = normal cost (${SCHALE[c.who].cost}). Type a number to override, e.g. for Kokona's stamp reduction."></td>
-      <td><input type="text" style="width:160px" value="${c.tag||''}" data-g="${i}"></td><td style="white-space:nowrap"><input type="text" class="${timed(c) ? 'ovr' : ''}" value="${fmt2(c.t)}" data-t="${i}" title="${timed(c) ? 'A time you set (orange). Clear the box to let the cost place this cast again.' : 'Where the cost (or the chain) puts this cast. Type a time, for example 2:30.866, to pin it.'}"></td>
+      <td><input type="text" style="width:140px" value="${c.tag||''}" data-g="${i}"></td><td style="white-space:nowrap"><input type="text" class="${timed(c) ? 'ovr' : ''}" value="${fmt2(c.t)}" data-t="${i}" title="${timed(c) ? 'A time you set (orange). Clear the box to let the cost place this cast again.' : 'Where the cost (or the chain) puts this cast. Type a time, for example 2:30.866, to pin it.'}"></td>
       <td><button class="btn" data-x="${i}">✕</button></td></tr>`;
   });
   const keepScroll = $('#rotbox').scrollTop;
@@ -634,7 +639,7 @@ function render(){
     document.querySelectorAll('#rot tr[data-row]').forEach(r => r.classList.toggle('hl', hlRow !== null && cid(t.casts[+r.dataset.row]) === hlRow));
   };
   $('#rotbox').scrollTop = keepScroll;
-  $('#addbar').innerHTML = '<b style="color:var(--dim)">Add cast:</b>' + t.roster.map(id=>`<button class="btn addq" data-aq="${id}" title="Add ${SCHALE[id].name}'s EX at the first moment the team can pay for it"><img src="https://schaledb.com/images/student/icon/${id}.webp" onerror="this.style.visibility='hidden'" draggable="false">${SCHALE[id].name} <small>${SCHALE[id].cost}</small></button>`).join('')
+  $('#addbar').innerHTML = '<b style="color:var(--dim)">Add cast:</b>' + t.roster.map(id=>`<button class="btn addq" data-aq="${id}" title="Add ${SCHALE[id].name}'s EX at the first moment the team can pay for it"><img src="https://schaledb.com/images/student/icon/${id}.webp" onerror="this.style.visibility='hidden'" draggable="false">${sname(id)} <small>${SCHALE[id].cost}</small></button>`).join('')
     + `<label title="When ticked, each new cast is tied to the cast above it (the &#9193; button): it goes off as soon as the team has the cost, instead of waiting for you to set a time. Use it for back-to-back EX skills."><input type="checkbox" id="chainnew" ${state.chainNew?'checked':''}> Chain: cast as soon as affordable &#9193;</label>`;
   $('#chainnew').onchange = e=>{ state.chainNew = e.target.checked; save(); };
   document.querySelectorAll('[data-aq]').forEach(b=>b.onclick=()=>addCast(+b.dataset.aq));
@@ -737,7 +742,7 @@ function renderBoss(t){
   order.forEach((k,n)=>{ const e = evs[k];
     h += `<tr><td>${n+1}</td><td><input type="text" value="${fmt2(e.t)}" data-et="${k}"></td>
       <td><select data-ety="${k}">${Object.keys(EVNAME).map(x=>`<option value="${x}" ${e.type===x?'selected':''}>${EVNAME[x]}</option>`).join('')}</select></td>
-      <td><input type="text" style="width:190px" value="${(e.label||'').replace(/"/g,'&quot;')}" data-elb="${k}" placeholder="${EVNAME[e.type]}"></td>
+      <td><input type="text" style="width:150px" value="${(e.label||'').replace(/"/g,'&quot;')}" data-elb="${k}" placeholder="${EVNAME[e.type]}"></td>
       <td><input type="number" step="1" min="0" value="${e.dur ?? ''}" data-edu="${k}" ${e.type==='groggy' && bd && bd.enemies[0].groggyMs ? `placeholder="${bd.enemies[0].groggyMs/1000}"` : ''}></td>
       <td>${e.type==='skill' && bd ? `<select data-esk="${k}"><option value="">(none)</option>${bd.skills.filter(sk=>sk.type!=='Passive').map(sk=>`<option value="${sk.id}" ${e.skill===sk.id?'selected':''}>${sk.name}</option>`).join('')}</select>` : ''}</td>
       <td>${e.type==='skill' ? `<input type="checkbox" data-eca="${k}" ${e.cancel?'checked':''} style="width:18px;height:18px">` : ''}</td>
