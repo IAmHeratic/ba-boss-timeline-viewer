@@ -5,7 +5,7 @@ let bad = 0;
 const eq = (name, got, want) => { const ok = JSON.stringify(got) === JSON.stringify(want); if (!ok) bad++; console.log((ok ? 'ok   ' : 'FAIL ') + name + (ok ? '' : `: got ${JSON.stringify(got)}, want ${JSON.stringify(want)}`)); };
 const id = n => +Object.keys(D).find(k => D[k].name === n);
 function team(names, lv) {
-  const roster = names.map(id), t = { name: 'T', carry: roster[0], custom: true, roster, casts: [], set: { lv: lv || {}, ext: {}, ue: {}, wait: {} }, events: [] };
+  const roster = names.map(id), t = { name: 'T', custom: true, roster, casts: [], set: { lv: lv || {}, ext: {}, ue: {}, wait: {} }, events: [] };
   E.state.teams.length = 0; E.state.teams.push(t); E.state.team = 0; E.setTotal(180); return t;
 }
 const cast = (t, who, tm) => { const c = { t: tm, who: id(who), after: undefined }; delete c.after; t.casts.push(c); return c; };
@@ -76,5 +76,15 @@ t = team(['Ui', 'Mika', 'Aru']); { const u = cast(t, 'Ui', 170); u.target = id('
   t = team(['Hifumi', 'Mika', 'Aru']); cast(t, 'Hifumi', 170); const T0 = 160, withFx = E.costAt(t, -1, T0, E.castsExcept(t, -1)), r0 = E.regenInfo(t).auto;
   eq('Hifumi: cost 10 s after her EX = rate x elapsed + 5 s of the passive - her EX cost',
     near(withFx, Math.min(10, r0*(178.02 - 170) + 0) - D[10003].cost + r0*(170 - T0) + 5*1861/10000*(1 + E.regenInfo(t).boost)), true); }
+
+// No carry: targets are explicit
+{ const nag = 'Nagisa (Swimsuit)';
+  t = team([nag, 'Mika', 'Aru']); const n1 = cast(t, nag, 170); const m1 = cast(t, 'Mika', 160); m1.cost = 3;
+  const over = () => E.costModel(t, E.allResolved()).ev.find(e => e.i === t.casts.indexOf(m1));
+  eq('Cost Overload does nothing until a target is picked', over().overload, false);
+  n1.target = id('Mika'); E.applyChains(t); eq('picking Mika as the target turns it on', E.allResolved().some(x => x.r.buffs.some(b => b.stat === 'CostOverload')), true);
+  t = team(['Ui', 'Mika', 'Aru']); const u = cast(t, 'Ui', 170); cast(t, 'Mika', 160); eq('a reduction without a target goes nowhere', spends(t, 'Mika'), [6]);
+  const old = { name: 'old', carry: id('Mika'), roster: [id('Ui'), id('Mika')], casts: [{ t: 170, who: id('Ui') }, { t: 160, who: id('Mika') }], set: { lv: {}, ext: {}, ue: {}, wait: {} } };
+  E.dropCarry(old); eq('an old team with a carry: the carry becomes the target of the casts that needed one', [old.carry, old.casts[0].target, old.casts[1].target], [undefined, id('Mika'), undefined]); }
 
 console.log(bad ? `\n${bad} scenario(s) failed` : '\nALL SCENARIOS PASS'); process.exit(bad ? 1 : 0);

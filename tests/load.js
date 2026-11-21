@@ -19,7 +19,7 @@ function load() {
     ${read('rotations.js')}
     ${engine}
     return {SCHALE, BOSSES, state, team, tset, ueOf, capOf, levelOf, regenInfo, regenWindows, regenAdv, resolve, simBasics, costModel, costAt,
-            castsExcept, timeForCost, castWindows, allWindows, CRED, TIMED_REGEN, PERM_REGEN, SEQ, cid, setSpend, setForm, spendOf, formIdx, baseCost, exLv, MODEL_V, timed, overOnFor, firstAffordable, applyChains, allResolved, bossOf, bossDiff, buffLabel, shortName, OUTFIT, FPS,
+            castsExcept, timeForCost, castWindows, allWindows, targetsAlly, dropCarry, CRED, TIMED_REGEN, PERM_REGEN, SEQ, cid, setSpend, setForm, spendOf, formIdx, baseCost, exLv, MODEL_V, timed, overOnFor, firstAffordable, applyChains, allResolved, bossOf, bossDiff, buffLabel, shortName, OUTFIT, FPS,
             clock: () => ({TOTAL, BATTLE0, COST0}),
             setTotal: v => { TOTAL = +v; BATTLE0 = TOTAL - 0.4; COST0 = TOTAL - 1.98; }};`;
   return new Function(body)();

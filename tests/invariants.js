@@ -15,7 +15,7 @@ const OVER = ids.filter(i => D[i].buffs.some(b => b.stat === 'CostOverload'));
 
 function mkTeam(opts = {}) {
   const roster = opts.roster || [...Array.from({ length: 4 }, () => pick(mains)), ...Array.from({ length: 2 }, () => pick(supports))];
-  const t = { name: 'T', carry: roster[0], custom: true, roster: [...new Set(roster)], casts: [], set: { lv: {}, ext: {}, ue: {}, wait: {} }, events: [] };
+  const t = { name: 'T', custom: true, roster: [...new Set(roster)], casts: [], set: { lv: {}, ext: {}, ue: {}, wait: {} }, events: [] };
   roster.forEach(id => {
     if (rnd() < .5) t.set.ue[id] = pick([0, 30, 40, 50, 60]);
     if (rnd() < .4) t.set.lv[id] = { ex: ri(1, 5), basic: ri(1, 10), sub: ri(0, 10) };
@@ -40,6 +40,7 @@ const bossFx = t => { const b = E.bossOf(t), d = b && E.bossDiff(t); return d; }
 function randomRotation(t, n) {
   for (let k = 0; k < n; k++) {
     const who = pick(t.roster), c = addCast(t, who, rnd() < .4 ? 'after' : 'cb');
+    if (E.targetsAlly(who) && t.roster.length > 1 && rnd() < .8) c.target = pick(t.roster.filter(x => x !== who));   // the page has no default target any more
     if (process.env.PURE) E.applyChains(t);   // the page settles after every edit; the stress mode below settles once at the end
     if (!process.env.PURE && rnd() < .1) E.setSpend(c, ri(0, 6));                      // manual cost override (Kokona stamps etc.)
     if (!process.env.PURE && rnd() < .1 && t.casts.length > 1) { delete c.after; delete c.cb; c.t = Math.max(0, +(c.t - rnd() * 10).toFixed(2)); }   // a hand-set time
