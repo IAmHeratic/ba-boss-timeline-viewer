@@ -94,4 +94,13 @@ t = team(['Ui', 'Mika', 'Aru']); { const u = cast(t, 'Ui', 170); u.target = id('
   t.reds = [{ id: 'c', t: 150, n: 9, to: id('Aru') }]; eq('a marker never takes the price below 0', spends(t, 'Aru'), [0]);
   t.reds = []; eq('no markers: normal prices', spends(t, 'Mika'), [6, 6]); }
 
+// Buff wording: direction follows the skill text, and no raw stat name leaks into a label
+{ const lab = (sid, which) => { const d = D[sid]; return (which === 'pub' ? d.public.effects.filter(e => e.type === 'Buff') : d.buffs).map(b => E.buffLabel(b.stat, b.target, b.values)); };
+  eq('Kanna (Swimsuit): her passive reduces damage taken', lab(10096, 'pub').includes('Self DMG Taken Down'), true);
+  eq('Wakamo (Swimsuit): her drawback raises damage taken', lab(10043, 'pub').includes('Self DMG Taken Up'), true);
+  eq('Himari (Armed) debuff: the enemy takes MORE weakness damage', lab(20054, 'ex').some(l => l.startsWith('Enemy Weakness DMG Taken Up')), true);
+  const raw = []; Object.keys(D).forEach(i => { [...(D[i].buffs || []), ...((D[i].public || {}).effects || []).filter(e => e.type === 'Buff'), ...(D[i].forms || []).flatMap(f => f.buffs)].forEach(b => { const l = E.buffLabel(b.stat, b.target, b.values); if(/_/.test(l)) raw.push(l); }); });
+  eq('no buff label shows a raw stat name', [...new Set(raw)], []); }
+
+
 console.log(bad ? `\n${bad} scenario(s) failed` : '\nALL SCENARIOS PASS'); process.exit(bad ? 1 : 0);

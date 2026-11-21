@@ -24,9 +24,13 @@ body.side main{height:calc(100vh / var(--ui,1) - var(--hh,56px));padding:12px 18
 body.side main>#builder{grid-column:1;grid-row:1;margin-bottom:12px}
 body.side main>.card:not(#builder){grid-column:1;grid-row:2;display:flex;flex-direction:column;min-height:0}
 body.side main>.card:not(#builder) .tl-wrap{flex:1 1 auto;min-height:0;overflow:auto}
-body.side #side{display:flex;flex-direction:column;gap:10px;grid-column:3;grid-row:1 / span 2;min-height:0;min-width:0;overflow:hidden}
-body.side #sidetabs{display:flex;gap:6px;flex:none}
-body.side #sidetabs .tab{flex:1}
+body.side #side{display:flex;flex-direction:column;gap:0;grid-column:3;grid-row:1 / span 2;min-height:0;min-width:0;overflow:hidden}
+body.side #sidetabs{display:flex;gap:3px;flex:none;position:relative;z-index:2}
+/* real folder tabs: the open one is the same colour as the card under it and has no line between them */
+body.side #sidetabs .tab{flex:1;font-size:18px;font-weight:700;padding:10px 12px;border-radius:10px 10px 0 0;background:#182131;color:var(--dim);border:1px solid var(--line);margin-bottom:-1px;filter:none}
+body.side #sidetabs .tab:hover{color:var(--text);background:#202c40}
+body.side #sidetabs .tab.on{background:var(--panel);color:#fff;border-color:var(--line);border-top:3px solid var(--accent);border-bottom-color:var(--panel);padding-top:8px}
+body.side #side>.card{border-radius:0 0 10px 10px}
 body.side #side>.card{display:none}
 body.side #side>.card.pane-on{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;overflow:auto}
 body.side #side>.card.pane-on>*{flex:none}
@@ -88,6 +92,7 @@ body.side .rotbar{top:0}
 .bar.cancelled{background:transparent !important;border:2px dashed var(--warn);color:var(--warn);cursor:default}
 .bar.startup{background:repeating-linear-gradient(45deg,#4a5670,#4a5670 4px,#39445c 4px,#39445c 8px) !important;color:#cbd5e1;border-radius:6px 0 0 6px;border-color:#2b3548}
 .bar.startup.solo{border-radius:6px}
+.bar.startup.atk{background:var(--atk) !important;color:#fff;text-shadow:0 1px 2px #0009;border-color:#ffffff40}
 .bar.startup.cancelled{border:2px dashed var(--warn);color:var(--warn)}
 .bar.main{border-radius:0 6px 6px 0}
 .bar.main.alone{border-radius:6px}
@@ -194,7 +199,7 @@ header .btn,header select{padding:4px 12px}
     <button class="btn" id="reset" title="Discard all edits and reload the bundled rotations">Reset</button>
     <div id="setpop">
       <label>Zoom <input type="range" id="zoom" min="4" max="400" value="16"> <small id="zlabel" style="color:var(--dim)"></small></label>
-      <label>Basic skills <select id="basic"><option value="off">off</option><option value="predicted" selected>predicted (rules)</option></select></label>
+      <label>Student Basic Skills <select id="basic"><option value="off">off</option><option value="predicted" selected>predicted (rules)</option></select></label>
       <label>UI size <select id="uisize"><option>100%</option><option>115%</option><option>125%</option><option>150%</option><option>175%</option></select></label>
     </div>
   </div>
@@ -233,7 +238,7 @@ header .btn,header select{padding:4px 12px}
   </div>
   </aside>
 </main>
-<script src="data.js"></script>
+<script src="data.js?v=5"></script>
 <script src="bosses.js?v=4"></script>
 <script src="rotations.js"></script>
 <script>
@@ -291,12 +296,19 @@ const parse = v => { v = String(v).trim(); if(v.includes(':')){const [m,s]=v.spl
 const STATNAME = {AttackPower_Coefficient:'ATK', DefensePower_Coefficient:'DEF', CriticalDamageRate_Coefficient:'Crit DMG',
   EnhanceExDamageRate_Base:'EX Skill DMG', RegenCost_Base:'Cost Recovery', ReduceWeakDamagedRate_Base:'Weakness DMG Taken',
   EnhancePierceRate_Base:'Piercing Effectiveness', DodgePoint_Coefficient:'Evasion', DamagedRatio2_Coefficient:'DMG Taken',
-  CriticalDamageResistRate_Coefficient:'Crit DMG RES'};
+  CriticalDamageResistRate_Coefficient:'Crit DMG RES', AccuracyPoint_Coefficient:'Accuracy', AccuracyPoint_Base:'Accuracy', AttackSpeed_Coefficient:'ATK Speed',
+  Range_Coefficient:'Range', CriticalPoint_Coefficient:'Crit Rate', CriticalChanceResistPoint_Coefficient:'Crit Rate RES', MoveSpeed_Coefficient:'Move Speed',
+  HealEffectivenessRate_Coefficient:'Healing Received', HealPower_Coefficient:'Healing', EnhanceExplosionRate_Base:'Explosive Effectiveness',
+  EnhanceMysticRate_Base:'Mystic Effectiveness', EnhanceSonicRate_Base:'Sonic Effectiveness', EnhanceBasicsDamageRate_Base:'Basic Skill DMG',
+  DefensePenetration_Base:'DEF Penetration', DamageRatio2_Base:'DMG Dealt', IgnoreDelayCount_Base:'Ignore Delay'};
+// These stats are stored the other way round: a positive number means LESS damage taken (Kanna Swimsuit's 19.6% is a reduction, Wakamo Swimsuit's -9.6% a drawback),
+// and a negative one on an enemy means MORE weakness damage taken (Himari Armed's debuff).
+const FLIPPED = {DamagedRatio2_Coefficient:1, ReduceWeakDamagedRate_Base:1};
 // e.g. "Crit DMG Up", "Enemy DEF Down", "Self ATK Up"
 function buffLabel(stat, target, values){
   if(stat==='CostOverload') return 'Cost Overload';
   if(stat==='Summon') return 'On field';
-  const v = values && values.length ? values[Math.min(4, values.length-1)] : 0, dir = v<0 ? 'Down' : 'Up';
+  const v = values && values.length ? values[Math.min(4, values.length-1)] : 0, dir = (v<0) !== !!FLIPPED[stat] ? 'Down' : 'Up';
   const who = target==='Enemy' ? 'Enemy ' : target==='Self' ? 'Self ' : '';
   return who + (STATNAME[stat]||stat) + ' ' + dir;
 }
@@ -626,6 +638,7 @@ function render0(){
 
   $('#zlabel').textContent = px.toFixed(0)+' px/s, snap '+STEP(px)+'s';
   let ROW = 24; const X = v => LEFT + (TOTAL - v)*px, GAP = 3, PAD = 6;
+  const ATKCOL = {Explosion:'#c8453b', Pierce:'#d4a017', Mystic:'#3f7fd6', Sonic:'#8b5cc6'};   // the game's attack-type colours: an EX that is only an attack is drawn in its student's colour
   const pctText = b => (b.stat==='CostOverload'||b.stat==='Summon') ? '' : ' '+b.val+'%';
   const palette = st => COLORS[st] || '#9aa7c7';
 
@@ -636,15 +649,15 @@ function render0(){
   const laneOf = id => lanes.find(l=>l.id===id);
   list.forEach(({c,i,r})=>{
     const L = laneOf(c.who); if(!L) return;
-    const d = SCHALE[c.who], bf = r.buffs, animEnd = r.anim[1], ce = costOf[i];
+    const d = SCHALE[c.who], bf = r.buffs, animEnd = r.anim[1], ce = costOf[i], fmx = formOfCast(t, c), exN = fmx ? fmx.name : d.exName;   // exN: the form's own name (Neru's "This'll Hurt, Y'know") when the cast is an alternate form
     const landing = bf.length ? Math.max(...bf.map(b=>b.start)) : animEnd;     // first effect lands
     const end = bf.length ? Math.min(...bf.map(b=>b.end)) : animEnd;
     const lines = bf.map(b=>`• ${b.label}${pctText(b)} (${whoText(b.target)}): ${fmt(b.start)} → ${fmt(b.end)} (${(b.start-b.end).toFixed(1)}s)`);
     const waste = bf.filter(b=>b.waste);
     const costLine = ce ? `\nCost ${ce.before.toFixed(1)} → ${ce.after.toFixed(1)} (spend ${ce.spend})${ce.ok ? (ce.overload?' [Cost Overload]':'') : ' NOT ENOUGH COST'}` : '';
-    L.ex.push({i, start:c.t, landing, animEnd, end, effect:bf.length>0, est:!!t.estimated, waste:waste.length>0, color: bf.length ? palette(bf[0].stat) : '#7f8fb0',
-      text: bf.length ? bf.map(b=>b.label+pctText(b)).join(' + ') : d.exName,
-      title: `${d.exName} (cast @ ${fmt(c.t)})\n${lines.join('\n')}${bf.length?'\n':''}Cast animation ends ${fmt(animEnd)}${costLine}${waste.length?'\nWASTE: recast with '+waste[0].waste+'s left on the previous buff':''}`});
+    L.ex.push({i, start:c.t, landing, animEnd, end, effect:bf.length>0, est:!!t.estimated, waste:waste.length>0, color: bf.length ? palette(bf[0].stat) : '#7f8fb0', atk: bf.length ? null : ATKCOL[d.bullet] || null,
+      text: bf.length ? bf.map(b=>b.label+pctText(b)).join(' + ') : exN,
+      title: `${exN} (cast @ ${fmt(c.t)})\n${lines.join('\n')}${bf.length?'\n':''}Cast animation ends ${fmt(animEnd)}${costLine}${waste.length?'\nWASTE: recast with '+waste[0].waste+'s left on the previous buff':''}`});
   });
   if(showBasic()) t.roster.forEach(id=>{
     const L = laneOf(id), d = SCHALE[id], p = d.public; if(!p) return;
@@ -714,7 +727,7 @@ function render0(){
     const sw = Math.max(4, (it.start - sEnd)*px), mw = Math.max(4, (it.landing - it.end)*px);
     const di = it.i!=null ? `data-i="${it.i}"` : '';
     let out = '';
-    if(hasStart) out += `<div class="bar startup ${it.effect?'':'solo'} ${it.cls||''}" ${di} data-tip="${it.title}" style="left:${X(it.start)}px;width:${sw}px;top:${top}px;height:${ROW}px">`
+    if(hasStart) out += `<div class="bar startup ${it.effect?'':'solo'} ${it.atk ? 'atk' : ''} ${it.cls||''}" ${di} data-tip="${it.title}" style="${it.atk ? '--atk:' + it.atk + ';' : ''}left:${X(it.start)}px;width:${sw}px;top:${top}px;height:${ROW}px">`
       + (!it.effect && sw > 60 ? `<span class="btext" style="margin-left:8px;left:${LEFT+10}px;max-width:${sw-14}px">${it.text}</span>` : '') + `</div>`;
     if(it.effect) out += `<div class="bar main ${hasStart?'':'alone'} ${it.est?'est':''} ${it.waste?'waste':''}" ${di} data-tip="${it.title}" style="left:${X(it.landing)}px;width:${mw}px;top:${top}px;height:${ROW}px;background:${it.color}">`
       + (mw > 40 ? `<span class="btext" style="margin-left:8px;left:${LEFT+10}px;max-width:${mw-14}px">${it.text}</span>` : '') + `</div>`;
