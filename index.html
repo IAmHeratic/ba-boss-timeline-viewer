@@ -92,7 +92,7 @@ body.side .rotbar{top:0}
 #rowmenu{position:fixed;z-index:400;background:#141e2e;border:1px solid var(--line);border-radius:8px;padding:4px;box-shadow:0 8px 24px #000a;display:flex;flex-direction:column}
 #rowmenu button{background:none;border:0;color:var(--text);font:inherit;padding:7px 16px;text-align:left;cursor:pointer;border-radius:5px}
 #rowmenu button:hover{background:var(--panel2)}
-.bar.lk::after{content:'F512';position:absolute;right:3px;top:0;font-size:10px;text-shadow:0 0 2px #000}
+.bar.lk::after{content:'';position:absolute;right:-6px;top:-7px;width:15px;height:15px;border-radius:50%;background:#101826 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 14'%3E%3Cpath d='M3 6V4a3 3 0 0 1 6 0v2' fill='none' stroke='%23ffd54a' stroke-width='1.8'/%3E%3Crect x='1' y='6' width='10' height='7.5' rx='1.5' fill='%23ffd54a'/%3E%3C/svg%3E") center/8px no-repeat;border:1px solid #ffd54a;z-index:3}   /* a badge on the corner: never over the text */
 .rotbox button[data-x]{color:#ff8a80;border-color:#7a3038;background:#2b1a21}
 .rotbox button[data-x]:hover:not(:disabled){background:#4a2029;border-color:#ff6b5e}
 #rot tr.locked button[data-x]:disabled{color:#b5767d;-webkit-text-fill-color:#b5767d}
@@ -127,8 +127,8 @@ body.side .rotbar{top:0}
 .fxrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;padding:6px 10px;border-radius:8px;border:1px solid #2f7fb8;background:#2f7fb81f}
 .sklist{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:8px;margin-top:6px}
 .skcard{display:flex;flex-direction:column;gap:4px;padding:8px 10px;border-radius:8px;background:#2a3348;border:1px solid var(--line);border-left:4px solid #b98cff}
+.skcard .d.more{cursor:pointer}.skcard .d .mr{color:var(--accent);font-size:11.5px;white-space:nowrap}
 .skcard .d{font-size:12.5px;color:var(--dim);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
-.skcard:hover .d{-webkit-line-clamp:unset}
 .evcards{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px}
 .evcard{display:flex;flex-direction:column;align-items:flex-start;gap:3px;text-align:left;padding:8px 10px;border-left:4px solid}
 .evcard small{color:var(--dim);font-weight:400;font-size:12px;white-space:normal}
@@ -693,12 +693,12 @@ function render0(){
     const d = SCHALE[c.who], bf = r.buffs, animEnd = r.anim[1], ce = costOf[i], fmx = formOfCast(t, c), exN = fmx ? fmx.name : d.exName;   // exN: the form's own name (Neru's "This'll Hurt, Y'know") when the cast is an alternate form
     const landing = bf.length ? Math.max(...bf.map(b=>b.start)) : animEnd;     // first effect lands
     const end = bf.length ? Math.min(...bf.map(b=>b.end)) : animEnd;
-    const lines = bf.map(b=>`• ${b.label}${pctText(b)} (${whoText(b.target)}): ${fmt(b.start)} → ${fmt(b.end)} (${(b.start-b.end).toFixed(1)}s)`);
+    const lines = bf.map(b=>`• ${b.label}${pctText(b)} (${whoText(b.target)})\n    ${fmt(b.start)} → ${fmt(b.end)}  (${(b.start-b.end).toFixed(1)}s)`);
     const waste = bf.filter(b=>b.waste);
     const costLine = ce ? `\nCost ${ce.before.toFixed(1)} → ${ce.after.toFixed(1)} (spend ${ce.spend})${ce.ok ? (ce.overload?' [Cost Overload]':'') : ' NOT ENOUGH COST'}` : '';
     L.ex.push({i, lock:!!c.lock, start:c.t, landing, animEnd, end, effect:bf.length>0, est:!!t.estimated, waste:waste.length>0, color: bf.length ? palette(bf[0].stat) : '#7f8fb0', atk: bf.length ? null : ATKCOL[d.bullet] || null,
       text: bf.length ? bf.map(b=>b.label+pctText(b)).join(' + ') : exN,
-      title: `${exN} (cast @ ${fmt(c.t)})\n${lines.join('\n')}${bf.length?'\n':''}Cast animation ends ${fmt(animEnd)}${costLine}${waste.length?'\nWASTE: recast with '+waste[0].waste+'s left on the previous buff':''}`});
+      title: `${exN}\nCast @ ${fmt(c.t)}\n${lines.join('\n')}${bf.length?'\n':''}Cast animation ends ${fmt(animEnd)}${costLine}${waste.length?'\nWASTE: recast with '+waste[0].waste+'s left on the previous buff':''}`});
   });
   if(showBasic()) t.roster.forEach(id=>{
     const L = laneOf(id), d = SCHALE[id], p = d.public; if(!p) return;
@@ -719,7 +719,7 @@ function render0(){
       const landing = eb.length ? Math.max(...eb.map(x=>x.s)) : animEnd, end = eb.length ? Math.min(...eb.map(x=>x.e)) : animEnd;
       L.bs.push({start:t0, landing, animEnd, end, effect:eb.length>0, est:!measured, color: eb.length ? (eb[0].type==='Shield' ? '#9aa7c7' : palette(eb[0].stat)) : '#7f8fb0',
         text: p.name + (eb.length ? ': '+eb.map(x=>x.label).join(' + ') : ''),
-        title: `${d.name} basic: ${p.name} (starts @ ${fmt(t0)})\n${eb.map(x=>`• ${x.label} (${x.who}): ${fmt(x.s)} → ${fmt(x.e)} (${(x.s-x.e).toFixed(1)}s)`).join('\n')}${eb.length?'\n':''}Animation ends ${fmt(animEnd)} [${tag}]`});
+        title: `${d.name} basic: ${p.name}\nStarts @ ${fmt(t0)}\n${eb.map(x=>`• ${x.label} (${x.who})\n    ${fmt(x.s)} → ${fmt(x.e)}  (${(x.s-x.e).toFixed(1)}s)`).join('\n')}${eb.length?'\n':''}Animation ends ${fmt(animEnd)} [${tag}]`});
     }
   });
   // stack overlapping uses of the same skill into extra rows
@@ -768,7 +768,7 @@ function render0(){
     const sw = Math.max(4, (it.start - sEnd)*px), mw = Math.max(4, (it.landing - it.end)*px);
     const di = it.i!=null ? `data-i="${it.i}"` : '';
     let out = '';
-    if(hasStart) out += `<div class="bar startup ${it.effect?'':'solo'} ${it.atk ? 'atk' : ''} ${it.lock ? 'lk' : ''} ${it.cls||''}" ${di} data-tip="${it.title}" style="${it.atk ? '--atk:' + it.atk + ';' : ''}left:${X(it.start)}px;width:${sw}px;top:${top}px;height:${ROW}px">`
+    if(hasStart) out += `<div class="bar startup ${it.effect?'':'solo'} ${it.atk ? 'atk' : ''} ${it.lock && !it.effect ? 'lk' : ''} ${it.cls||''}" ${di} data-tip="${it.title}" style="${it.atk ? '--atk:' + it.atk + ';' : ''}left:${X(it.start)}px;width:${sw}px;top:${top}px;height:${ROW}px">`
       + (!it.effect && sw > 60 ? `<span class="btext" style="margin-left:8px;left:${LEFT+10}px;max-width:${sw-14}px">${it.text}</span>` : '') + `</div>`;
     if(it.effect) out += `<div class="bar main ${hasStart?'':'alone'} ${it.lock ? 'lk' : ''} ${it.est?'est':''} ${it.waste?'waste':''}" ${di} data-tip="${it.title}" style="left:${X(it.landing)}px;width:${mw}px;top:${top}px;height:${ROW}px;background:${it.color}">`
       + (mw > 40 ? `<span class="btext" style="margin-left:8px;left:${LEFT+10}px;max-width:${mw-14}px">${it.text}</span>` : '') + `</div>`;
@@ -875,7 +875,7 @@ Drag to move it; change or remove it in the Rotation tab.`;
   // rotation table
   const ri = regenInfo(t); $('#regen').value = +(t.regen ?? ri.auto).toFixed(3); $('#scost').value = +(t.startCost ?? 0); $('#limit').value = fmt(TOTAL).replace(/\.0$/,''); $('#regentext').textContent = (t.regen != null ? 'Set by hand (Reset returns to ' + ri.auto.toFixed(3) + '/s). Calculated: ' : 'Calculated: ') + ri.text + '. Max cost ' + capOf(t) + '.';
   $('#regenauto').disabled = t.regen == null;
-  let rt = '<tr><th>#</th><th>Cost</th><th title="Chain: tie this cast to the cast above it, so it goes off the moment the team has the cost.">Chain</th><th>Student</th><th>Target</th><th title="Cost this EX spends. Leave blank for the normal cost of the skill; type a number for cost reductions (Kokona stamps, a Rio copy, ...).">EX cost</th><th>Note</th><th>Time</th><th style="white-space:nowrap"><button class="btn" id="lockall" style="padding:2px 8px;font-size:12px"></button></th></tr>';
+  let rt = '<tr><th>#</th><th>Cost</th><th title="Chain: tie this cast to the cast above it, so it goes off the moment the team has the cost.">Chain</th><th>Student</th><th>Target</th><th title="Cost this EX spends. Leave blank for the normal cost of the skill; type a number for cost reductions (Kokona stamps, a Rio copy, ...).">EX cost</th><th>Note</th><th>Approx. Time</th><th style="white-space:nowrap"><button class="btn" id="lockall" style="padding:2px 8px;font-size:12px"></button></th></tr>';
   const order = [...t.casts.keys()].sort((a,b)=>t.casts[b].t-t.casts[a].t);
   order.forEach((i,n)=>{
     const c = t.casts[i], ce = costOf[i];
@@ -1024,7 +1024,9 @@ function renderBoss(t){
   $('#evadd').innerHTML = '<div style="width:100%"><b style="color:var(--dim)">Add event</b></div><div class="evcards" style="width:100%">'
     + ['groggy','phase','note'].concat(bd ? [] : ['skill']).map(k=>`<button class="btn evcard ${k}" data-add="${k}"><b>+ ${EVINFO[k][0]}</b><small>${EVINFO[k][1]}</small></button>`).join('') + '</div>'
     + (SKP.length ? `<div style="width:100%;margin-top:6px"><b style="color:var(--dim)">Boss skills</b> <small style="color:var(--dim)">click one to put it on the timeline, then drag it to when it is cast (the game data has no cast times)</small></div><div class="sklist" style="width:100%">`
-        + SKP.map(sk=>`<div class="skcard"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><b>${esc(sk.name)}</b><button class="btn" data-addsk="${sk.id}">+ Add</button></div><div class="d" title="${esc(sk.desc)}">${esc(sk.desc)}</div></div>`).join('') + '</div>' : '')
+        + SKP.map(sk=>`<div class="skcard"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><b>${esc(sk.name)}</b><button class="btn" data-addsk="${sk.id}">+ Add</button></div>${(() => { const full = String(sk.desc || '').trim(), m = full.match(/^[\s\S]*?[.!?](?=\s|$)/), first = m ? m[0] : full, more = full.length > first.length + 1;   // first sentence on the card; the rest in the click popup
+          return `<div class="d ${more ? 'more' : ''}" ${more ? `data-tip="${esc(sk.name)}
+${esc(full)}"` : ''}>${esc(first)}${more ? ' <span class="mr">&hellip; click for more</span>' : ''}</div>`; })()}</div>`).join('') + '</div>' : '')
     + (state.teams.length > 1 ? `<div style="width:100%;margin-top:6px"><select id="evcopysel">${state.teams.map((x,i)=>i===state.team?'':`<option value="${i}">${x.name}</option>`).join('')}</select> <button class="btn" id="evcopy" title="Copy the boss events of that team into this one">Copy events from</button></div>` : '');
   // table
   const evs = evOf(t), order = evs.map((e,k)=>k).sort((a,c)=>evs[c].t - evs[a].t);
@@ -1156,7 +1158,9 @@ applySide();
   }); }
 // Click a bar on the timeline for its details in a bigger window you can drag around (X or Esc closes it). A drag of the bar itself does not open it.
 { const win = document.createElement('div'); win.id = 'tipwin'; document.body.append(win);
-  let down = null, mv = null;
+  let down = null, mv = null, panned = false, p0 = null;
+  document.addEventListener('mousedown', e => { p0 = {x:e.clientX, y:e.clientY}; panned = false; }, true);
+  document.addEventListener('mousemove', e => { if(p0 && Math.hypot(e.clientX - p0.x, e.clientY - p0.y) >= 4) panned = true; });
   const show = (txt, cx, cy) => {
     const [head, ...rest] = String(txt).split('\n'); win.innerHTML = ''; const b = document.createElement('b'); b.textContent = head;
     const x = document.createElement('span'); x.className = 'x'; x.textContent = '✕'; x.onclick = () => { win.style.display = 'none'; }; x.onmousedown = e => e.stopPropagation();
@@ -1165,7 +1169,7 @@ applySide();
     win.style.left = Math.max(8, Math.min(vw - w - 8, cx/z + 14)) + 'px'; win.style.top = Math.max(8, Math.min(vh - h - 8, cy/z + 14)) + 'px';
   };
   document.addEventListener('mousedown', e => {
-    const bar = e.target.closest && e.target.closest('#tl [data-tip]');
+    const bar = e.target.closest && e.target.closest('#tl [data-tip], .skcard [data-tip]');
     down = bar && e.button === 0 ? {x:e.clientX, y:e.clientY, tip:bar.dataset.tip} : null;
     if(e.target.closest && e.target.closest('#tipwin') && e.button === 0){ const z = UI(), r = win.getBoundingClientRect(); mv = {dx:e.clientX/z - r.left/z, dy:e.clientY/z - r.top/z}; e.preventDefault(); }
   }, true);
@@ -1173,7 +1177,8 @@ applySide();
   document.addEventListener('mouseup', e => {
     mv = null;
     if(down && Math.hypot(e.clientX - down.x, e.clientY - down.y) < 4) show(down.tip, e.clientX, e.clientY);
-    down = null;
+    else if(!down && win.style.display === 'block' && e.button === 0 && !(e.target.closest && e.target.closest('#tipwin')) && !panned) win.style.display = 'none';   // a click anywhere else closes it (a drag to pan does not)
+    down = null; panned = false;
   });
   document.addEventListener('keydown', e => { if(e.key === 'Escape') win.style.display = 'none'; }); }
 $('#basic').onchange = render; $('#zoom').oninput = render;
@@ -1335,11 +1340,10 @@ document.addEventListener('mousedown', e => { if(!e.target.closest('#setpop, #ge
 document.addEventListener('keydown', e => { if(e.key === 'Escape') $('#setpop').classList.remove('on'); });
 $('#exp').onclick = () => {
   const pk = teamPicker(state.teams), body = document.createElement('div');
-  const fl = document.createElement('label'), fi = document.createElement('input'); fi.type = 'text'; fi.value = 'ba-timeline'; fi.style.width = '200px';
-  fl.append('File name ', fi, '.json'); body.append(pk.box, fl);
-  dialog('Export teams', body, 'Download', () => {
+  body.append(pk.box);
+  dialog('Export teams', body, 'Export', () => {
     const picked = pk.picked(); if(!picked.length){ alert('Tick at least one team.'); return false; }
-    const name = (fi.value.trim().replace(/\.json$/i, '').replace(/[\\/:*?"<>|]+/g, '-') || 'ba-timeline') + '.json';
+    const name = 'ba-timeline.json';   // Chrome and Edge let you rename it in the Save dialog
     const out = {...state, teams: picked, team: Math.max(0, picked.indexOf(team()))};   // the open team stays the open one if it is exported
     saveJson(name, JSON.stringify(out, null, 1));
   });
