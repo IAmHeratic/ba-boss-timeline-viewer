@@ -54,4 +54,23 @@ t = team(['Shiroko (Swimsuit)', 'Mika', 'Aru']); { [170, 160].forEach(x => cast(
   eq('Shiroko (Swimsuit): -1 on everyone first EX of the battle (not her own)', [spends(t, 'Mika'), spends(t, 'Shiroko (Swimsuit)')], [[5, 6], [D[20027].cost]]); }
 t = team(['Ui', 'Mika', 'Aru']); { const u = cast(t, 'Ui', 170); u.target = id('Mika'); const m = cast(t, 'Mika', 160); m.cost = 1; eq('a hand-typed cost beats a reduction', spends(t, 'Mika'), [1]); }
 
+// Cost recovery
+{ const near = (x, y) => Math.abs(x - y) < 1e-9;
+  t = team(['Azusa (Racing)', 'Mika', 'Aru']); cast(t, 'Azusa (Racing)', 170); let w = E.castWindows(t, t.casts);
+  eq('Azusa (Racing): one 25 s window of +986 (EX 5)', [w.length, near(w[0].a - w[0].b, 25), near(w[0].extra, 986/10000*(1 + E.regenInfo(t).boost))], [1, true, true]);
+  t = team(['Hifumi', 'Mika', 'Aru']); [170, 150, 130].forEach(x => cast(t, 'Hifumi', x)); w = E.castWindows(t, t.casts);
+  eq('Hifumi: 5 s of +1861 after every EX (Sub Lv 10)', [w.length, near(w[0].a - w[0].b, 5), near(w[0].extra, 1861/10000)], [3, true, true]);
+  t = team(['Yukari (Swimsuit)', 'Mika', 'Aru']); [170, 150, 130, 110].forEach(x => cast(t, 'Yukari (Swimsuit)', x)); w = E.castWindows(t, t.casts);
+  eq('Yukari (Swimsuit): every 2nd EX only', w.map(x => x.a).sort((a, b) => b - a), [150, 110]);
+  t = team(['Noa (Pajamas)', 'Mika', 'Aru']); [170, 150, 130, 110, 90, 70].forEach(x => cast(t, 'Noa (Pajamas)', x)); w = E.castWindows(t, t.casts);
+  eq('Noa (Pajamas): after the 2nd EX of every 3 (30 s, Basic Lv 10)', [w.map(x => x.a).sort((a, b) => b - a), near(w[0].a - w[0].b, 30), near(w[0].extra, 803/10000)], [[150, 90], true, true]);
+  t = team(['Mika', 'Aru']); eq('no cost-recovery passive: no extra windows', [E.castWindows(t, []).length, E.regenInfo(t).flat], [0, 0]);
+  const red = Object.keys(D).filter(k => D[k].school === 'RedWinter' && +k !== 10017 && D[k].squad === 'Main').slice(0, 2).map(k => D[k].name);
+  t = team(['Cherino', ...red, 'Aru']); eq('Cherino with two other Red Winter students: third value of her list', near(E.regenInfo(t).flat, D[10017].regenFx[0].values[2][9]/10000), true);
+  t = team(['Cherino', 'Aru', 'Mika']); eq('Cherino alone: base value', near(E.regenInfo(t).flat, D[10017].regenFx[0].values[0][9]/10000), true);
+  // the extra recovery changes the cost the model reports
+  t = team(['Hifumi', 'Mika', 'Aru']); cast(t, 'Hifumi', 170); const T0 = 160, withFx = E.costAt(t, -1, T0, E.castsExcept(t, -1)), r0 = E.regenInfo(t).auto;
+  eq('Hifumi: cost 10 s after her EX = rate x elapsed + 5 s of the passive - her EX cost',
+    near(withFx, Math.min(10, r0*(178.02 - 170) + 0) - D[10003].cost + r0*(170 - T0) + 5*1861/10000*(1 + E.regenInfo(t).boost)), true); }
+
 console.log(bad ? `\n${bad} scenario(s) failed` : '\nALL SCENARIOS PASS'); process.exit(bad ? 1 : 0);

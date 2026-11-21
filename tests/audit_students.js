@@ -69,7 +69,9 @@ for (const id of want) {
     const d = D[id];
     let ok = false;
     if (e.Type === 'Buff' && slot === 'Ex') ok = !!(d && d.buffs.some(b => b.stat === e.Stat));
-    if (e.Type === 'Buff' && slot === 'ExtraPassive') ok = !!(d && d.regenBoost);
+    if (e.Type === 'Buff' && slot === 'ExtraPassive' && e.Stat === 'RegenCost_Coefficient') ok = !!(d && d.regenBoost);
+    if (e.Type === 'Buff' && e.Stat === 'RegenCost_Base' && slot !== 'Ex') ok = !!(E.TIMED_REGEN[id] || E.PERM_REGEN[id]);   // passives that raise the student's own Cost Recovery
+    if (e.Type === 'CostChange') ok = !!E.CRED[id] && (slot === 'Ex' || slot === 'Public');                                   // cost reductions given to allies
     (ok ? modelled : unmodelled).push(row);
   }
 }

@@ -50,8 +50,14 @@ for i in WANT:
                 fb.append({'stat': e['Stat'], 'label': LABEL.get(e['Stat'], e['Stat']), 'target': e['Target'][0] if e.get('Target') else '', 'ms': e['Duration'],
                            'apply': e.get('ApplyFrame', 0), 'values': e['Value'][0], 'slot': e.get('OverrideSlot')})
         forms.append({'name': xs['Name'], 'costs': xs.get('Cost'), 'frames': xs.get('Duration') or ex.get('Duration', 90), 'buffs': fb})
+    # Cost Recovery given to the student itself by a passive (not by the EX): timed (after an EX use) or permanent. values = one array per variant, indexed by skill level.
+    regen_fx = []
+    for slot in ('ExtraPassive', 'Public', 'Passive'):
+        for e in (x['Skills'].get(slot) or {}).get('Effects', []):
+            if e.get('Stat') == 'RegenCost_Base' and e.get('Target') == ['Self']:
+                regen_fx.append({'slot': slot, 'ms': e.get('Duration'), 'values': e['Value']})
     out[str(i)] = {'public': pubd, 'id': i, 'name': x['Name'], 'exName': ex['Name'],
                    'desc': re.sub('<[^>]+>', '', ex['Desc']), 'params': ex.get('Parameters'),
-                   'squad': x.get('SquadType'), 'regenStat': x.get('RegenCost', 700), 'regenBoost': boost, 'cost': ex['Cost'][-1], 'costs': ex['Cost'], 'forms': forms, 'frames': ex.get('Duration', 90), 'buffs': buffs, 'extend': ext}
+                   'squad': x.get('SquadType'), 'regenStat': x.get('RegenCost', 700), 'regenBoost': boost, 'cost': ex['Cost'][-1], 'costs': ex['Cost'], 'school': x.get('School'), 'armor': x.get('ArmorType'), 'regenFx': regen_fx, 'forms': forms, 'frames': ex.get('Duration', 90), 'buffs': buffs, 'extend': ext}
 open('data.js', 'w', encoding='utf8').write('const SCHALE = ' + json.dumps(out, ensure_ascii=False) + ';\n')
 print('ok', len(out))

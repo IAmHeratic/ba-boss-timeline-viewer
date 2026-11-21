@@ -175,6 +175,7 @@ header .btn,header select{padding:4px 12px}
     <label>Basic skills <select id="basic"><option value="off">off</option><option value="predicted" selected>predicted (rules)</option></select></label>
     <label>UI size <select id="uisize"><option>100%</option><option>115%</option><option>125%</option><option>150%</option><option>175%</option></select></label>
     <button class="btn" id="sbtoggle" title="Show Team, Boss and Rotation as tabs in a panel on the right (drag its edge to resize) or stacked under the timeline">Sidebar</button>
+    <button class="btn" id="undobtn" title="Undo (Ctrl+Z)">&#8630;</button><button class="btn" id="redobtn" title="Redo (Ctrl+Y)">&#8631;</button>
     <button class="btn" id="exp">Export</button>
     <button class="btn" id="imp">Import</button>
     <button class="btn" id="reset">Reset</button>
@@ -238,7 +239,13 @@ state.teams.forEach(t=>{ if(!t.set) t.set = JSON.parse(JSON.stringify({lv:state.
   const S = t.set; if(!S.ue){ S.ue = {}; Object.keys(S.ext||{}).forEach(id=>{ if(+S.ext[id] > 0) S.ue[id] = 40; }); } });
 function fresh(){ return {team:0, lv:{}, cap:{}, rc:{}, wait:{}, ext:{}, first:{}, teams: JSON.parse(JSON.stringify(ROTATIONS))}; }
 const $ = s => document.querySelector(s);
-const save = () => localStorage.setItem(KEY, JSON.stringify(state));
+// Undo / redo: every edit that is saved first pushes the settled state from before it. A drag is one step (the state is only re-read when the mouse is released).
+const undoStack = [], redoStack = []; let baseline = null, gesture = false;
+const snap = () => JSON.stringify(state);
+const save = () => {
+  if(baseline != null && snap() !== baseline){ undoStack.push(baseline); if(undoStack.length > 100) undoStack.shift(); redoStack.length = 0; }
+  localStorage.setItem(KEY, JSON.stringify(state));
+};
 const fmt = t => { const m = Math.floor(t/60), s = (t - m*60); return m + ':' + (s<10?'0':'') + s.toFixed(1); };
 const fmt2 = t => { const ms = Math.round(t*1000), m = Math.floor(ms/60000), s = (ms - m*60000)/1000; return m + ':' + (s<10?'0':'') + s.toFixed(3); };   // like the in-game timer: three decimals
 // Short student names for the narrow drop-downs: "Nagisa (Swimsuit)" -> "S. Nagisa", "Fuuka (New Year)" -> "NY Fuuka".
@@ -274,13 +281,20 @@ const pickv = (vals, level) => vals[Math.min(level, vals.length) - 1];
 // cost point is 10,000, so the squad fills (sum of stats)/10,000 cost per second; cost-recovery Sub Skills (Kisaki, Himari (Armed), ...)
 // multiply that. Checked in four mock-battle runs (bar scaled by each team's max cost): 0.4185 / 0.4184 without a booster (formula 0.420)
 // and 0.5042 / 0.5035 with Kisaki / Himari (Armed) at max Sub Skill (formula 0.505).
+const PERM_REGEN = {10017: d => d.school === 'RedWinter', 10126: d => d.armor === 'HeavyArmor' && d.squad === 'Main'};
 function regenInfo(t){
   const units = t.roster.map(id=>SCHALE[id]).slice(0,6);
   const base = units.reduce((a,d)=>a+(d.regenStat||700),0)/10000;
   let boost = 0; const parts = [];
   t.roster.forEach(id=>{ const d = SCHALE[id]; if(d.regenBoost){ const L = levelOf(id).sub; if(L>0){ const b = Math.abs(pickv(d.regenBoost.values, L))/10000; boost += b; parts.push(d.name+' Sub Lv'+L+' +'+(b*100).toFixed(1)+'%'); } } });
-  const auto = base*(1+boost);   // (boost is also used by boss effects)
-  return {auto, boost, text:`${units.length} students x 700 / 10000 = ${base.toFixed(3)}${parts.length ? ' x (1 + '+parts.join(' + ')+')' : ', no cost-recovery Sub Skill in the team'} = ${auto.toFixed(3)}/s`};
+  // A few students raise their own Cost Recovery all the time (Cherino: more per other Red Winter student; Kanoe: more per other Heavy Armor Striker; up to 3 each).
+  let flat = 0; const fparts = [];
+  t.roster.slice(0, 6).forEach(id => { const d = SCHALE[id], rule = PERM_REGEN[id]; if(!rule || !d.regenFx || !d.regenFx.length) return;
+    const L = levelOf(id).sub; if(L <= 0) return;
+    const k = Math.min(3, t.roster.slice(0, 6).filter(o => o !== id && rule(SCHALE[o])).length), arr = d.regenFx[0].values;
+    const v = pickv(arr[Math.min(k, arr.length - 1)], L); flat += v/10000; fparts.push(d.name + ' +' + v + (k ? ' (' + k + ' others)' : '')); });
+  const auto = (base + flat)*(1+boost);   // (boost is also used by boss effects)
+  return {auto, boost, flat, text:`${units.length} students x 700 / 10000 = ${base.toFixed(3)}${flat ? ' + ' + flat.toFixed(4) + ' (' + fparts.join(', ') + ')' : ''}${parts.length ? ' x (1 + '+parts.join(' + ')+')' : ', no cost-recovery Sub Skill in the team'} = ${auto.toFixed(3)}/s`};
 }
 const team = () => state.teams[state.team];
 const pxs = () => +$('#zoom').value;
@@ -324,8 +338,10 @@ const bossOf = t => t.boss ? BOSSES.find(b=>b.id===t.boss.raid) : null;
 const bossDiff = t => { const b = bossOf(t); return b ? (b.diffs.find(d=>d.k===t.boss.diff) || null) : null; };
 const evOf = t => t.events || (t.events = []);
 // Windows in which the team gets extra cost recovery because of a boss effect (e.g. Binah Lunatic: all Strikers +600 for 10 s after Binah goes groggy).
+let winOverride = null;   // set around a calculation: event windows + the windows made by the casts it looks at
 const winCache = {ok:false, t:null, w:[]};   // cleared at the start of every render(); events and roster only change through a handler that ends in render()
-function regenWindows(t){
+function regenWindows(t){ return winOverride || eventWindows(t); }
+function eventWindows(t){
   const bd = bossDiff(t), evs = t.events || [];
   if(!bd || !evs.length) return [];
   if(winCache.ok && winCache.t === t) return winCache.w;
@@ -360,6 +376,25 @@ function regenAdv(t, cost, a, b, rate, CAP){
   for(const sg of regenSegs(t, a, b, rate)) cost = Math.min(CAP, cost + sg.rate*(sg.hi - sg.lo));
   return cost;
 }
+// Cost Recovery the casts give the team for a while: the EX of Azusa Racing / Seia / Kisaki Swimsuit (own Cost Recovery up for 5-25 s), and passives that start after an EX
+// (Hifumi, Reijo: 5 s; Suzumi Magical: 35 s; Yukari Swimsuit: every 2nd EX, 10 s; Noa Pajamas: after the 2nd EX of 3, 30 s, at her Basic level). Not modelled: Hoshino Swimsuit
+// (while her EX lasts), Miyako Swimsuit (every 50 dodges), Kurumi (conditions). A +X on one student adds X/10000 to the team's cost per second.
+const TIMED_REGEN = {10003:{}, 10104:{}, 10129:{}, 10121:{every:2}, 10109:{every:3, at:2, lvl:'basic'}};
+function castWindows(t, casts){
+  const boost = regenInfo(t).boost, w = [], ord = {};
+  [...casts].sort((a, b) => b.t - a.t).forEach(c => {
+    const d = SCHALE[c.who], n = ord[c.who] = (ord[c.who] || 0) + 1;
+    if(d.buffs.some(b => b.stat === 'RegenCost_Base') || (d.forms || []).some(f => f.buffs.some(b => b.stat === 'RegenCost_Base')))
+      resolve(c).buffs.forEach(b => { if(b.stat === 'RegenCost_Base' && b.target === 'Self') w.push({a:b.start, b:b.end, extra:b.val*100/10000*(1+boost), name:d.name}); });
+    const r = TIMED_REGEN[c.who];
+    if(r && d.regenFx && d.regenFx[0] && d.regenFx[0].ms){
+      const every = r.every || 1, at = (r.at || every) % every, L = levelOf(c.who)[r.lvl || 'sub'];
+      if(L > 0 && n % every === at) w.push({a:c.t, b:c.t - d.regenFx[0].ms/1000, extra:pickv(d.regenFx[0].values[0], L)/10000*(1+boost), name:d.name});
+    }
+  });
+  return w;
+}
+const allWindows = (t, casts) => eventWindows(t).concat(castWindows(t, casts));
 // What an EX cast spends. The cost falls with EX level for some students (Ui 5 -> 3), and some students have alternate EX skills with their own cost:
 // a second form after the first use (Ibuki Swimsuit 0 then 3, Hina Dress 6 then 0/0/0, Toki, Kisaki Swimsuit, Noa Pajamas) or one that depends on the target (Mika Swimsuit, Rabu, Aris Armed).
 // SEQ is the usual order of the forms for the ones that follow the cast count; a form picked by hand in the table always wins.
@@ -409,6 +444,7 @@ const spendAt = (t, c, T, list) => { const tmp = {who:c.who, t:T, form:c.form, c
 const baseCost = (t, id) => { const d = SCHALE[id]; return d.costs ? atLevel(d.costs, exLv(t, id)) : d.cost; };
 const formOfCast = (t, c) => { const f = formIdx(t, c); return f != null && SCHALE[c.who].forms ? SCHALE[c.who].forms[f] || null : null; };
 function costModel(t, list){
+  const prevW = winOverride; winOverride = allWindows(t, list.map(x => x.c));
   const rate = +(t.regen ?? regenInfo(t).auto), CAP = capOf(t), ev = [], sm = spendMap(t, list.map(x => x.c));
   let cost = +(t.startCost ?? 0), last = COST0;
   const od = (tm, who) => list.some(x=>(x.c.target || t.carry) === who && x.r.buffs.some(b=>b.stat==='CostOverload' && b.start>=tm && b.end<tm));
@@ -419,10 +455,15 @@ function costModel(t, list){
     ev.push({i, t:c.t, before, after:before-spend, spend, ok: before >= spend || overload, overload});
     cost = before - spend; last = c.t;
   });
+  winOverride = prevW;
   return {ev, rate, cap:CAP, startCost:+(t.startCost ?? 0), tail:{cost, last}};
 }
 // Cost the team would have at clock time T if cast `skip` were not in the rotation (casts before T are paid, regen in between, capped).
-function costAt(t, skip, T, sorted, smap){
+function costAt(t, skip, T, sorted, smap, win){
+  const prev = winOverride; winOverride = win || allWindows(t, sorted.map(x => x.c));
+  try { return costAt0(t, skip, T, sorted, smap); } finally { winOverride = prev; }
+}
+function costAt0(t, skip, T, sorted, smap){
   const rate = +(t.regen ?? regenInfo(t).auto), CAP = capOf(t);
   let cost = +(t.startCost ?? 0), last = COST0; const sm = smap || spendMap(t, sorted.map(x => x.c));
   for(const {c} of sorted){
@@ -441,7 +482,11 @@ const overOnFor = (t, c, T) => t.casts.some(x => x !== c && (x.target || t.carry
   && resolve(x).buffs.some(b=>b.stat==='CostOverload' && b.start>=T && b.end<T));
 // Time at which cast i sees `want` cost before it. If several moments qualify (cost passes the same value again after other casts) the one nearest to
 // where the cast already is wins; at the cost cap the first moment it is reached counts.
-function timeForCost(t, i, want, maxT = TOTAL, accept, minT = 0){   // maxT: the cast must not come before this clock time (it stays after the cast above it)
+function timeForCost(t, i, want, maxT = TOTAL, accept, minT = 0){
+  const prev = winOverride; winOverride = allWindows(t, castsExcept(t, i).map(x => x.c));
+  try { return timeForCost0(t, i, want, maxT, accept, minT); } finally { winOverride = prev; }
+}
+function timeForCost0(t, i, want, maxT = TOTAL, accept, minT = 0){   // maxT: the cast must not come before this clock time (it stays after the cast above it)
   const T0 = t.casts[i].t, sorted = castsExcept(t, i), X = Math.min(want, capOf(t));
   const hits = []; let bestErr = 1e9, bestT = T0;
   // One sweep from late-fight to early: the cost after each other cast is carried along, so a step costs one short regen piece instead of a replay of the fight.
@@ -452,15 +497,15 @@ function timeForCost(t, i, want, maxT = TOTAL, accept, minT = 0){   // maxT: the
     if(err <= 0.012 && T >= minT && (!accept || accept(T))) hits.push([T, err]);
     if(err < bestErr && T >= minT){ bestErr = err; bestT = T; }   // the closest miss may not hop over the cast below (that made casts drift later on every re-render)
   }
-  if(!hits.length) return accept ? timeForCost(t, i, want, maxT, undefined, minT) : bestT;
+  if(!hits.length) return accept ? timeForCost0(t, i, want, maxT, undefined, minT) : bestT;
   hits.sort((a,b)=>Math.abs(a[0]-T0) - Math.abs(b[0]-T0));
   const near = hits.filter(h=>Math.abs(h[0]-hits[0][0]) <= 0.05).sort((a,b)=>a[1]-b[1]);
   return near[0][0];
 }
 // Earliest moment after `fromT` (going later in the fight) at which the team can afford `spend`.
 function firstAffordable(t, spend, fromT){
-  const sorted = castsExcept(t, -1);
-  for(let T = fromT; T >= 0; T = +(T - 0.01).toFixed(2)) if(costAt(t, -1, T, sorted) >= spend - 1e-9) return T;
+  const sorted = castsExcept(t, -1), win = allWindows(t, sorted.map(x => x.c)), sm = spendMap(t, sorted.map(x => x.c));
+  for(let T = fromT; T >= 0; T = +(T - 0.01).toFixed(2)) if(costAt(t, -1, T, sorted, sm, win) >= spend - 1e-9) return T;
   return Math.max(0, fromT);
 }
 // "Right after": a cast can be tied to the cast before it. It then sits where that cast's EX animation ends, and follows it when it moves.
@@ -497,12 +542,12 @@ function applyChains(t){
         // Right after = the first moment the team can pay for it. EX skills of different students can overlap their animations, so the animation length is not a gap.
         let nt = Math.max(0, +(p.t - 0.01).toFixed(2));
         // The Cost Over target may go up to 5 below zero while the buff runs, so such a cast needs only (cost - 5) held.
-        const others = castsExcept(t, idx), otherCasts = others.map(x => x.c), smo = spendMap(t, otherCasts);
+        const others = castsExcept(t, idx), otherCasts = others.map(x => x.c), smo = spendMap(t, otherCasts), winC = allWindows(t, otherCasts);
         // a cost reduction can only change the price at the few moments reductions are granted; without reduction givers in the team the price is fixed
         const anyRed = otherCasts.some(x => CRED[x.who]) || t.roster.some(id => CRED[id] && CRED[id].start); let need0 = anyRed ? null : spendAt(t, c, nt, otherCasts);
         const overOn = T => t.casts.some(x => x !== c && (x.target || t.carry) === c.who && SCHALE[x.who].buffs.some(b=>b.stat==='CostOverload')
                             && resolve(x).buffs.some(b=>b.stat==='CostOverload' && b.start>=T && b.end<T));
-        while(nt > 0){ const held = costAt(t, -1, nt, others, smo), need = need0 ?? spendAt(t, c, nt, otherCasts); if((held >= need - 1e-9 || (held + 5 >= need - 1e-9 && overOn(nt))) && !others.some(o => o.c.t === nt)) break; nt = +(nt - 0.01).toFixed(2); }   // never on the very instant of another cast (it would not count that cast's cost)
+        while(nt > 0){ const held = costAt(t, -1, nt, others, smo, winC), need = need0 ?? spendAt(t, c, nt, otherCasts); if((held >= need - 1e-9 || (held + 5 >= need - 1e-9 && overOn(nt))) && !others.some(o => o.c.t === nt)) break; nt = +(nt - 0.01).toFixed(2); }   // never on the very instant of another cast (it would not count that cast's cost)
         if(nt !== c.t){ c.t = nt; moved = true; }
       } else if(c.cb != null){
         const others = castsExcept(t, idx);
@@ -532,7 +577,8 @@ function allResolved(){
   return list;
 }
 
-function render(){
+function render(){ render0(); if(!gesture) baseline = snap(); updateUndoUI(); }
+function render0(){
   winCache.ok = false;
   { const t0 = team(); TOTAL = +(t0.limit ?? 180); BATTLE0 = TOTAL - 0.4; COST0 = TOTAL - 1.98; applyChains(t0); }
   const t = team(), list = allResolved(), px = pxs();
@@ -640,6 +686,7 @@ function render(){
     L.bs.forEach(it=> html += bars(it, L.top + PAD + (L.exRows + it.row)*(ROW+GAP)));
   });
   // cost lane: line chart of the team's cost (range -5 .. 10)
+  winOverride = allWindows(t, t.casts);
   {
     const lo = -5, hi = cm.cap, yy = c => costTop + 10 + (hi - c)/(hi - lo)*(CL - 20);
     const pts = [[COST0, cm.startCost]];
@@ -666,6 +713,7 @@ function render(){
       + [cm.cap,5,0,-5].map(v=>`<span style="top:${yy(v)-costTop-7}px">${v}</span>`).join('')
       + `</div></div><svg style="position:absolute;left:0;top:0;pointer-events:none" width="${w}" height="${costTop+CL}">${g}${refLine}<polyline points="${path}" fill="none" stroke="#7bd88f" stroke-width="2"/>${dots}</svg>`;
   }
+  winOverride = null;
   list.forEach(({c,i})=>{
     if(c.who!==t.carry) return;
     const L = laneOf(c.who); if(!L) return;
@@ -933,6 +981,22 @@ $('#uisize').value = localStorage.getItem(UIKEY) || '100%';
 const applyUI = () => { document.documentElement.style.zoom = (parseInt($('#uisize').value)/100); };
 $('#uisize').onchange = ()=>{ localStorage.setItem(UIKEY, $('#uisize').value); applyUI(); fitRot(); render(); };
 applyUI();
+// Undo / redo buttons and keys. Text boxes keep their own Ctrl+Z while you are typing in them.
+function updateUndoUI(){ const u = $('#undobtn'), r = $('#redobtn'); if(u){ u.disabled = !undoStack.length; r.disabled = !redoStack.length; } }
+function stepHistory(from, to){
+  if(!from.length) return;
+  to.push(baseline ?? snap()); state = JSON.parse(from.pop());
+  localStorage.setItem(KEY, JSON.stringify(state)); winCache.ok = false; render();
+}
+const doUndo = () => stepHistory(undoStack, redoStack), doRedo = () => stepHistory(redoStack, undoStack);
+$('#undobtn').onclick = doUndo; $('#redobtn').onclick = doRedo;
+document.addEventListener('keydown', e => {
+  if(!(e.ctrlKey || e.metaKey) || e.altKey || (e.target.closest ? e.target : document.body).closest('input:not([type=checkbox]):not([type=range]),textarea,select')) return;
+  const k = e.key.toLowerCase();
+  if(k === 'z' && !e.shiftKey){ e.preventDefault(); doUndo(); } else if(k === 'y' || (k === 'z' && e.shiftKey)){ e.preventDefault(); doRedo(); }
+});
+document.addEventListener('mousedown', () => { gesture = true; }, true);
+document.addEventListener('mouseup', () => setTimeout(() => { gesture = false; baseline = snap(); updateUndoUI(); }, 0), true);
 // Sidebar switch, its width (drag the edge) and the open tab are remembered in this browser, not in the teams.
 const SBKEY = 'ba-ui-sidebar', SBW = 'ba-ui-sbw', SBTAB = 'ba-ui-sbtab';
 let sbOn = localStorage.getItem(SBKEY) !== 'off', sbTab = localStorage.getItem(SBTAB) || 'rotcard';
