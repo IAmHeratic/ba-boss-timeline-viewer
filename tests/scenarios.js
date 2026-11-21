@@ -111,4 +111,12 @@ t = team(['Ui', 'Mika', 'Aru']); { const u = cast(t, 'Ui', 170); u.target = id('
   eq('a time inside the animation is flagged busy', E.ownBusy(t, { who: id('Neru (School)') }, n1.t - dur/2) !== null, true); }
 
 
+// Lock: a locked row is never moved by the planner
+{ t = team(['Mika', 'Aru', 'Kokona']); const a = cast(t, 'Mika', 170); a.cb = 6; const b = cast(t, 'Aru', 160); b.cb = 3;
+  E.applyChains(t); const tb = b.t, ta = a.t; b.lock = true; t.startCost = 5; E.applyChains(t);
+  eq('locked row stays put when the start cost changes', b.t, tb);
+  eq('an unlocked one is placed again', a.t !== ta, true);
+  delete b.lock; E.applyChains(t); eq('unlocking lets the planner place it again', b.t !== tb, true); }
+
+
 console.log(bad ? `\n${bad} scenario(s) failed` : '\nALL SCENARIOS PASS'); process.exit(bad ? 1 : 0);
