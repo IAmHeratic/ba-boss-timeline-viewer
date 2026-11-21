@@ -128,6 +128,7 @@ body.side .rotbar{top:0}
 .bosslane .lname{flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:0;font-size:15px;line-height:1.2;background-size:cover;background-position:right center;background-repeat:no-repeat;text-shadow:0 1px 3px #000}
 #evt input[type=number]{width:62px}
 .chain-on{background:var(--accent,#4a7fd4);color:#fff}
+.busy{border-color:var(--warn) !important;color:var(--warn) !important;background:#3a1d22 !important}
 .cost-bad input{color:var(--warn);border-color:var(--warn)}.cost-od input{color:#ff7de0;border-color:#ff7de0}
 .notg{border-color:var(--warn)}
 .redmk{position:absolute;z-index:6;height:20px;line-height:18px;padding:0 7px;border-radius:5px;background:#1f8f8a;border:1px solid #0008;color:#fff;font-size:12px;font-weight:700;cursor:grab;white-space:nowrap}
@@ -568,10 +569,19 @@ function timeForCost0(t, i, want, maxT = TOTAL, accept, minT = 0){   // maxT: th
   return near[0][0];
 }
 // Earliest moment after `fromT` (going later in the fight) at which the team can afford `spend`.
+// A student cannot cast while her own EX animation is still playing (her card is greyed out): if T falls inside the animation of an earlier cast of the same student,
+// this returns the moment that animation ends (the earliest she can cast again), else null.
+const animDur = (t, c) => { const fm = formOfCast(t, c); return ((fm ? fm.frames : SCHALE[c.who].frames) || 0)/FPS; };
+const floor2 = x => Math.floor(x*100 + 1e-6)/100;
+function ownBusy(t, c, T){
+  let end = null;
+  for(const o of t.casts){ if(o === c || o.who !== c.who || !(o.t > T + 1e-6)) continue; const e = o.t - animDur(t, o); if(e < T - 1e-6) end = end === null ? e : Math.min(end, e); }
+  return end;   // callers re-check after moving to this moment, in case another earlier cast of hers covers it too
+}
 function firstAffordable(t, spend, fromT, who){   // who: the price may change with the moment (cost reductions), so it is looked up per moment
   const sorted = castsExcept(t, -1), win = allWindows(t, sorted.map(x => x.c)), sm = spendMap(t, sorted.map(x => x.c));
   const oc = sorted.map(x => x.c), redPlay = who != null && ((t.reds && t.reds.length) || oc.some(x => CRED[x.who]) || t.roster.some(id => CRED[id] && CRED[id].start));
-  for(let T = fromT; T >= 0; T = +(T - 0.01).toFixed(2)) if(costAt(t, -1, T, sorted, sm, win) >= (redPlay ? spendAt(t, {who}, T, oc) : spend) - 1e-9) return T;
+  for(let T = fromT; T >= 0; T = +(T - 0.01).toFixed(2)){ const bz = who != null ? ownBusy(t, {who}, T) : null; if(bz !== null){ T = +(floor2(bz) + 0.01).toFixed(2); continue; } if(costAt(t, -1, T, sorted, sm, win) >= (redPlay ? spendAt(t, {who}, T, oc) : spend) - 1e-9) return T; }
   return Math.max(0, fromT);
 }
 // "Right after": a cast can be tied to the cast before it. It then sits where that cast's EX animation ends, and follows it when it moves.
@@ -613,20 +623,22 @@ function applyChains(t){
         const anyRed = otherCasts.some(x => CRED[x.who]) || t.roster.some(id => CRED[id] && CRED[id].start); let need0 = anyRed ? null : spendAt(t, c, nt, otherCasts);
         const overOn = T => t.casts.some(x => x !== c && x.target === c.who && SCHALE[x.who].buffs.some(b=>b.stat==='CostOverload')
                             && resolve(x).buffs.some(b=>b.stat==='CostOverload' && b.start>=T && b.end<T));
-        while(nt > 0){ const held = costAt(t, -1, nt, others, smo, winC), need = need0 ?? spendAt(t, c, nt, otherCasts); if((held >= need - 1e-9 || (held + 5 >= need - 1e-9 && overOn(nt))) && !others.some(o => o.c.t === nt)) break; nt = +(nt - 0.01).toFixed(2); }   // never on the very instant of another cast (it would not count that cast's cost)
+        while(nt > 0){ const bz = ownBusy(t, c, nt); if(bz !== null){ nt = Math.max(0, floor2(bz)); continue; }   // still in her own EX animation: wait for it to end
+          const held = costAt(t, -1, nt, others, smo, winC), need = need0 ?? spendAt(t, c, nt, otherCasts); if((held >= need - 1e-9 || (held + 5 >= need - 1e-9 && overOn(nt))) && !others.some(o => o.c.t === nt)) break; nt = +(nt - 0.01).toFixed(2); }   // never on the very instant of another cast (it would not count that cast's cost)
         if(nt !== c.t){ c.t = nt; moved = true; }
       } else if(c.cb != null){
         const others = castsExcept(t, idx);
-        const sig = JSON.stringify([c.cb, c.cost ?? null, spendOf(t, c), c.who, +(t.regen ?? regenInfo(t).auto), capOf(t), COST0, +(t.startCost ?? 0), regenWindows(t).map(w=>[w.a, w.b, w.extra]), others.map(o=>[o.c.t, spendOf(t, o.c), o.c.who, o.c.target ?? null]), tset(t).ue, tset(t).ext, tset(t).lv]);   // everything the Cost Over window depends on too
+        const sig = JSON.stringify([c.cb, c.cost ?? null, spendOf(t, c), c.who, +(t.regen ?? regenInfo(t).auto), capOf(t), COST0, +(t.startCost ?? 0), regenWindows(t).map(w=>[w.a, w.b, w.extra]), others.map(o=>[o.c.t, spendOf(t, o.c), o.c.who, o.c.target ?? null, o.c.who === c.who ? animDur(t, o.c) : 0]), tset(t).ue, tset(t).ext, tset(t).lv]);   // everything the Cost Over window depends on too
         const own = JSON.stringify([c.cb, c.cost ?? null, spendOf(t, c), c.who, +(t.regen ?? regenInfo(t).auto), capOf(t), COST0, +(t.startCost ?? 0), regenWindows(t).map(w=>[w.a, w.b, w.extra]), tset(t).ue, tset(t).ext, tset(t).lv]), ownSame = cbOwn.get(c) === own; cbOwn.set(c, own);
         if(trust && !cbSig.has(c)){ cbSig.set(c, sig); cbOwn.set(c, own); return; }   // a cast loaded as it was saved: leave it where it is
         if(cbSig.get(c) !== sig){ cbSig.set(c, sig); const spendC = spendOf(t, c);
           // Already sitting where it sees the planned cost: leave it. (Searching again could pick another moment with the same cost and hop over the casts below it, which made tightly packed casts creep later on every re-render.)
-          if(Math.abs(costAt(t, idx, c.t, others) - Math.min(c.cb, capOf(t))) <= 0.012 && (c.cb >= spendC || overOnFor(t, c, c.t))) return;
+          if(Math.abs(costAt(t, idx, c.t, others) - Math.min(c.cb, capOf(t))) <= 0.012 && (c.cb >= spendC || overOnFor(t, c, c.t)) && ownBusy(t, c, c.t) === null) return;
           // With cost reductions around the price depends on the moment: only moments where the cost seen is enough for the price at that moment count.
           const oc = others.map(x => x.c), redPlay = (t.reds && t.reds.length) || oc.some(x => CRED[x.who]) || t.roster.some(id => CRED[id] && CRED[id].start);
           const acc = (c.cb < spendC || redPlay) ? T => { const X = Math.min(c.cb, capOf(t)), sp = redPlay ? spendAt(t, c, T, oc) : spendC; return X >= sp - 0.012 || (X + 5 >= sp - 0.012 && overOnFor(t, c, T)); } : undefined;
-          const nt = timeForCost(t, idx, c.cb, k ? byTime[k-1].t - 0.01 : TOTAL, acc, ownSame && k + 1 < byTime.length ? byTime[k+1].t : 0); if(nt !== c.t){ c.t = nt; moved = true; } }
+          const accB = T => ownBusy(t, c, T) === null, accF = acc ? (T => accB(T) && acc(T)) : accB;
+          const nt = timeForCost(t, idx, c.cb, k ? byTime[k-1].t - 0.01 : TOTAL, accF, ownSame && k + 1 < byTime.length ? byTime[k+1].t : 0); if(nt !== c.t){ c.t = nt; moved = true; } }
       }
     });
     if(!moved) break;
@@ -857,6 +869,7 @@ Drag to move it; change or remove it in the Rotation tab.`;
   const order = [...t.casts.keys()].sort((a,b)=>t.casts[b].t-t.casts[a].t);
   order.forEach((i,n)=>{
     const c = t.casts[i], ce = costOf[i];
+    const busy = ownBusy(t, c, c.t);   // her own earlier EX is still playing
     const cls = ce && !ce.ok ? 'cost-bad' : (ce && ce.overload ? 'cost-od' : '');
     const tip = ce ? `Cost ${ce.before.toFixed(1)} -> ${ce.after.toFixed(1)} (spend ${ce.spend})${!ce.ok ? ' - NOT ENOUGH COST' : (ce.overload ? ' - paid with Cost Over' : '')}. Type the cost you want before this cast and the time moves to match. Up/Down: +-1 (Shift: 0.1)` : '';
     rt += `<tr data-row="${i}" class="${hlRow === cid(c) ? 'hl' : ''}"><td>${n+1}</td>
@@ -865,7 +878,7 @@ Drag to move it; change or remove it in the Rotation tab.`;
       <td><select data-w="${i}">${t.roster.map(id=>`<option value="${id}" ${id==c.who?'selected':''}>${sname(id)}</option>`).join('')}</select></td>
       <td>${targetsAlly(c.who) ? `<select data-tg="${i}" class="${c.target ? '' : 'notg'}" title="${c.target ? '' : 'Pick who this EX targets: its buff or cost reduction only counts once a target is picked.'}"><option value="">(pick target)</option>${t.roster.filter(id=>id!==c.who).map(id=>`<option value="${id}" ${c.target==id?'selected':''}>${sname(id)}</option>`).join('')}</select>` : ''}</td>
       <td>${SCHALE[c.who].forms && SCHALE[c.who].forms.length ? `<select data-form="${i}" style="max-width:118px" title="This student has more than one EX skill. Auto follows the usual order (e.g. Ibuki Swimsuit: first use, then the second EX); pick one for target-dependent ones.">${(() => { const fi = formIdx(t, c), ds = SCHALE[c.who], nm = f => f === null ? 'Normal' : ds.forms[f].name; return `<option value="" ${c.form === undefined ? 'selected' : ''}>Auto: ${nm(fi)}</option><option value="main" ${c.form === null ? 'selected' : ''}>Normal</option>` + ds.forms.map((f, k) => `<option value="${k}" ${c.form === k ? 'selected' : ''}>${f.name}</option>`).join(''); })()}</select><br>` : ''}<input type="number" step="1" min="0" style="width:58px" class="${c.cost!=null?'ovr':''}" data-cost="${i}" value="${c.cost ?? ''}" placeholder="${spendOf(t, c)}" title="Cost this EX spends: ${spendOf(t, c)}${c.cost!=null ? ' (set by hand)' : ''}. Blank = the skill's own cost at its EX level. Type a number to override, e.g. for Kokona's stamp reduction."></td>
-      <td><input type="text" style="width:140px" value="${c.tag||''}" data-g="${i}"></td><td style="white-space:nowrap"><input type="text" class="${timed(c) ? 'ovr' : ''}" value="${fmt2(c.t)}" data-t="${i}" title="${timed(c) ? 'A time you set (orange). Clear the box to let the cost place this cast again.' : 'Where the cost (or the chain) puts this cast. Type a time, for example 2:30.866, to pin it.'}"></td>
+      <td><input type="text" style="width:140px" value="${c.tag||''}" data-g="${i}"></td><td style="white-space:nowrap"><input type="text" class="${timed(c) ? 'ovr' : ''}${busy !== null ? ' busy' : ''}" value="${fmt2(c.t)}" data-t="${i}" title="${busy !== null ? 'Her own EX animation is still playing: in the game this card is greyed out until ' + fmt2(busy) + '. ' : ''}${timed(c) ? 'A time you set (orange). Clear the box to let the cost place this cast again.' : 'Where the cost (or the chain) puts this cast. Type a time, for example 2:30.866, to pin it.'}"></td>
       <td><button class="btn" data-x="${i}">✕</button></td></tr>`;
   });
   const keepScroll = $('#rotbox').scrollTop;

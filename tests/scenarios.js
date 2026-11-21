@@ -103,4 +103,12 @@ t = team(['Ui', 'Mika', 'Aru']); { const u = cast(t, 'Ui', 170); u.target = id('
   eq('no buff label shows a raw stat name', [...new Set(raw)], []); }
 
 
+// A student cannot cast again while her own EX animation is still playing
+{ t = team(['Neru (School)', 'Mika', 'Aru']); t.startCost = 10; const n1 = cast(t, 'Neru (School)', 170); n1.t = 179; n1.cb = 10; const n2 = cast(t, 'Neru (School)', 169.9); n2.after = E.cid(n1);
+  E.applyChains(t); const dur = E.animDur(t, n1);
+  eq('chained right after her own EX: waits until the animation ends', n2.t <= +(n1.t - dur).toFixed(2) + 1e-9 && n2.t > n1.t - dur - 1.5, true);
+  eq('and is not flagged as busy there', E.ownBusy(t, n2, n2.t), null);
+  eq('a time inside the animation is flagged busy', E.ownBusy(t, { who: id('Neru (School)') }, n1.t - dur/2) !== null, true); }
+
+
 console.log(bad ? `\n${bad} scenario(s) failed` : '\nALL SCENARIOS PASS'); process.exit(bad ? 1 : 0);
