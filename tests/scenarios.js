@@ -194,4 +194,16 @@ t = team(['Ui', 'Mika', 'Aru']); { const u = cast(t, 'Ui', 170); u.target = id('
   const ev = E.costModel(t, E.allResolved()).ev; eq('and nothing is flagged as not enough cost', ev.every(e => e.ok), true); }
 
 
+// Green Relic heals: numbered in time order, the fifth makes the relic leave
+{ const ev = {ent: 'Green Relic', t: 240, heals: [{t: 100, d: 20}, {t: 220}, {t: 200}, {t: 180}, {t: 160}, {t: 140}]};
+  eq('heals are sorted in time order and capped at 5', E.relicHeals(ev).map(h => h.t), [220, 200, 180, 160, 140]);
+  eq('the relic stays for 100 s (until its 5th heal at 140) when nothing else ends it', E.entLife(ev), 100);
+  eq('an earlier leave time wins', E.entLife({...ev, dur: 60}), 60);
+  eq('with fewer than 5 heals the relic stays to the end', E.entLife({ent: 'Green Relic', t: 240, heals: [{t: 200}]}), 0);
+  { const t2 = team(['Serina', 'Aru']); const c1 = cast(t2, 'Serina', 230), c2 = cast(t2, 'Aru', 225); const ev2 = {id: 'r1', ent: 'Green Relic', t: 240}; c1.hit = 'r1'; c2.hit = 'r1';
+    eq('a heal aimed at the relic from the Rotation table counts as a heal; a non-healer does not', E.relicHeals(ev2, t2.casts).map(h => h.t), [230]);
+    eq('Serina can heal a relic, Aru cannot', [E.healsRelic(id('Serina')), E.healsRelic(id('Aru'))], [true, false]); }
+  eq('other things are unaffected', E.entLife({ent: 'Erosion Tower', t: 200, dur: 30}), 30); }
+
+
 console.log(bad ? `\n${bad} scenario(s) failed` : '\nALL SCENARIOS PASS'); process.exit(bad ? 1 : 0);

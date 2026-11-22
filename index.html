@@ -116,7 +116,7 @@ body.side .rotbar{top:0}
 .cost-bad{color:var(--warn);font-weight:700}.cost-od{color:#ff7de0;font-weight:700}
 .ovr{border-color:#ffd54a !important;color:#ffd54a}
 .evpill{position:absolute;height:26px;line-height:26px;padding:0 8px;border-radius:5px;font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:grab;color:#fff;border:1px solid #0008;z-index:4}
-.evpill.entity{background:#1f8f8acc}.evpill.groggy{background:#c0392bcc}.evpill.skill{background:#8e5bd6cc}.evpill.phase{background:#2f7fb8cc}.evpill.note{background:#6b7a99cc}
+.cap{display:block;color:var(--dim);font-size:10.5px;line-height:1.1;margin-top:1px}.evpill.heal{background:repeating-linear-gradient(135deg,#2e9e5acc,#2e9e5acc 6px,#2e9e5a88 6px,#2e9e5a88 12px);cursor:default}.evpill.entity{background:#1f8f8acc}.evpill.groggy{background:#c0392bcc}.evpill.skill{background:#8e5bd6cc}.evpill.phase{background:#2f7fb8cc}.evpill.note{background:#6b7a99cc}
 .evpill.cancel{text-decoration:line-through;opacity:.75}
 .evline{position:absolute;border-left:2px solid;pointer-events:none;z-index:3}
 .evline.groggy{border-color:#ff6b5e}.evline.skill{border-color:#b98cff;border-left-style:dashed}.evline.phase{border-color:#5dade2;border-left-style:dotted}.evline.note{border-color:#8fa0c0;border-left-style:dotted}
@@ -259,7 +259,7 @@ header .btn,header select{padding:4px 12px}
   </div>
   </aside>
 </main>
-<script src="data.js?v=6"></script>
+<script src="data.js?v=10"></script>
 <script src="bosses.js?v=4"></script>
 <script src="rotations.js"></script>
 <script>
@@ -275,11 +275,12 @@ const UELEVELS = [0, 30, 40, 50, 60];
 // Who an EX can be aimed at: Strikers only (Specials are not on the field), except the Specials that put something on the field themselves: Himari (Armed) on her wheelchair, Reisa (Magical)'s summon.
 const FIELD_SPECIALS = new Set([20054, 20051]);
 const allyTargetable = id => SCHALE[id].squad === 'Main' || FIELD_SPECIALS.has(id);
+const healsRelic = id => !!SCHALE[id].exHeal;   // her EX heals someone, so it can be aimed at a relic that is healed
 const aimsAtEnemy = id => SCHALE[id].exTarget === 'enemy' && !targetsAlly(id);   // a student aims her EX at an ally or at an enemy, not both
 const targetsAlly = id => SCHALE[id].buffs.some(b => b.target === 'AllyMain') || /one ally|an ally|target ally|designated ally/i.test(SCHALE[id].desc);
 // The old 'carry' star is gone: a team that had one gets it written into the casts that needed a target.
 function dropCarry(t){
-  if(t.carry){ t.casts.forEach(c => { if(c.target == null && c.who !== t.carry && targetsAlly(c.who)) c.target = t.carry; }); }
+  if(t.carry){ t.casts.forEach(c => { if(c.target == null && !c.hit && c.who !== t.carry && targetsAlly(c.who)) c.target = t.carry; }); }
   delete t.carry;
 }
 const tset = t => (t.set = t.set || {lv:{}, ext:{}, ue:{}, wait:{}});
@@ -361,6 +362,8 @@ const UI = () => parseInt($('#uisize').value)/100;     // page zoom: mouse coord
 const LVDEF = {ex:5, basic:10, sub:10};                    // skill levels per student (EX 1-5, Basic 1-10, Sub 1-10)
 const levelOf = id => Object.assign({}, LVDEF, tset(team()).lv[id]);
 const pickv = (vals, level) => vals[Math.min(level, vals.length) - 1];
+// A skill's full description at the student's skill level: the data keeps {1}, {2} where the numbers go (one array per number, indexed by level)
+const skillText = (desc, params, level) => String(desc || '').replace(/\{(\d+)\}/g, (m, n) => { const a = params && params[n - 1]; return a && a.length ? pickv(a, level) : m; });
 // Cost regeneration per second from the units: every student has a Cost Recovery stat (700 for all of them in SchaleDB) and one
 // cost point is 10,000, so the squad fills (sum of stats)/10,000 cost per second; cost-recovery Sub Skills (Kisaki, Himari (Armed), ...)
 // multiply that. Checked in four mock-battle runs (bar scaled by each team's max cost): 0.4185 / 0.4184 without a booster (formula 0.420)
@@ -433,6 +436,9 @@ const ENTITY = {
   'Erosion Tower': {action:'attack', regen:-350, area:true, tip:'Allies standing in its erosion area lose 350 Cost Recovery each. Placing it costs your team nothing until you say when the team is inside its area (the from / to boxes in the table); the area grows every 15 s, which is not modelled. Destroying it cuts Hod’s ATG gauge by 50% and fills 25% of its groggy gauge.'},
   'Blue Lantern': {action:'attack', kill:{half:true, gain:0.6}, tip:'Destroying it halves (rounded down) the destroyer’s next EX cost and gives the team 0.6 cost per student in the unit. Two lanterns destroyed by one ally within 2 s lock Cost Recovery for 50 s (JP) or stun the team (Global): not modelled.'},
   'Red Lantern': {action:'attack', kill:{half:true, gain:0.6}, tip:'Destroying it halves (rounded down) the destroyer’s next EX cost and gives the team 0.6 cost per student in the unit. Two lanterns destroyed by one ally within 2 s lock Cost Recovery for 50 s (JP) or stun the team (Global): not modelled.'},
+  'Green Relic': {action:'heal', heals:{max:5, bonus:55, debuff:20}, tip:'Holy Light: heal it to 100% and Hieronymus takes 55% more damage (stacks up to 5 times, then the relic leaves). Add each heal with + Heal: the bar after it shows how long the relic carries its healing debuff (20 s, checked in game; editable).'},
+  'Violet Relic': {action:'attack', tip:'Ominous Light: bring it to 0 HP and your Strikers gain ATK +25% (Torment and up also damage) while Hieronymus loses DEF. It has no Cost Recovery effect.'},
+  'Red Relic': {action:'heal', tip:'Holy Light (red). Normal to Extreme: healing it to 100% interrupts Hieronymus’s current skill and fills his groggy gauge, and gives 4 students +2500 Cost Recovery for 1 s. Lunatic: appears after 9,000,000 total damage; each heal gives 5 charges of Cost Recovery, and a 5 s groggy only if his ATG skill is in use. Cost effects not modelled yet.'},
   'Left Pillar': {action:'none', regen:-400, area:true, inDefault:true, defDur:10, tip:'Pillar of Power: immortal, cannot be attacked. When it is at full HP it hits the team and lowers their Cost Recovery by 400 for 10 s (that pulse is what this marker is).'},
   'Right Pillar': {action:'attack', tip:'Pillar of Foundation: destroying it makes Yesod’s Right Hand take 1000% more damage (stacks twice).'}
 };
@@ -440,6 +446,11 @@ const ENTITY = {
 // 700 contribution). Unless the boss event says otherwise (the student toggles in its row), every Striker counts.
 // The spans of time Strikers stand inside an area effect: ev.spans = [{f: from clock, to: to clock, in: [student ids]}]. (Older saves kept one span as inFrom / inTo / inside.)
 const spansOf = ev => Array.isArray(ev.spans) ? ev.spans : ((ev.inFrom != null || ev.inTo != null) ? [{f: ev.inFrom, to: ev.inTo, in: ev.inside}] : []);
+// A relic that is healed (Green Relic): ev.heals = [{t: clock of the heal, d: seconds its healing debuff lasts}]. They are numbered in time order; stack 5 is the last one: the relic leaves then.
+const relicHeals = (ev, casts) => { const def = ENTITY[ev.ent], mx = def && def.heals ? def.heals.max : 0; if(!mx) return [];
+  const own = Array.isArray(ev.heals) ? ev.heals : [], fromCasts = (casts || []).filter(c => c.hit === ev.id && healsRelic(c.who) && c.t <= ev.t + 1e-6).map(c => ({t:+(c.t - (SCHALE[c.who].exHealFrame || 0)/FPS).toFixed(3), d:def.heals.debuff, cast:c.who}));   // casts aimed at it count as heals too
+  return own.concat(fromCasts).sort((a, b) => b.t - a.t).slice(0, mx); };
+const entLife = (ev, casts) => { const def = ENTITY[ev.ent], hs = relicHeals(ev, casts), full = def && def.heals && hs.length >= def.heals.max ? ev.t - hs[hs.length - 1].t : 0, own = ev.dur > 0 ? ev.dur : 0; return full && own ? Math.min(full, own) : (full || own); };   // seconds it stays on the field (0 = to the end)
 const insideIds = (t, ev) => { const strikers = t.roster.filter(id => SCHALE[id].squad === 'Main'); const list = Array.isArray(ev.in) ? ev.in : ev.inside; return Array.isArray(list) ? strikers.filter(id => list.includes(id)) : strikers; };
 // An entity a cast aims at (the "Hit" box in the Rotation table) is destroyed by the LAST such cast while it is alive: that cast's student is who destroyed it, and the clock
 // moment (a hair before the cast, so that cast itself still pays the old price) is when the destroyer's reduction and the team's cost gain happen.
@@ -486,8 +497,7 @@ function regenAdv(t, cost, a, b, rate, CAP){
   return cost;
 }
 // Cost Recovery the casts give the team for a while: the EX of Azusa Racing / Seia / Kisaki Swimsuit (own Cost Recovery up for 5-25 s), and passives that start after an EX
-// (Hifumi, Reijo: 5 s; Suzumi Magical: 35 s; Yukari Swimsuit: every 2nd EX, 10 s; Noa Pajamas: after the 2nd EX of 3, 30 s, at her Basic level). Not modelled: Hoshino Swimsuit
-// (while her EX lasts), Miyako Swimsuit (every 50 dodges), Kurumi (conditions). A +X on one student adds X/10000 to the team's cost per second.
+// (Hifumi, Reijo: 5 s; Suzumi Magical: 35 s; Yukari Swimsuit: every 2nd EX, 10 s; Noa Pajamas: after the 2nd EX of 3, 30 s, at her Basic level). Not modelled: Miyako Swimsuit (every 50 dodges), Kurumi (conditions). A +X on one student adds X/10000 to the team's cost per second.
 const TIMED_REGEN = {10003:{}, 10104:{}, 10129:{}, 10121:{every:2}, 10109:{every:3, at:2, lvl:'basic'}, 10045:{ms:50000}, 10140:{fx:1, arr:1}};   // Hoshino Swimsuit: as long as her 50 s EX lasts; Kurumi: while her shield is up (10 s, assumed unbroken)
 function castWindows(t, casts){
   const boost = regenInfo(t).boost, w = [], ord = {};
@@ -768,7 +778,7 @@ function render0(){
     const costLine = ce ? `\nCost ${ce.before.toFixed(1)} → ${ce.after.toFixed(1)} (spend ${ce.spend})${ce.ok ? (ce.overload?' [Cost Overload]':'') : ' NOT ENOUGH COST'}` : '';
     L.ex.push({i, lock:!!c.lock, start:c.t, landing, animEnd, end, effect:bf.length>0, est:!!t.estimated, waste:waste.length>0, color: bf.length ? palette(bf[0].stat) : '#7f8fb0', atk: bf.length ? null : ATKCOL[d.bullet] || null,
       text: bf.length ? bf.map(b=>b.label+pctText(b)).join(' + ') : exN,
-      title: `${exN}\nCast @ ${fmt(c.t)}\n${lines.join('\n')}${bf.length?'\n':''}Cast animation ends ${fmt(animEnd)}${costLine}${waste.length?'\nWASTE: recast with '+waste[0].waste+'s left on the previous buff':''}`});
+      title: `EX: ${exN}\n${skillText(fmx && fmx.desc ? fmx.desc : d.desc, fmx && fmx.desc ? fmx.params : d.params, levelOf(c.who).ex)}\n\nCast @ ${fmt(c.t)}\n${lines.join('\n')}${bf.length?'\n':''}Cast animation ends ${fmt(animEnd)}${costLine}${waste.length?'\nWASTE: recast with '+waste[0].waste+'s left on the previous buff':''}`});
   });
   if(showBasic()) t.roster.forEach(id=>{
     const L = laneOf(id), d = SCHALE[id], p = d.public; if(!p) return;
@@ -781,7 +791,7 @@ function render0(){
       if(ev.cancelled){
         const cEnd = t0 - (eff.length ? Math.min(...eff.map(e=>e.apply))/FPS : 1);
         L.bs.push({start:t0, landing:cEnd, animEnd, end:cEnd, effect:false, est:true, cls:'cancelled', color:'transparent',
-          text:'&#10005; '+p.name+' (cancelled)', title:`${d.name} basic: ${p.name} @ ${fmt(t0)}\nCancelled by own EX: the effect never lands, the cooldown is still used. [${tag}]`});
+          text:'&#10005; '+p.name+' (cancelled)', title:`Basic: ${p.name}\n${skillText(p.desc, p.params, levelOf(id).basic)}\n\n${d.name} @ ${fmt(t0)}\nCancelled by own EX: the effect never lands, the cooldown is still used. [${tag}]`});
         continue;
       }
       const bl = levelOf(id).basic;
@@ -789,7 +799,7 @@ function render0(){
       const landing = eb.length ? Math.max(...eb.map(x=>x.s)) : animEnd, end = eb.length ? Math.min(...eb.map(x=>x.e)) : animEnd;
       L.bs.push({start:t0, landing, animEnd, end, effect:eb.length>0, est:!measured, color: eb.length ? (eb[0].type==='Shield' ? '#9aa7c7' : palette(eb[0].stat)) : '#7f8fb0',
         text: p.name + (eb.length ? ': '+eb.map(x=>x.label).join(' + ') : ''),
-        title: `${d.name} basic: ${p.name}\nStarts @ ${fmt(t0)}\n${eb.map(x=>`• ${x.label} (${x.who})\n    ${fmt(x.s)} → ${fmt(x.e)}  (${(x.s-x.e).toFixed(1)}s)`).join('\n')}${eb.length?'\n':''}Animation ends ${fmt(animEnd)} [${tag}]`});
+        title: `Basic: ${p.name}\n${skillText(p.desc, p.params, bl)}\n\n${d.name}\nStarts @ ${fmt(t0)}\n${eb.map(x=>`• ${x.label} (${x.who})\n    ${fmt(x.s)} → ${fmt(x.e)}  (${(x.s-x.e).toFixed(1)}s)`).join('\n')}${eb.length?'\n':''}Animation ends ${fmt(animEnd)} [${tag}]`});
     }
   });
   // stack overlapping uses of the same skill into extra rows
@@ -798,8 +808,11 @@ function render0(){
   const evs = evOf(t), bd = bossDiff(t), bb = bossOf(t);
   const EK = entKills(t, t.casts);
   const evItems = evs.map((e,k)=>{ const label = e.label || (e.type==='entity' ? (e.ent || 'Entity') : e.type==='groggy' ? 'Groggy' : e.type==='phase' ? 'Phase Change' : e.type==='skill' ? 'Boss skill' : 'Note');
-    const kl = e.type === 'entity' ? EK.find(z => z.ev === e) : null, dur = kl ? +(e.t - kl.at).toFixed(2) : +(e.dur || 0), wpx = Math.max(dur*px, Math.min(260, label.length*7.2 + 18));
+    const kl = e.type === 'entity' ? EK.find(z => z.ev === e) : null, dur = kl ? +(e.t - kl.at).toFixed(2) : +(e.type === 'entity' ? entLife(e, t.casts) : e.dur || 0), wpx = Math.max(dur*px, Math.min(260, label.length*7.2 + 18));
     return {k, e, label, dur, wpx, start:e.t, end:e.t - wpx/px}; });
+  evs.forEach((e, k) => { if(e.type !== 'entity') return; const def = ENTITY[e.ent]; if(!def || !def.heals) return;   // each heal of a relic: a bar as long as its healing debuff
+    relicHeals(e, t.casts).forEach((h, j, a) => { const d = +(h.d ?? def.heals.debuff), label = 'Heal ' + (j + 1) + '/' + def.heals.max + ': boss +' + (def.heals.bonus*(j + 1)) + '%', wpx = Math.max(d*px, Math.min(260, label.length*7.2 + 18)), nx = a[j + 1];
+      evItems.push({k:null, e:{type:'heal', t:h.t}, label, dur:d, wpx, start:h.t, end:h.t - wpx/px, heal:{n:j + 1, d, by:h.cast, name:e.label || e.ent, last:j + 1 === def.heals.max}}); }); });
   const BOSSL = (bb || evs.length) ? pack(evItems)*30 + 10 : 0;
   let y = HEAD + BOSSL;
   lanes.forEach(L=>{ L.exRows = pack(L.ex); L.bsRows = showBasic() ? pack(L.bs) : 0; });
@@ -823,6 +836,8 @@ function render0(){
     html += `<div class="lane bosslane" style="top:${HEAD}px;height:${BOSSL}px"><div class="lname"${bb ? ` style="background-image:linear-gradient(#141e2eb8,#141e2eb8),url(https://schaledb.com/images/raid/Boss_Portrait_${BOSS_DEV[bb.path] || bb.path}_Lobby.png)"` : ''}><b>${bb ? bb.name + (bd ? `<br><span class="bd">${bd.name}</span>` : '') : nm}</b></div></div>`;
     evItems.forEach(it=>{
       const e = it.e, x = X(e.t), full = y + 0;
+      if(it.heal){ const NL = '\n', tip = [it.heal.name + ': heal ' + it.label.slice(5), 'Healed at ' + fmt2(e.t) + (it.heal.by ? ' by ' + SCHALE[it.heal.by].name : ''), 'Its healing debuff lasts ' + (+it.heal.d.toFixed(2)) + ' s, until ' + fmt2(Math.max(0, e.t - it.heal.d)) + ': healing it again before then is weak'].concat(it.heal.last ? ['This is the last stack: the relic leaves'] : []).join(NL);
+        html += `<div class="evpill heal" data-tip="${tip.replace(/"/g,'&quot;')}" style="left:${x}px;top:${HEAD + 5 + it.row*30}px;width:${it.wpx}px">${it.label}</div>`; return; }
       if(e.type === 'phase' && it.dur > 0) html += `<div class="evband phase" title="Phase transition: no casting until it ends" style="left:${x}px;top:${HEAD}px;width:${it.dur*px}px;height:${full - HEAD}px"></div>`;
       if(e.type === 'groggy' && it.dur > 0) html += `<div class="evband" style="left:${x}px;top:${HEAD}px;width:${it.dur*px}px;height:${full - HEAD}px"></div>`;
       html += `<div class="evline ${e.type}" style="left:${x}px;top:${HEAD}px;height:${full - HEAD}px"></div>`;
@@ -954,7 +969,10 @@ function render0(){
       <td class="${cls}"><input type="number" step="1" min="-5" max="${capOf(t)}" data-cb="${i}" value="${ce ? (c.cb != null && Math.abs(ce.before - c.cb) <= 0.02 ? c.cb : +ce.before.toFixed(1)) : ''}" style="width:70px" title="${tip}"></td>
       <td style="text-align:center"><button class="btn ${c.after?'chain-on':''}" data-ch="${i}" ${n===0?'disabled':''} title="${c.after?'Tied to the cast above: it follows that cast and goes off the moment the team has the cost for it. Click to untie.':'Cast right after the cast above, the moment the team has the cost for it. Click again to untie.'}">&#9193;</button></td>
       <td><select data-w="${i}">${t.roster.map(id=>`<option value="${id}" ${id==c.who?'selected':''}>${sname(id)}</option>`).join('')}</select></td>
-      <td>${(() => { const ents = evOf(t).filter(e => e.type === 'entity' && ENTITY[e.ent] && ENTITY[e.ent].action === 'attack'); return ents.length && aimsAtEnemy(c.who) ? `<select data-hit="${i}" class="hit" title="Which thing on the field this EX is aimed at. The last EX aimed at one is the one that destroys it."><option value="">(boss)</option>${ents.map(e => `<option value="${e.id}" ${c.hit === e.id ? 'selected' : ''}>${String(e.label || e.ent).replace(/</g, '&lt;')} @ ${fmt(e.t)}</option>`).join('')}</select>` : ''; })()}${targetsAlly(c.who) ? `<select data-tg="${i}" class="${c.target ? '' : 'notg'}" title="${c.target ? '' : 'Pick who this EX targets: its buff or cost reduction only counts once a target is picked.'}"><option value="">(pick target)</option>${t.roster.filter(id=>id!==c.who && (allyTargetable(id) || c.target==id)).map(id=>`<option value="${id}" ${c.target==id?'selected':''}>${sname(id)}</option>`).join('')}</select>` : ''}</td>
+      <td>${(() => { const ents = evOf(t).filter(e => e.type === 'entity' && ENTITY[e.ent] && (ENTITY[e.ent].action === 'attack' && aimsAtEnemy(c.who) || ENTITY[e.ent].action === 'heal' && healsRelic(c.who))), nm = e => String(e.label || e.ent).replace(/</g, '&lt;') + ' @ ' + fmt(e.t);
+        if(targetsAlly(c.who)){ const picked = c.target || c.hit;   // one list: your allies, and (for a heal) the relics on the field
+          return `<select data-tg="${i}" class="${picked ? '' : 'notg'}" title="${picked ? '' : 'Pick who this EX targets: its buff or cost reduction only counts once a target is picked.'}"><option value="">(pick target)</option>${t.roster.filter(id=>id!==c.who && (allyTargetable(id) || c.target==id)).map(id=>`<option value="${id}" ${c.target==id && !c.hit ? 'selected' : ''}>${sname(id)}</option>`).join('')}${ents.length ? '<optgroup label="On the field">' + ents.map(e => `<option value="e:${e.id}" ${c.hit === e.id ? 'selected' : ''}>${nm(e)}</option>`).join('') + '</optgroup>' : ''}</select>`; }
+        return ents.length ? `<select data-hit="${i}" class="hit" title="Which thing on the field this EX is aimed at. The last attack aimed at one destroys it."><option value="">(boss)</option>${ents.map(e => `<option value="${e.id}" ${c.hit === e.id ? 'selected' : ''}>${nm(e)}</option>`).join('')}</select>` : ''; })()}</td>
       <td>${SCHALE[c.who].forms && SCHALE[c.who].forms.length ? `<select data-form="${i}" style="max-width:118px" title="This student has more than one EX skill. The box shows the one this cast really uses (they usually follow a set order, e.g. Ibuki Swimsuit: first use, then the second EX); pick another to set it yourself.">${(() => { const fi = formIdx(t, c), ds = SCHALE[c.who], nm = f => f === null ? 'Normal' : ds.forms[f].name; const cur = c.form === undefined ? fi : c.form;   // what it will really cast (the usual order unless you picked one)
           return `<option value="main" ${cur === null ? 'selected' : ''}>Normal</option>` + ds.forms.map((f, k) => `<option value="${k}" ${cur === k ? 'selected' : ''}>${f.name}</option>`).join(''); })()}</select><br>` : ''}<input type="number" step="1" min="0" style="width:58px" class="${c.cost!=null?'ovr':''}" data-cost="${i}" value="${c.cost ?? ''}" placeholder="${spendOf(t, c)}" title="Cost this EX spends: ${spendOf(t, c)}${c.cost!=null ? ' (set by hand)' : ''}. Blank = the skill's own cost at its EX level. Type a number to override, e.g. for Kokona's stamp reduction."></td>
       <td><input type="text" style="width:140px" value="${c.tag||''}" data-g="${i}"></td><td style="white-space:nowrap"><input type="text" class="${timed(c) ? 'ovr' : ''}${busy !== null ? ' busy' : ''}" value="${fmt2(c.t)}" data-t="${i}" title="${busy !== null ? 'Not castable here: her own EX animation, or a phase transition, is still going on. In the game this card is greyed out until ' + fmt2(busy) + '. ' : ''}${timed(c) ? 'A time you set (orange). Clear the box to let the cost place this cast again.' : 'Where the cost (or the chain) puts this cast. Type a time, for example 2:30.866, to pin it.'}"></td>
@@ -1018,8 +1036,8 @@ function render0(){
     };
   });
   ch2('[data-w]',e=>{ const c = t.casts[e.dataset.w]; c.who = +e.value; delete c.cost; delete c.form; });   // an EX-cost override belongs to the student it was set for
-  ch2('[data-hit]',e=>{ const c=t.casts[e.dataset.hit]; if(e.value==='') delete c.hit; else c.hit=e.value; });
-  ch2('[data-tg]',e=>{ const c=t.casts[e.dataset.tg]; if(e.value==='') delete c.target; else c.target=+e.value; });
+  ch2('[data-hit]',e=>{ const c=t.casts[e.dataset.hit]; if(e.value==='') delete c.hit; else { c.hit=e.value; if(targetsAlly(c.who)) delete c.target; } });   // aimed at a relic: no ally is its target
+  ch2('[data-tg]',e=>{ const c=t.casts[e.dataset.tg]; if(e.value.startsWith('e:')){ c.hit = e.value.slice(2); delete c.target; } else { delete c.hit; if(e.value==='') delete c.target; else c.target=+e.value; } });
   ch2('[data-g]',e=>t.casts[e.dataset.g].tag=e.value);
   ch2('[data-cost]',e=>setSpend(t.casts[e.dataset.cost], e.value));
   ch2('[data-form]',e=>setForm(t.casts[e.dataset.form], e.value));
@@ -1097,14 +1115,18 @@ ${esc(full)}"` : ''}>${esc(first)}${more ? ' <span class="mr">&hellip; click for
       return `<div class="zspan"><span style="white-space:nowrap"><input type="text" data-zf="${k}:${j}" value="${x.f != null ? fmt2(x.f) : ''}" placeholder="${def.inDefault ? 'whole pulse' : 'from the start'}" style="width:78px" title="Clock time these students step into its area"> &ndash; <input type="text" data-zt="${k}:${j}" value="${x.to != null ? fmt2(x.to) : ''}" placeholder="to the end" style="width:78px" title="Clock time they step out (blank = until the tower's Length runs out, or the end of the fight)"> <button type="button" class="btn" data-zx="${k}:${j}" title="Remove this span">&#10005;</button></span>`
         + `<div class="insiders" title="Who is standing inside it during this span: each Striker toggled on loses the Cost Recovery">${strikers.map(id => `<button type="button" class="btn inb ${on.includes(id) ? 'on' : ''}" data-zs="${k}:${j}:${id}" title="${SCHALE[id].name}: ${on.includes(id) ? 'inside the area' : 'outside the area'}"><img src="https://schaledb.com/images/student/icon/${id}.webp" onerror="this.style.visibility='hidden'" draggable="false"></button>`).join('')}</div></div>`; }).join('')
       + `<button type="button" class="btn" data-za="${k}" style="margin-top:4px" title="Add a time span in which Strikers stand inside its area">+ Add a time in the zone</button>`; };
-  let h = '<tr><th>#</th><th>Time</th><th>Type</th><th>Label</th><th title="How long the event lasts, in seconds. For something on the field (a tower): the clock time it is destroyed.">Length (s) / destroyed at</th><th>Boss skill</th><th title="For a boss skill: it never lands (e.g. interrupted by a groggy). For something on the field with an area (Erosion Tower, pillar pulse): the clock times your team is inside it. Empty = not inside (Erosion Tower) / the whole pulse (Pillar pulse).">Cancelled / team in area (from, to)</th><th></th></tr>';
+  const healCell = (e, k) => { const def = ENTITY[e.ent], hs = Array.isArray(e.heals) ? e.heals : [], mx = def.heals.max, srt = hs.map((x, j) => j).sort((a, b) => hs[b].t - hs[a].t), nc = relicHeals(e, t.casts).filter(x => x.cast).length;
+    return srt.map((j, n) => `<div class="zspan"><span style="white-space:nowrap${n >= mx ? ';opacity:.5' : ''}"><b>${n + 1}</b> <input type="text" data-hl="${k}:${j}" value="${fmt2(hs[j].t)}" style="width:78px" title="Clock time of this heal"> debuff <input type="number" step="any" min="0" data-hd="${k}:${j}" value="${hs[j].d ?? def.heals.debuff}" style="width:54px" title="Seconds the relic carries its healing debuff after this heal"> s <button type="button" class="btn" data-hx="${k}:${j}" title="Remove this heal">&#10005;</button></span>${n >= mx ? ' <small>after the last stack: ignored</small>' : ''}</div>`).join('')
+      + (nc ? `<div class="zspan"><small>${nc} heal${nc > 1 ? 's' : ''} come from the Rotation table (casts aimed at this relic)</small></div>` : '')
+      + `<button type="button" class="btn" data-ha="${k}" style="margin-top:4px" ${hs.length + nc >= mx ? 'disabled' : ''} title="Add a heal: each one stacks +${def.heals.bonus}% damage taken on the boss, up to ${mx}">+ Heal (${Math.min(hs.length + nc, mx)}/${mx})</button>`; };
+  let h = '<tr><th>#</th><th>Time</th><th>Type</th><th>Label</th><th title="How long the event lasts, in seconds. For something on the field: the clock time it leaves.">Length (s) / leaves at</th><th>Boss skill</th><th title="For a boss skill: it never lands (e.g. interrupted by a groggy). For something on the field with an area (Erosion Tower, pillar pulse): the clock times your team is inside it. Empty = not inside (Erosion Tower) / the whole pulse (Pillar pulse).">Cancelled / team in area (from, to)</th><th></th></tr>';
   order.forEach((k,n)=>{ const e = evs[k];
-    h += `<tr><td>${n+1}</td><td><input type="text" value="${fmt2(e.t)}" data-et="${k}"></td>
+    h += `<tr><td>${n+1}</td><td><input type="text" value="${fmt2(e.t)}" data-et="${k}" ${e.type==='entity' ? 'title="The clock time it appears on the field"' : ''}></td>
       <td><select data-ety="${k}">${Object.keys(EVNAME).map(x=>`<option value="${x}" ${e.type===x?'selected':''}>${EVNAME[x]}</option>`).join('')}</select></td>
       <td><input type="text" style="width:150px" value="${(e.label||'').replace(/"/g,'&quot;')}" data-elb="${k}" placeholder="${EVNAME[e.type]}"></td>
-      <td>${e.type==='entity' ? `<input type="text" style="width:104px" value="${e.dur > 0 ? fmt2(e.t - e.dur) : ''}" placeholder="until destroyed" data-eend="${k}" title="The clock time it is destroyed (blank = it lasts to the end of the fight). Towers have no fixed lifetime: type the moment it goes down.">` : `<input type="number" step="any" min="0" value="${e.dur ?? ''}" data-edu="${k}" ${e.type==='groggy' && bd && bd.enemies[0].groggyMs ? `placeholder="${bd.enemies[0].groggyMs/1000}"` : ''}>`}</td>
+      <td>${e.type==='entity' ? `<input type="text" style="width:104px" value="${e.dur > 0 ? fmt2(e.t - e.dur) : ''}" placeholder="${ENTITY[e.ent] && ENTITY[e.ent].heals ? 'after the 5th heal' : 'never'}" data-eend="${k}" title="The clock time it leaves the field: destroyed, or gone for good (blank = it stays to the end of the fight; a healed relic leaves after its last stack).">` : `<input type="number" step="any" min="0" value="${e.dur ?? ''}" data-edu="${k}" ${e.type==='groggy' && bd && bd.enemies[0].groggyMs ? `placeholder="${bd.enemies[0].groggyMs/1000}"` : ''}>`}</td>
       <td>${e.type==='skill' && bd ? `<select data-esk="${k}"><option value="">(none)</option>${bd.skills.filter(sk=>sk.type!=='Passive').map(sk=>`<option value="${sk.id}" ${e.skill===sk.id?'selected':''}>${sk.name}</option>`).join('')}</select>` : ''}</td>
-      <td>${e.type==='entity' && ENTITY[e.ent] && ENTITY[e.ent].area ? zoneCell(e, k) : ''}${e.type==='skill' ? `<input type="checkbox" data-eca="${k}" ${e.cancel?'checked':''} style="width:18px;height:18px">` : ''}</td>
+      <td>${e.type==='entity' && ENTITY[e.ent] && ENTITY[e.ent].area ? zoneCell(e, k) : ''}${e.type==='entity' && ENTITY[e.ent] && ENTITY[e.ent].heals ? healCell(e, k) : ''}${e.type==='skill' ? `<input type="checkbox" data-eca="${k}" ${e.cancel?'checked':''} style="width:18px;height:18px">` : ''}</td>
       <td style="white-space:nowrap"><button class="btn" data-edup="${k}" title="Duplicate">&#10064;</button> <button class="btn" data-edel="${k}" title="Delete">&#10005;</button></td></tr>`;
   });
   $('#evt').innerHTML = h;
@@ -1133,6 +1155,12 @@ ${esc(full)}"` : ''}>${esc(first)}${more ? ' <span class="mr">&hellip; click for
   document.querySelectorAll('[data-zs]').forEach(el => el.onclick = () => upd(() => { const [k, j, sid] = el.dataset.zs.split(':').map(Number), x = spansFor(evs[k])[j], cur = insideIds(t, x).slice(), i = cur.indexOf(sid); if(i >= 0) cur.splice(i, 1); else cur.push(sid); x.in = cur; }));
   document.querySelectorAll('[data-zx]').forEach(el => el.onclick = () => upd(() => { const [k, j] = el.dataset.zx.split(':').map(Number); spansFor(evs[k]).splice(j, 1); }));
   document.querySelectorAll('[data-za]').forEach(el => el.onclick = () => upd(() => { const e = evs[+el.dataset.za]; spansFor(e).push({}); }));
+  const healAt = el => { const [k, j] = el.dataset[Object.keys(el.dataset)[0]].split(':').map(Number); return evs[k].heals[j]; };
+  document.querySelectorAll('[data-hl]').forEach(el => el.onchange = () => upd(() => { const v = parse(el.value); if(v >= 0 && v <= TOTAL) healAt(el).t = +v.toFixed(3); }));
+  document.querySelectorAll('[data-hd]').forEach(el => el.onchange = () => upd(() => { const v = +el.value; if(v >= 0) healAt(el).d = v; }));
+  document.querySelectorAll('[data-hx]').forEach(el => el.onclick = () => upd(() => { const [k, j] = el.dataset.hx.split(':').map(Number); evs[k].heals.splice(j, 1); }));
+  document.querySelectorAll('[data-ha]').forEach(el => el.onclick = () => upd(() => { const e = evs[+el.dataset.ha], def = ENTITY[e.ent], rh = relicHeals(e, t.casts), last = rh[rh.length - 1]; if(!Array.isArray(e.heals)) e.heals = [];   // the first heal soon after it appears; the next when the last one's debuff ends
+    e.heals.push({t:+Math.max(0, last ? last.t - (last.d ?? def.heals.debuff) : e.t - 5).toFixed(3), d:def.heals.debuff}); }));
   document.querySelectorAll('[data-addsk]').forEach(btn=>btn.onclick = ()=>upd(()=>{
     const es = evOf(t), sk = bd.skills.find(x=>x.id===btn.dataset.addsk), tt = es.length ? Math.max(0, Math.min(...es.map(x=>x.t)) - 10) : Math.max(0, TOTAL - 60);
     es.push({id:rid(), type:'skill', t:+tt.toFixed(2), skill:sk.id, label:sk.name});
