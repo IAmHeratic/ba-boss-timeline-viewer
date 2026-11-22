@@ -121,6 +121,7 @@ body.side .rotbar{top:0}
 .evline{position:absolute;border-left:2px solid;pointer-events:none;z-index:3}
 .evline.groggy{border-color:#ff6b5e}.evline.skill{border-color:#b98cff;border-left-style:dashed}.evline.phase{border-color:#5dade2;border-left-style:dotted}.evline.note{border-color:#8fa0c0;border-left-style:dotted}
 .tbadge{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px 0 0;border-radius:6px;overflow:hidden;font-size:12.5px;font-weight:700;color:#fff;border:1px solid #0004}
+.stu .types{display:flex;gap:6px;margin:3px 0 2px}.stu .tbadge{height:20px;font-size:11px;padding-right:8px}.stu .tbadge i{font-size:9px;padding:0 6px}
 .tbadge i{font-style:normal;font-size:10px;letter-spacing:.06em;height:100%;display:flex;align-items:center;padding:0 7px;background:#0005;color:#ffffffcc}
 .chip{display:inline-block;padding:3px 9px;border-radius:6px;background:#2a3348;border:1px solid var(--line);font-size:12.5px;color:var(--dim)}.chip b{color:var(--text)}
 .terr{display:inline-block;width:26px;height:26px;vertical-align:middle;background:#5a6a8a;border-radius:6px;padding:2px;box-sizing:border-box}
@@ -240,7 +241,9 @@ header .btn,header select{padding:4px 12px}
     <div class="rowhead"><b>Strikers <span id="nstr"></span></b><select id="addstr"></select><button class="btn" id="addstrbtn">Add</button></div>
     <div class="roster" id="rosterStr"></div>
     <div class="rowhead"><b>Specials <span id="nspc"></span></b><select id="addspc"></select><button class="btn" id="addspcbtn">Add</button></div>
-    <div class="roster" id="rosterSpc"></div></div>
+    <div class="roster" id="rosterSpc"></div>
+    <div class="rowhead"><b>Starting skills</b><small style="color:var(--dim)">the order of the first five EX skills, as set in the team selection menu</small></div>
+    <div class="row" id="startorder" style="gap:8px;margin:6px 0 4px"></div></div>
   <div class="card" id="bosscard"><h2>Boss</h2>
     <div class="row" style="margin-bottom:8px"><label>Boss <select id="bsel"></select></label><label>Difficulty <select id="bdiff"></select></label><label>Terrain <img id="bterricon" class="terr" alt="" style="display:none"> <select id="bterr"></select></label><label title="Total Assault bosses have one armor type. In Grand Assault you pick the armor type per season: choose it here. HP and skills below are the Total Assault ones.">Armor <select id="barm"></select></label>
       <button class="btn" id="bclear">Clear boss</button></div>
@@ -311,6 +314,10 @@ const OUTFIT = {'Swimsuit':'S.','Dress':'D.','Armed':'A.','New Year':'NY','Hot S
 { const by = {}; Object.values(SCHALE).forEach(d => (by[d.name] = by[d.name] || []).push(d)); Object.values(by).filter(a => a.length > 1).forEach(a => a.forEach(d => { d.name = d.name.replace(/\)$/, ' · ' + d.exName + ')'); })); }
 const shortName = n => { const m = n.match(/^(.*?)\s*\(([^)]*)\)$/); if(!m) return n; const [o, ...x] = m[2].split(' · '); return OUTFIT[o] ? OUTFIT[o] + ' ' + m[1] + (x.length ? ' · ' + x.join(' · ') : '') : n; };
 const sname = id => shortName(SCHALE[id].name);
+// Attack / defense type badges (same colours as the boss info): Explosive red, Piercing yellow, Mystic blue, Sonic purple; Light red, Heavy yellow, Special blue, Elastic purple
+const TARM = {HeavyArmor:['Heavy','#c08a2b'], LightArmor:['Light','#b4403f'], Unarmed:['Special','#3a82c4'], ElasticArmor:['Elastic','#8a5fc7'], CompositeArmor:['Composite','#4f9b6b'], Normal:['Normal','#77808f']};
+const TATK = {Explosion:['Explosive','#b4403f'], Pierce:['Piercing','#c08a2b'], Mystic:['Mystic','#3a82c4'], Sonic:['Sonic','#8a5fc7'], Chemical:['Chemical','#4f9b6b'], Normal:['Normal','#77808f']};
+const typeBadges = d => [['ATK', TATK[d.bullet] || [d.bullet || '?', '#77808f']], ['DEF', TARM[d.armor] || [d.armor || '?', '#77808f']]].map(([lab, [name, col]]) => `<span class="tbadge" style="background:${col}"><i>${lab}</i>${name}</span>`).join('');
 // SchaleDB names boss portraits by the boss's internal name, which differs from its path for some bosses.
 const BOSS_DEV = {binah:'Binah',chesed:'Chesed',shirokuro:'Shirokuro',hieronymus:'Hieronymus',kaiten:'KaitenFxMk0',perorodzilla:'Perorozilla',hod:'HOD',goz:'Goz',gregorius:'EN0005',hovercraft:'RaidHoverCraft',kurokage:'EN0006',geburah:'EN0010',yesod:'EN0013',drumbarka:'EN0022',nightmare:'EN0023'};
 // The cast marked in the Rotation table is outlined on the timeline, and (if the setting is on) the timeline scrolls to centre it.
@@ -881,7 +888,7 @@ function render0(){
       + (d.regenBoost ? `<label title="Sub Skill: raises every ally's cost recovery. 0 = locked.">Sub Lv <input type="number" min="0" max="10" data-lv="sub" data-id="${id}" value="${L.sub}"></label>` : '') + `</div>`;
     const more = d.public && d.public.interval ? `<details><summary>more</summary><label class="opt">basic skill extra wait <input type="number" step="0.5" min="0" data-wait="${id}" value="${tset(t).wait[id]||0}" style="width:50px"> s</label></details>` : '';
     return `<div class="stu" draggable="true" data-id="${id}" title="${d.exName}: ${effects}"><div class="tools"><button data-rm="${id}" title="Remove from team">&#10005;</button></div>`
-      + `<img src="https://schaledb.com/images/student/icon/${id}.webp" onerror="this.style.visibility='hidden'" draggable="false"><div class="body"><b>${d.name}</b><small>${d.exName} &middot; cost ${d.cost}</small>${lv}${ueSel}${ext}${more}</div></div>`;
+      + `<img src="https://schaledb.com/images/student/icon/${id}.webp" onerror="this.style.visibility='hidden'" draggable="false"><div class="body"><b>${d.name}</b><small>${d.exName} &middot; cost ${d.cost}</small><div class="types">${typeBadges(d)}</div>${lv}${ueSel}${ext}${more}</div></div>`;
   };
   const fillRow = (sq, max, rowSel, countSel, addSel, label) => {
     const ids = t.roster.filter(id=>SCHALE[id].squad===sq);
@@ -893,6 +900,14 @@ function render0(){
   $('#tname').value = t.name;
   fillRow('Main', 4, '#rosterStr', '#nstr', '#addstr', 'striker');
   fillRow('Support', 2, '#rosterSpc', '#nspc', '#addspc', 'special');
+  // Starting skills: which five EX skills open the battle and in what order (saved with the team, for reference)
+  { const cur = Array.from({length:5}, (_, i) => { const v = (t.startOrder || [])[i]; return t.roster.includes(v) ? v : 0; });
+    const nth = ['1st','2nd','3rd','4th','5th'];
+    $('#startorder').innerHTML = cur.map((v, i) => `<label class="opt" title="${i < 3 ? 'In the starting hand' : 'Waiting behind the hand'}">${nth[i]} <select data-so="${i}"><option value="0">(not set)</option>${t.roster.filter(id => id === v || !cur.includes(id)).map(id => `<option value="${id}" ${id === v ? 'selected' : ''}>${sname(id)}</option>`).join('')}</select></label>`).join('')
+      + (cur.some(Boolean) ? `<button class="btn" id="soclear" title="Clear the starting skill order">Clear</button>` : '')
+      + (cur.filter(Boolean).length >= 5 && t.roster.length > 5 ? `<small style="color:var(--dim)">Not in the first five: ${t.roster.filter(id => !cur.includes(id)).map(sname).join(', ')}</small>` : '');
+    document.querySelectorAll('#startorder [data-so]').forEach(el => el.onchange = () => { const a = Array.from({length:5}, (_, i) => cur[i]); a[+el.dataset.so] = +el.value || 0; t.startOrder = a; save(); render(); });
+    if($('#soclear')) $('#soclear').onclick = () => { delete t.startOrder; save(); render(); }; }
   $('#addstrbtn').disabled = t.roster.filter(id=>SCHALE[id].squad==='Main').length >= 4;
   $('#addspcbtn').disabled = t.roster.filter(id=>SCHALE[id].squad!=='Main').length >= 2;
   document.querySelectorAll('[data-lv]').forEach(i=>i.onchange=()=>{ const id=i.dataset.id; const S = tset(t); S.lv[id] = Object.assign({}, S.lv[id], {[i.dataset.lv]: +i.value}); save(); render(); });
@@ -1027,7 +1042,7 @@ function renderBoss(t){
   $('#bterr').innerHTML = b ? b.terrains.map(x=>`<option value="${x}" ${t.boss.terrain===x?'selected':''}>${TERR[x]||x}</option>`).join('') : '';
   const ti = $('#bterricon'); ti.style.display = b ? '' : 'none'; if(b){ ti.src = 'https://schaledb.com/images/ui/Terrain_' + t.boss.terrain + '.png'; ti.title = TERR[t.boss.terrain] || t.boss.terrain; }
   { const ARMN = {HeavyArmor:'Heavy', LightArmor:'Light', Unarmed:'Special', ElasticArmor:'Elastic'}, DN = ['Normal','Hard','Very Hard','Hardcore','Extreme','Insane','Torment','Lunatic'];
-    const opts = b ? [[b.armor, (ARMN[b.armor]||b.armor) + ' (Total Assault)']].concat(Object.entries((b.ga||{}).armors||{}).filter(([a])=>a!==b.armor).map(([a,mx])=>[a, (ARMN[a]||a) + ' (Grand Assault, up to ' + (DN[mx]||mx) + ')'])) : [];
+    const opts = b ? [[b.armor, (ARMN[b.armor]||b.armor) + ' (Total Assault' + (((b.ga||{}).armors||{})[b.armor] ? ' and Grand Assault, up to ' + (DN[((b.ga||{}).armors||{})[b.armor]]||'') : '') + ')']].concat(Object.entries((b.ga||{}).armors||{}).filter(([a])=>a!==b.armor).map(([a,mx])=>[a, (ARMN[a]||a) + ' (Grand Assault, up to ' + (DN[mx]||mx) + ')'])) : [];
     const cur = b && t.boss.armor && opts.some(o=>o[0]===t.boss.armor) ? t.boss.armor : (b ? b.armor : '');
     $('#barm').innerHTML = opts.map(([a,l])=>`<option value="${a}" ${a===cur?'selected':''}>${l}</option>`).join(''); $('#barm').disabled = !b || opts.length < 2; }
   $('#bdiff').disabled = $('#bterr').disabled = !b; $('#bclear').disabled = !b;
