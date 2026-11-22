@@ -1399,9 +1399,9 @@ async function saveAll(forceAsk){
       }
       if(fileHandle && !forceAsk){   // never replace a file that holds other work without asking: it lists what is in the file and what would replace it
         try { const old = JSON.parse(await (await fileHandle.getFile()).text()), oldN = (old.teams || []).map(x => x.name), newN = state.teams.map(x => x.name);
-          if(oldN.length && (!oldN.some(n => newN.includes(n)) || newN.length < oldN.length)){
-            const list = a => a.map(n => '  - ' + n).join('\n');
-            if(!confirm('"' + fileHandle.name + '" currently holds:\n' + list(oldN) + '\n\nSaving now would replace it with:\n' + list(newN) + '\n\nOK = replace the file.   Cancel = save to a different file instead.')) forceAsk = true; }
+          const real = (old.teams || []).filter(x => (x.casts || []).length), lost = real.filter(x => !newN.includes(x.name));   // only teams with rotations in them count; a blank starter team is not work
+          if(lost.length){
+            if(!confirm('"' + fileHandle.name + '" holds ' + lost.map(x => x.name).join(', ') + ', which this save would remove.\n\nOK = replace the file.   Cancel = pick another file.')) forceAsk = true; }
         } catch(e){ /* unreadable or not a timeline file: go on */ } }
       if(!fileHandle || forceAsk){
         fileHandle = await window.showSaveFilePicker(FILEPICK);
@@ -1432,7 +1432,7 @@ document.addEventListener('keydown', e => { if(e.key === 'Escape') $('#setpop').
 $('#saveas').onclick = () => saveAll(true);
 const blankState = () => ({team:0, lv:{}, cap:{}, rc:{}, wait:{}, ext:{}, first:{}, teams:[{name:'Team 1', estimated:false, source:'Your own rotation: add casts in the Rotation table or drag bars.', roster:[], casts:[], custom:true, blank:true, events:[]}]});
 $('#newfile').onclick = () => {
-  if(!confirm('Start a new, empty file?\n\nThe teams on screen are cleared and no file is linked any more, so the next Save asks where to save. Your saved file is not changed, and Ctrl+Z brings the teams back until you reload the page.')) return;
+  if(!confirm('Start a new, empty file? (Ctrl+Z undoes it.)')) return;
   state = blankState(); forgetFile(); save(); render(); lastSaved = fsnap(); markDirty();
   $('#builder').style.display = ''; buildSlots();
 };
