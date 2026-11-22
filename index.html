@@ -116,7 +116,7 @@ body.side .rotbar{top:0}
 .cost-bad{color:var(--warn);font-weight:700}.cost-od{color:#ff7de0;font-weight:700}
 .ovr{border-color:#ffd54a !important;color:#ffd54a}
 .evpill{position:absolute;height:26px;line-height:26px;padding:0 8px;border-radius:5px;font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:grab;color:#fff;border:1px solid #0008;z-index:4}
-.evpill.groggy{background:#c0392bcc}.evpill.skill{background:#8e5bd6cc}.evpill.phase{background:#2f7fb8cc}.evpill.note{background:#6b7a99cc}
+.evpill.entity{background:#1f8f8acc}.evpill.groggy{background:#c0392bcc}.evpill.skill{background:#8e5bd6cc}.evpill.phase{background:#2f7fb8cc}.evpill.note{background:#6b7a99cc}
 .evpill.cancel{text-decoration:line-through;opacity:.75}
 .evline{position:absolute;border-left:2px solid;pointer-events:none;z-index:3}
 .evline.groggy{border-color:#ff6b5e}.evline.skill{border-color:#b98cff;border-left-style:dashed}.evline.phase{border-color:#5dade2;border-left-style:dotted}.evline.note{border-color:#8fa0c0;border-left-style:dotted}
@@ -132,7 +132,7 @@ body.side .rotbar{top:0}
 .evcards{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px}
 .evcard{display:flex;flex-direction:column;align-items:flex-start;gap:3px;text-align:left;padding:8px 10px;border-left:4px solid}
 .evcard small{color:var(--dim);font-weight:400;font-size:12px;white-space:normal}
-.evcard.groggy{border-color:#ff6b5e}.evcard.skill{border-color:#b98cff}.evcard.phase{border-color:#5dade2}.evcard.note{border-color:#8fa0c0}
+.evcard.entity{border-color:#2fc4bd}.evcard.groggy{border-color:#ff6b5e}.evcard.skill{border-color:#b98cff}.evcard.phase{border-color:#5dade2}.evcard.note{border-color:#8fa0c0}
 .evband{position:absolute;pointer-events:none;background:#ff6b5e1c;z-index:1}
 .bosslane .lname{flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:0;font-size:15px;line-height:1.2;background-size:cover;background-position:right center;background-repeat:no-repeat;text-shadow:0 1px 3px #000}
 #evt input[type=number]{width:62px}
@@ -140,9 +140,6 @@ body.side .rotbar{top:0}
 .busy{border-color:var(--warn) !important;color:var(--warn) !important;background:#3a1d22 !important}
 .cost-bad input{color:var(--warn);border-color:var(--warn)}.cost-od input{color:#ff7de0;border-color:#ff7de0}
 .notg{border-color:var(--warn)}
-.redmk{position:absolute;z-index:6;height:20px;line-height:18px;padding:0 7px;border-radius:5px;background:#1f8f8a;border:1px solid #0008;color:#fff;font-size:12px;font-weight:700;cursor:grab;white-space:nowrap}
-.redchip{display:inline-flex;align-items:center;gap:5px;background:var(--panel2);border:1px solid #1f8f8a;border-radius:8px;padding:2px 8px;font-size:12.5px}
-.redchip input{width:54px}.redchip input.n{width:36px}.redchip select{max-width:110px}
 .carry{position:absolute;width:14px;height:14px;background:#fff;transform:rotate(45deg);border:2px solid #000;cursor:grab}
 .cline{position:absolute;top:0;bottom:0;border-left:1px dashed #ffffff40;pointer-events:none}
 .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--dim);margin-top:8px}
@@ -181,6 +178,7 @@ input,select{background:#0f1520;color:var(--text);border:1px solid var(--line);b
 header .row{gap:14px 18px;justify-content:flex-end}
 header .row label{display:flex;align-items:center;gap:8px;white-space:nowrap}
 header .sep{width:1px;align-self:stretch;background:var(--line)}
+header .filelabel{color:var(--dim);font-size:12px;max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-left:-8px}
 header #savedot{display:none;width:7px;height:7px;border-radius:50%;background:#ffb347;margin-left:7px;vertical-align:middle}
 header #savebtn.dirty #savedot{display:inline-block}
 header .row{position:relative}
@@ -205,18 +203,21 @@ header .btn,header select{padding:4px 12px}
   <div class="row" style="margin-left:auto">
     <button class="btn" id="undobtn" title="Undo (Ctrl+Z)">&#8630;</button><button class="btn" id="redobtn" title="Redo (Ctrl+Y)">&#8631;</button>
     <span class="sep"></span>
+    <button class="btn" id="newfile" title="Start a new, empty file. Your saved file is not touched.">New</button>
     <button class="btn" id="savebtn" title="Save all teams to a file (Ctrl+S)">Save<i id="savedot"></i></button>
-    <button class="btn" id="exp" title="Save a copy of some or all teams under a new name">Export</button>
+    <span id="filelabel" class="filelabel"></span>
+    <button class="btn" id="saveas" title="Save all teams to a different file">Save as&hellip;</button>
+    <button class="btn" id="exp" title="Save a copy of only some of the teams">Export</button>
     <button class="btn" id="imp">Import</button>
     <span class="sep"></span>
     <button class="btn" id="sbtoggle" title="Show Team, Boss and Rotation as tabs in a panel on the right (drag its edge to resize) or stacked under the timeline">Sidebar</button>
     <button class="btn" id="gear" title="Settings: zoom, UI size, basic skills">&#9881;</button>
-    <button class="btn" id="reset" title="Discard all edits and reload the bundled rotations">Reset</button>
     <div id="setpop">
       <label>Zoom <input type="range" id="zoom" min="4" max="400" value="16"> <small id="zlabel" style="color:var(--dim)"></small></label>
       <label>Student Basic Skills <select id="basic"><option value="off">off</option><option value="predicted" selected>predicted (rules)</option></select></label>
       <label>Follow selected cast <input type="checkbox" id="followsel" title="Clicking a cast in the Rotation table scrolls the timeline to its bar"></label>
       <label>UI size <select id="uisize"><option>100%</option><option>115%</option><option>125%</option><option>150%</option><option>175%</option></select></label>
+      <button class="btn" id="reset" title="Throw away the teams on screen and load the rotations that came with the tool" style="margin-top:4px;border-color:#7a3038;color:#ff8a80">Reload the bundled rotations</button>
     </div>
   </div>
 </header>
@@ -248,13 +249,12 @@ header .btn,header select{padding:4px 12px}
   </div>
   <div class="card" id="rotcard"><h2>Rotation</h2>
     <div class="rotbar" id="rotbar"><div class="row addbar" id="addbar"></div>
-    <div class="row" id="redbar" style="margin-bottom:6px"></div>
     <div class="row" style="margin-bottom:8px"><label>Cost regen /s <input type="number" id="regen" step="0.001" min="0" style="width:78px"></label><button class="btn" id="regenauto" title="Set the cost regen back to the value calculated from the team">Reset</button><span class="info" id="reginfo" tabindex="0" title="How the cost regen is calculated">&#9432;</span><div class="pop" id="regentext" hidden></div><label>Start cost <input type="number" id="scost" step="0.5" style="width:60px"></label><label>Time limit <input type="text" id="limit" style="width:62px" title="In-battle clock. Binah is 3:00; some other raid bosses start at 4:00."></label></div></div>
     <div class="rotbox" id="rotbox"><table id="rot"></table></div>
   </div>
   </aside>
 </main>
-<script src="data.js?v=5"></script>
+<script src="data.js?v=6"></script>
 <script src="bosses.js?v=4"></script>
 <script src="rotations.js"></script>
 <script>
@@ -267,6 +267,10 @@ let TOTAL = 180, BATTLE0 = 179.6, COST0 = 178.02;   // set from the team's time 
 // that have one). Lv 60 on a Special raises the max cost by 0.5 (two Specials give 11). Sources: Game8 JP, kamigame, bluearchive.wiki (see MECHANICS.md).
 const UELEVELS = [0, 30, 40, 50, 60];
 // Which students aim their EX at one ally (a buff, Cost Overload, a cost reduction): the Target box shows for these.
+// Who an EX can be aimed at: Strikers only (Specials are not on the field), except the Specials that put something on the field themselves: Himari (Armed) on her wheelchair, Reisa (Magical)'s summon.
+const FIELD_SPECIALS = new Set([20054, 20051]);
+const allyTargetable = id => SCHALE[id].squad === 'Main' || FIELD_SPECIALS.has(id);
+const aimsAtEnemy = id => SCHALE[id].exTarget === 'enemy' && !targetsAlly(id);   // a student aims her EX at an ally or at an enemy, not both
 const targetsAlly = id => SCHALE[id].buffs.some(b => b.target === 'AllyMain') || /one ally|an ally|target ally|designated ally/i.test(SCHALE[id].desc);
 // The old 'carry' star is gone: a team that had one gets it written into the casts that needed a target.
 function dropCarry(t){
@@ -410,6 +414,26 @@ const evOf = t => t.events || (t.events = []);
 let winOverride = null;   // set around a calculation: event windows + the windows made by the casts it looks at
 const winCache = {ok:false, t:null, w:[]};   // cleared at the start of every render(); events and roster only change through a handler that ends in render()
 function regenWindows(t){ return winOverride || eventWindows(t); }
+// Things a boss puts on the field that the team can act on. Placed by hand (the data has no spawn times): time = when it appears, length = how long it lives
+// (blank = to the end; for something that is destroyed, until it is destroyed), "destroyed by" = who kills it.
+//   regen: Cost Recovery change for every student standing in its area while it lives (Hod's Erosion Tower, -350; Yesod's Pillar of Power pulse, -400 for 10 s)
+//   kill:  what the student who destroys it gets (Yesod lanterns: their next EX costs half, rounded down, and every student left in the unit gives the team 0.6 cost)
+const ENTITY = {
+  'Erosion Tower': {action:'attack', regen:-350, area:true, tip:'Allies standing in its erosion area lose 350 Cost Recovery each. Placing it costs your team nothing until you say when the team is inside its area (the from / to boxes in the table); the area grows every 15 s, which is not modelled. Destroying it cuts Hod’s ATG gauge by 50% and fills 25% of its groggy gauge.'},
+  'Blue Lantern': {action:'attack', kill:{half:true, gain:0.6}, tip:'Destroying it halves (rounded down) the destroyer’s next EX cost and gives the team 0.6 cost per student in the unit. Two lanterns destroyed by one ally within 2 s lock Cost Recovery for 50 s (JP) or stun the team (Global): not modelled.'},
+  'Red Lantern': {action:'attack', kill:{half:true, gain:0.6}, tip:'Destroying it halves (rounded down) the destroyer’s next EX cost and gives the team 0.6 cost per student in the unit. Two lanterns destroyed by one ally within 2 s lock Cost Recovery for 50 s (JP) or stun the team (Global): not modelled.'},
+  'Left Pillar': {action:'none', regen:-400, area:true, inDefault:true, defDur:10, tip:'Pillar of Power: immortal, cannot be attacked. When it is at full HP it hits the team and lowers their Cost Recovery by 400 for 10 s (that pulse is what this marker is).'},
+  'Right Pillar': {action:'attack', tip:'Pillar of Foundation: destroying it makes Yesod’s Right Hand take 1000% more damage (stacks twice).'}
+};
+// An entity a cast aims at (the "Hit" box in the Rotation table) is destroyed by the LAST such cast while it is alive: that cast's student is who destroyed it, and the clock
+// moment (a hair before the cast, so that cast itself still pays the old price) is when the destroyer's reduction and the team's cost gain happen.
+function entKills(t, casts){
+  const out = [];
+  (t.events || []).forEach(ev => { if(ev.type !== 'entity') return; const def = ENTITY[ev.ent]; if(!def || def.action !== 'attack') return;
+    const hits = casts.filter(c => c.hit === ev.id && aimsAtEnemy(c.who) && c.t <= ev.t + 1e-6 && (!(ev.dur > 0) || c.t >= ev.t - ev.dur - 1e-6)); if(!hits.length) return;
+    const c = hits.reduce((x, y) => y.t < x.t ? y : x); out.push({ev, c, at:+(c.t - 0.01).toFixed(3)}); });
+  return out;
+}
 function eventWindows(t){
   const bd = bossDiff(t), evs = t.events || [];
   if(!bd || !evs.length) return [];
@@ -451,6 +475,12 @@ function regenAdv(t, cost, a, b, rate, CAP){
 const TIMED_REGEN = {10003:{}, 10104:{}, 10129:{}, 10121:{every:2}, 10109:{every:3, at:2, lvl:'basic'}, 10045:{ms:50000}, 10140:{fx:1, arr:1}};   // Hoshino Swimsuit: as long as her 50 s EX lasts; Kurumi: while her shield is up (10 s, assumed unbroken)
 function castWindows(t, casts){
   const boost = regenInfo(t).boost, w = [], ord = {};
+  { const units = t.roster.slice(0, 6), kills = new Map(entKills(t, casts).map(k => [k.ev.id, k]));
+    (t.events || []).forEach(ev => { const def = ev.type === 'entity' && ENTITY[ev.ent]; if(!def) return; const k = kills.get(ev.id), name = ev.label || ev.ent;
+      if(def.regen && ev.area !== false && (def.inDefault || ev.inFrom != null || ev.inTo != null)){ let from = ev.t, to = ev.dur > 0 ? ev.t - ev.dur : 0; if(k) to = Math.max(to, k.at);   // it ends when it is destroyed
+        if(ev.inFrom != null) from = Math.min(from, ev.inFrom); if(ev.inTo != null) to = Math.max(to, ev.inTo);   // the team is only in its area from inFrom to inTo
+        if(from > to) w.push({a:from, b:to, extra:def.regen*units.length/10000*(1 + boost), name}); }
+      if(def.kill && def.kill.gain && k) w.push({a:k.at, b:k.at - 0.01, extra:def.kill.gain*units.length/0.01, name:name + ' destroyed'}); }); }
   [...casts].sort((a, b) => b.t - a.t).forEach(c => {
     const d = SCHALE[c.who], n = ord[c.who] = (ord[c.who] || 0) + 1;
     if(d.buffs.some(b => b.stat === 'RegenCost_Base') || (d.forms || []).some(f => f.buffs.some(b => b.stat === 'RegenCost_Base')))
@@ -494,13 +524,13 @@ function spendMap(t, list){   // price of every cast in the list, in the order t
   const give = (g, spec, who) => { const uses = typeof spec.uses === 'function' ? spec.uses(exLv(t, g.who)) : spec.uses; (pend[who] = pend[who] || []).push({kind:spec.kind, n:spec.n, uses}); };
   t.roster.forEach(id => { const sp = CRED[id]; if(sp && sp.start) t.roster.forEach(x => { if(x !== id) give({who:id}, sp, x); }); });
   const grants = sorted.filter(g => CRED[g.who] && !CRED[g.who].start && formIdx(t, g, list) == null).map(g => ({at:g.t - CRED[g.who].frames/FPS, g}));
-  (t.reds || []).forEach(r => grants.push({at:r.t, mk:r}));   // cost reductions the player placed on the timeline (Kokona's stamps and the other ones the tool cannot see coming)
+  entKills(t, list).forEach(k => { const d = ENTITY[k.ev.ent]; if(d.kill && d.kill.half) grants.push({at:k.at, mk:{to:k.c.who, kind:'half'}}); });   // whoever destroys a lantern
   grants.sort((a, b) => b.at - a.at);
   let gi = 0;
   sorted.forEach(c => {
     while(gi < grants.length && grants[gi].at >= c.t - 1e-6){   // (a cast exactly on the moment a reduction lands gets it; the tolerance keeps rounding from flipping that)
       const gr = grants[gi++];
-      if(gr.mk){ t.roster.forEach(x => { if((!gr.mk.to || x === gr.mk.to) && x !== gr.mk.except) (pend[x] = pend[x] || []).push({kind:'minus', n:+gr.mk.n || 1, uses:1}); }); continue; }
+      if(gr.mk){ t.roster.forEach(x => { if((!gr.mk.to || x === gr.mk.to) && x !== gr.mk.except) (pend[x] = pend[x] || []).push({kind:gr.mk.kind || 'minus', n:+gr.mk.n || 1, uses:1}); }); continue; }
       const g = gr.g, sp = CRED[g.who];
       if(sp.to === 'target'){ const tg = g.target; if(tg != null && tg !== g.who) give(g, sp, tg); }
       else if(sp.to === 'strikers') t.roster.forEach(x => { if(x !== g.who && SCHALE[x].squad === 'Main') give(g, sp, x); });
@@ -585,11 +615,13 @@ const floor2 = x => Math.floor(x*100 + 1e-6)/100;
 function ownBusy(t, c, T){
   let end = null;
   for(const o of t.casts){ if(o === c || o.who !== c.who || !(o.t > T + 1e-6)) continue; const e = o.t - animDur(t, o); if(e < T - 1e-6) end = end === null ? e : Math.min(end, e); }
+  // A phase change with a length is a transition the player cannot act in: nobody can cast until it is over.
+  for(const e of (t.events || [])){ if(e.type !== 'phase' || !(e.dur > 0)) continue; const to = +(e.t - e.dur).toFixed(3); if(T < e.t - 1e-6 && T > to + 1e-6) end = end === null ? to : Math.min(end, to); }
   return end;   // callers re-check after moving to this moment, in case another earlier cast of hers covers it too
 }
 function firstAffordable(t, spend, fromT, who){   // who: the price may change with the moment (cost reductions), so it is looked up per moment
   const sorted = castsExcept(t, -1), win = allWindows(t, sorted.map(x => x.c)), sm = spendMap(t, sorted.map(x => x.c));
-  const oc = sorted.map(x => x.c), redPlay = who != null && ((t.reds && t.reds.length) || oc.some(x => CRED[x.who]) || t.roster.some(id => CRED[id] && CRED[id].start));
+  const oc = sorted.map(x => x.c), redPlay = who != null && (oc.some(x => CRED[x.who]) || t.roster.some(id => CRED[id] && CRED[id].start));
   for(let T = fromT; T >= 0; T = +(T - 0.01).toFixed(2)){ const bz = who != null ? ownBusy(t, {who}, T) : null; if(bz !== null){ T = +(floor2(bz) + 0.01).toFixed(2); continue; } if(costAt(t, -1, T, sorted, sm, win) >= (redPlay ? spendAt(t, {who}, T, oc) : spend) - 1e-9) return T; }
   return Math.max(0, fromT);
 }
@@ -638,20 +670,37 @@ function applyChains(t){
         if(nt !== c.t){ c.t = nt; moved = true; }
       } else if(c.cb != null){
         const others = castsExcept(t, idx);
-        const sig = JSON.stringify([c.cb, c.cost ?? null, spendOf(t, c), c.who, +(t.regen ?? regenInfo(t).auto), capOf(t), COST0, +(t.startCost ?? 0), regenWindows(t).map(w=>[w.a, w.b, w.extra]), others.map(o=>[o.c.t, spendOf(t, o.c), o.c.who, o.c.target ?? null, o.c.who === c.who ? animDur(t, o.c) : 0]), tset(t).ue, tset(t).ext, tset(t).lv]);   // everything the Cost Over window depends on too
+        const sig = JSON.stringify([c.cb, c.cost ?? null, spendOf(t, c), c.who, +(t.regen ?? regenInfo(t).auto), capOf(t), COST0, +(t.startCost ?? 0), regenWindows(t).map(w=>[w.a, w.b, w.extra]), others.map(o=>[o.c.t, spendOf(t, o.c), o.c.who, o.c.target ?? null, o.c.hit ?? null, o.c.who === c.who ? animDur(t, o.c) : 0]), (t.events || []).filter(e => e.type === 'entity'), c.hit ?? null, tset(t).ue, tset(t).ext, tset(t).lv]);   // everything the Cost Over window depends on too
         const own = JSON.stringify([c.cb, c.cost ?? null, spendOf(t, c), c.who, +(t.regen ?? regenInfo(t).auto), capOf(t), COST0, +(t.startCost ?? 0), regenWindows(t).map(w=>[w.a, w.b, w.extra]), tset(t).ue, tset(t).ext, tset(t).lv]), ownSame = cbOwn.get(c) === own; cbOwn.set(c, own);
         if(trust && !cbSig.has(c)){ cbSig.set(c, sig); cbOwn.set(c, own); return; }   // a cast loaded as it was saved: leave it where it is
         if(cbSig.get(c) !== sig){ cbSig.set(c, sig); const spendC = spendOf(t, c);
           // Already sitting where it sees the planned cost: leave it. (Searching again could pick another moment with the same cost and hop over the casts below it, which made tightly packed casts creep later on every re-render.)
           if(Math.abs(costAt(t, idx, c.t, others) - Math.min(c.cb, capOf(t))) <= 0.012 && (c.cb >= spendC || overOnFor(t, c, c.t)) && ownBusy(t, c, c.t) === null) return;
           // With cost reductions around the price depends on the moment: only moments where the cost seen is enough for the price at that moment count.
-          const oc = others.map(x => x.c), redPlay = (t.reds && t.reds.length) || oc.some(x => CRED[x.who]) || t.roster.some(id => CRED[id] && CRED[id].start);
+          const oc = others.map(x => x.c), redPlay = oc.some(x => CRED[x.who]) || t.roster.some(id => CRED[id] && CRED[id].start);
           const acc = (c.cb < spendC || redPlay) ? T => { const X = Math.min(c.cb, capOf(t)), sp = redPlay ? spendAt(t, c, T, oc) : spendC; return X >= sp - 0.012 || (X + 5 >= sp - 0.012 && overOnFor(t, c, T)); } : undefined;
           const accB = T => ownBusy(t, c, T) === null, accF = acc ? (T => accB(T) && acc(T)) : accB;
           const nt = timeForCost(t, idx, c.cb, k ? byTime[k-1].t - 0.01 : TOTAL, accF, ownSame && k + 1 < byTime.length ? byTime[k+1].t : 0); if(nt !== c.t){ c.t = nt; moved = true; } }
       }
     });
     if(!moved) break;
+  }
+}
+// "Cost before" of a row: the cast moves to the moment the team has that much cost. The casts that come after it in the table keep their place in the order: any that would now
+// end up before it are chained right after it (the chain button turns on for them), so raising a cost never makes rows jump over each other. Locked rows are not moved,
+// and the cast cannot move past a locked row below it.
+function placeByCost(t, i, want){
+  const me = t.casts[i]; delete me.after;
+  { const sp = spendOf(t, me); want = Math.max(want, t.casts.some(x=>x!==me && x.target === me.who && SCHALE[x.who].buffs.some(b=>b.stat==='CostOverload')) ? sp - 5 : sp); }   // less cost than it spends is only possible with Cost Over (up to 5 short)
+  want = Math.min(want, capOf(t)); me.cb = want;
+  const oldT = me.t, above = t.casts.filter(x=>x!==me && x.t >= oldT).sort((a,b)=>a.t-b.t)[0];
+  const below = t.casts.filter(x=>x!==me && x.t < oldT).sort((a,b)=>b.t-a.t), lockedBelow = below.find(x=>x.lock);
+  me.t = timeForCost(t, i, want, above ? above.t - 0.01 : TOTAL, want < (me.cost ?? SCHALE[me.who].cost) ? T => overOnFor(t, me, T) : undefined, lockedBelow ? lockedBelow.t + 0.01 : 0);
+  let prev = me;
+  for(const j of below){
+    if(j.lock) break;
+    if(j.t > prev.t - 0.01 + 1e-9 && j.cb != null && !j.after){ delete j.cb; j.after = cid(prev); }   // it would now come before the cast: it goes right after it instead (chained: it casts the moment the team can pay for it)
+    if(j.t < prev.t) prev = j;
   }
 }
 function allResolved(){
@@ -726,8 +775,9 @@ function render0(){
   const pack = items => { const rows = []; items.sort((a,b)=>b.start-a.start).forEach(it=>{ let k = rows.findIndex(e=>it.start <= e); if(k<0){ k = rows.length; rows.push(it.end); } else rows[k] = it.end; it.row = k; }); return Math.max(1, rows.length); };
   // boss lane: events the player placed (groggy, boss skills, phase changes, notes)
   const evs = evOf(t), bd = bossDiff(t), bb = bossOf(t);
-  const evItems = evs.map((e,k)=>{ const label = e.label || (e.type==='groggy' ? 'Groggy' : e.type==='phase' ? 'Phase change' : e.type==='skill' ? 'Boss skill' : 'Note');
-    const dur = +(e.dur || 0), wpx = Math.max(dur*px, Math.min(260, label.length*7.2 + 18));
+  const EK = entKills(t, t.casts);
+  const evItems = evs.map((e,k)=>{ const label = e.label || (e.type==='entity' ? (e.ent || 'Entity') : e.type==='groggy' ? 'Groggy' : e.type==='phase' ? 'Phase change' : e.type==='skill' ? 'Boss skill' : 'Note');
+    const kl = e.type === 'entity' ? EK.find(z => z.ev === e) : null, dur = kl ? +(e.t - kl.at).toFixed(2) : +(e.dur || 0), wpx = Math.max(dur*px, Math.min(260, label.length*7.2 + 18));
     return {k, e, label, dur, wpx, start:e.t, end:e.t - wpx/px}; });
   const BOSSL = (bb || evs.length) ? pack(evItems)*30 + 10 : 0;
   let y = HEAD + BOSSL;
@@ -754,7 +804,7 @@ function render0(){
       const e = it.e, x = X(e.t), full = y + 0;
       if(e.type === 'groggy' && it.dur > 0) html += `<div class="evband" style="left:${x}px;top:${HEAD}px;width:${it.dur*px}px;height:${full - HEAD}px"></div>`;
       html += `<div class="evline ${e.type}" style="left:${x}px;top:${HEAD}px;height:${full - HEAD}px"></div>`;
-      const tip = `${it.label} @ ${fmt2(e.t)}${it.dur ? ' for ' + it.dur + 's (until ' + fmt2(e.t - it.dur) + ')' : ''}${e.cancel ? '\nthe boss skill is cancelled' : ''}`;
+      const edef = e.type === 'entity' && ENTITY[e.ent], tip = `${it.label} @ ${fmt2(e.t)}${it.dur ? ' for ' + it.dur + 's (until ' + fmt2(e.t - it.dur) + ')' : ''}${(kk => kk ? '\ndestroyed by ' + SCHALE[kk.c.who].name + ' @ ' + fmt2(kk.at) : '')(EK.find(z => z.ev === e))}${edef ? '\n' + edef.tip : ''}${e.cancel ? '\nthe boss skill is cancelled' : ''}`;
       html += `<div class="evpill ${e.type} ${e.cancel?'cancel':''}" data-ev="${it.k}" data-tip="${tip.replace(/"/g,'&quot;')}" style="left:${x}px;top:${HEAD + 5 + it.row*30}px;width:${it.wpx}px">${it.label}</div>`;
     });
   }
@@ -807,21 +857,9 @@ function render0(){
       + `</div></div><svg style="position:absolute;left:0;top:0;pointer-events:none" width="${w}" height="${costTop+CL}">${g}${refLine}<polyline points="${path}" fill="none" stroke="#7bd88f" stroke-width="2"/>${dots}</svg>`;
   }
   winOverride = null;
-  (t.reds || []).forEach(r => {
-    const nmOf = id => SCHALE[id] ? SCHALE[id].name : '?', tip = `Cost reduction -${r.n || 1} @ ${fmt(r.t)}
-The next EX of ${r.to ? nmOf(r.to) : 'everyone'}${r.except ? ' (not ' + nmOf(r.except) + ')' : ''} costs ${r.n || 1} less.
-Drag to move it; change or remove it in the Rotation tab.`;
-    html += `<div class="redmk" data-redm="${r.id}" data-tip="${tip.replace(/"/g, '&quot;')}" style="left:${X(r.t)}px;top:${costTop + 3}px">&minus;${r.n || 1}</div>`;
-  });
-  html += '</div>';
+
   $('#tl').innerHTML = html;
-  document.querySelectorAll('#tl .redmk').forEach(el => el.addEventListener('mousedown', e => {   // drag a cost-reduction marker sideways; it is committed when the mouse is released
-    if(e.button !== 0) return; const r = t.reds.find(x => x.id === el.dataset.redm), x0 = e.clientX, t0 = r.t; let nt = t0;
-    const mv = ev => { nt = +Math.max(0, Math.min(TOTAL, t0 - (ev.clientX - x0)/UI()/px)).toFixed(2); el.style.left = X(nt) + 'px'; };
-    const up = () => { document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up); if(Math.abs(nt - t0) > 0.005){ r.t = nt; save(); render(); } };
-    document.addEventListener('mousemove', mv); document.addEventListener('mouseup', up);
-  }));
-  bindDrag(list);
+
   bindEventDrag(t);
   renderBoss(t);
 
@@ -886,9 +924,9 @@ Drag to move it; change or remove it in the Rotation tab.`;
       <td class="${cls}"><input type="number" step="1" min="-5" max="${capOf(t)}" data-cb="${i}" value="${ce ? (c.cb != null && Math.abs(ce.before - c.cb) <= 0.02 ? c.cb : +ce.before.toFixed(1)) : ''}" style="width:70px" title="${tip}"></td>
       <td style="text-align:center"><button class="btn ${c.after?'chain-on':''}" data-ch="${i}" ${n===0?'disabled':''} title="${c.after?'Tied to the cast above: it follows that cast and goes off the moment the team has the cost for it. Click to untie.':'Cast right after the cast above, the moment the team has the cost for it. Click again to untie.'}">&#9193;</button></td>
       <td><select data-w="${i}">${t.roster.map(id=>`<option value="${id}" ${id==c.who?'selected':''}>${sname(id)}</option>`).join('')}</select></td>
-      <td>${targetsAlly(c.who) ? `<select data-tg="${i}" class="${c.target ? '' : 'notg'}" title="${c.target ? '' : 'Pick who this EX targets: its buff or cost reduction only counts once a target is picked.'}"><option value="">(pick target)</option>${t.roster.filter(id=>id!==c.who).map(id=>`<option value="${id}" ${c.target==id?'selected':''}>${sname(id)}</option>`).join('')}</select>` : ''}</td>
+      <td>${(() => { const ents = evOf(t).filter(e => e.type === 'entity' && ENTITY[e.ent] && ENTITY[e.ent].action === 'attack'); return ents.length && aimsAtEnemy(c.who) ? `<select data-hit="${i}" class="hit" title="Which thing on the field this EX is aimed at. The last EX aimed at one is the one that destroys it."><option value="">(boss)</option>${ents.map(e => `<option value="${e.id}" ${c.hit === e.id ? 'selected' : ''}>${String(e.label || e.ent).replace(/</g, '&lt;')} @ ${fmt(e.t)}</option>`).join('')}</select>` : ''; })()}${targetsAlly(c.who) ? `<select data-tg="${i}" class="${c.target ? '' : 'notg'}" title="${c.target ? '' : 'Pick who this EX targets: its buff or cost reduction only counts once a target is picked.'}"><option value="">(pick target)</option>${t.roster.filter(id=>id!==c.who && (allyTargetable(id) || c.target==id)).map(id=>`<option value="${id}" ${c.target==id?'selected':''}>${sname(id)}</option>`).join('')}</select>` : ''}</td>
       <td>${SCHALE[c.who].forms && SCHALE[c.who].forms.length ? `<select data-form="${i}" style="max-width:118px" title="This student has more than one EX skill. Auto follows the usual order (e.g. Ibuki Swimsuit: first use, then the second EX); pick one for target-dependent ones.">${(() => { const fi = formIdx(t, c), ds = SCHALE[c.who], nm = f => f === null ? 'Normal' : ds.forms[f].name; return `<option value="" ${c.form === undefined ? 'selected' : ''}>Auto: ${nm(fi)}</option><option value="main" ${c.form === null ? 'selected' : ''}>Normal</option>` + ds.forms.map((f, k) => `<option value="${k}" ${c.form === k ? 'selected' : ''}>${f.name}</option>`).join(''); })()}</select><br>` : ''}<input type="number" step="1" min="0" style="width:58px" class="${c.cost!=null?'ovr':''}" data-cost="${i}" value="${c.cost ?? ''}" placeholder="${spendOf(t, c)}" title="Cost this EX spends: ${spendOf(t, c)}${c.cost!=null ? ' (set by hand)' : ''}. Blank = the skill's own cost at its EX level. Type a number to override, e.g. for Kokona's stamp reduction."></td>
-      <td><input type="text" style="width:140px" value="${c.tag||''}" data-g="${i}"></td><td style="white-space:nowrap"><input type="text" class="${timed(c) ? 'ovr' : ''}${busy !== null ? ' busy' : ''}" value="${fmt2(c.t)}" data-t="${i}" title="${busy !== null ? 'Her own EX animation is still playing: in the game this card is greyed out until ' + fmt2(busy) + '. ' : ''}${timed(c) ? 'A time you set (orange). Clear the box to let the cost place this cast again.' : 'Where the cost (or the chain) puts this cast. Type a time, for example 2:30.866, to pin it.'}"></td>
+      <td><input type="text" style="width:140px" value="${c.tag||''}" data-g="${i}"></td><td style="white-space:nowrap"><input type="text" class="${timed(c) ? 'ovr' : ''}${busy !== null ? ' busy' : ''}" value="${fmt2(c.t)}" data-t="${i}" title="${busy !== null ? 'Not castable here: her own EX animation, or a phase transition, is still going on. In the game this card is greyed out until ' + fmt2(busy) + '. ' : ''}${timed(c) ? 'A time you set (orange). Clear the box to let the cost place this cast again.' : 'Where the cost (or the chain) puts this cast. Type a time, for example 2:30.866, to pin it.'}"></td>
       <td style="white-space:nowrap"><button class="btn lockb ${c.lock ? 'on' : ''}" data-lock="${i}" title="${c.lock ? 'Locked: nothing on this row can change and the bar cannot be dragged. Click to unlock.' : 'Lock this row: freeze its time, cost, student and the rest, and keep the planner from moving it.'}">${c.lock ? '&#128274;' : '&#128275;'}</button> <button class="btn" data-x="${i}">✕</button></td></tr>`;
   });
   const keepScroll = $('#rotbox').scrollTop;
@@ -914,16 +952,6 @@ Drag to move it; change or remove it in the Rotation tab.`;
     document.body.append(m);
   };
   $('#rotbox').scrollTop = keepScroll;
-  { const reds = t.reds || [], nameOpt = (sel, blank) => `<option value="">${blank}</option>` + t.roster.map(id => `<option value="${id}" ${sel == id ? 'selected' : ''}>${sname(id)}</option>`).join('');
-    $('#redbar').innerHTML = `<button class="btn" id="redadd" title="Put a cost reduction on the timeline at the moment it happens in the game (for example Kokona's stamp reduction): the next EX of everyone it names costs that much less. Drag its teal marker on the cost graph to move it.">&#8722; Cost reduction</button>`
-      + [...reds].sort((a, b) => b.t - a.t).map(r => `<span class="redchip" data-red="${r.id}"><b>&#8722;</b><input class="n" type="number" min="1" max="10" value="${r.n || 1}" data-rn title="Cost taken off the next EX"> at <input type="text" value="${fmt2(r.t)}" data-rt style="width:76px"> for <select data-rto>${nameOpt(r.to, 'everyone')}</select> not <select data-rex>${nameOpt(r.except, 'nobody')}</select><button class="btn" data-rx title="Remove">&#10005;</button></span>`).join('');
-    const upd = fn => { fn(); save(); render(); }, find = el => (t.reds || []).find(r => r.id === el.closest('[data-red]').dataset.red);
-    $('#redadd').onclick = () => upd(() => { const last = t.casts.length ? Math.min(...t.casts.map(c => c.t)) : TOTAL - 30; (t.reds = t.reds || []).push({id:Math.random().toString(36).slice(2, 8), t:+Math.max(1, last - 3).toFixed(2), n:1}); });
-    document.querySelectorAll('#redbar [data-rn]').forEach(el => el.onchange = () => upd(() => { find(el).n = Math.max(1, Math.round(+el.value || 1)); }));
-    document.querySelectorAll('#redbar [data-rt]').forEach(el => el.onchange = () => upd(() => { const v = parse(el.value); if(v >= 0 && v <= TOTAL) find(el).t = +v.toFixed(3); }));
-    document.querySelectorAll('#redbar [data-rto]').forEach(el => el.onchange = () => upd(() => { const r = find(el); if(el.value) r.to = +el.value; else delete r.to; }));
-    document.querySelectorAll('#redbar [data-rex]').forEach(el => el.onchange = () => upd(() => { const r = find(el); if(el.value) r.except = +el.value; else delete r.except; }));
-    document.querySelectorAll('#redbar [data-rx]').forEach(el => el.onclick = () => upd(() => { const r = find(el); t.reds = t.reds.filter(x => x !== r); })); }
   $('#addbar').innerHTML = '<b style="color:var(--dim)">Add cast:</b>' + t.roster.map(id=>`<button class="btn addq" data-aq="${id}" title="Add ${SCHALE[id].name}'s EX at the first moment the team can pay for it"><img src="https://schaledb.com/images/student/icon/${id}.webp" onerror="this.style.visibility='hidden'" draggable="false">${sname(id)} <small>${baseCost(t, id)}</small></button>`).join('')
     + `<label title="When ticked, each new cast is tied to the cast above it (the &#9193; button): it goes off as soon as the team has the cost, instead of waiting for you to set a time. Use it for back-to-back EX skills."><input type="checkbox" id="chainnew" ${state.chainNew?'checked':''}> Chain: cast as soon as affordable &#9193;</label>`;
   $('#chainnew').onchange = e=>{ state.chainNew = e.target.checked; save(); };
@@ -932,15 +960,14 @@ Drag to move it; change or remove it in the Rotation tab.`;
   const ch2 = (sel,fn)=>document.querySelectorAll(sel).forEach(e=>e.onchange=()=>{fn(e);save();render();});
   document.querySelectorAll('[data-ch]').forEach(b=>b.onclick=()=>{
     const c = t.casts[+b.dataset.ch], n = order.indexOf(+b.dataset.ch);
-    if(c.after) delete c.after; else if(n > 0){ c.after = cid(t.casts[order[n-1]]); delete c.cb; }
+    if(c.after){ const i = +b.dataset.ch; delete c.after; c.cb = +Math.max(0, costAt(t, -1, c.t, castsExcept(t, i))).toFixed(2); }   // untied: it stays where it is, placed by the cost it sees there (not turned into a time you set by hand)
+    else if(n > 0){ c.after = cid(t.casts[order[n-1]]); delete c.cb; }
     t.estimated = false; save(); render(); });
   ch2('[data-t]',e=>{const i=+e.dataset.t, c=t.casts[i];
-    if(e.value.trim()===''){ if(timed(c)) c.cb = +Math.max(0, costAt(t, -1, c.t, castsExcept(t, i))).toFixed(1); return; }   // emptied: back to being placed by cost
+    if(e.value.trim()===''){ if(timed(c)) c.cb = +Math.max(0, costAt(t, -1, c.t, castsExcept(t, i))).toFixed(2); return; }   // emptied: back to being placed by cost
     delete c.after;delete c.cb;c.t=Math.max(0,Math.min(TOTAL,+parse(e.value).toFixed(3)));t.estimated=false;});
   // Cost before: type or step a value and the cast moves to the moment the team has that much cost.
-  const applyCost = (i, want) => { if(!isFinite(want)) return; delete t.casts[i].after;
-    { const sp = spendOf(t, t.casts[i]); want = Math.max(want, t.casts.some(x=>x!==t.casts[i] && x.target === t.casts[i].who && SCHALE[x.who].buffs.some(b=>b.stat==='CostOverload')) ? sp - 5 : sp); }   // less cost than it spends is only possible with Cost Over (up to 5 short)
-    want = Math.min(want, capOf(t)); t.casts[i].cb = want; { const above = t.casts.filter(x=>x!==t.casts[i] && x.t >= t.casts[i].t).sort((a,b)=>a.t-b.t)[0]; t.casts[i].t = timeForCost(t, i, want, above ? above.t - 0.01 : TOTAL, want < (t.casts[i].cost ?? SCHALE[t.casts[i].who].cost) ? T => overOnFor(t, t.casts[i], T) : undefined); } t.estimated = false; save(); render();
+  const applyCost = (i, want) => { if(!isFinite(want)) return; placeByCost(t, i, want); t.estimated = false; save(); render();
     const n = document.querySelector('[data-cb="'+i+'"]'); if(n){ n.focus(); n.select(); } };
   document.querySelectorAll('[data-cb]').forEach(inp=>{
     inp.oninput = ()=>{ const cap = capOf(t); if(inp.value !== '' && +inp.value > cap) inp.value = cap; if(inp.value !== '' && +inp.value < -5) inp.value = -5; };   // never above the max cost
@@ -960,6 +987,7 @@ Drag to move it; change or remove it in the Rotation tab.`;
     };
   });
   ch2('[data-w]',e=>{ const c = t.casts[e.dataset.w]; c.who = +e.value; delete c.cost; delete c.form; });   // an EX-cost override belongs to the student it was set for
+  ch2('[data-hit]',e=>{ const c=t.casts[e.dataset.hit]; if(e.value==='') delete c.hit; else c.hit=e.value; });
   ch2('[data-tg]',e=>{ const c=t.casts[e.dataset.tg]; if(e.value==='') delete c.target; else c.target=+e.value; });
   ch2('[data-g]',e=>t.casts[e.dataset.g].tag=e.value);
   ch2('[data-cost]',e=>setSpend(t.casts[e.dataset.cost], e.value));
@@ -968,7 +996,7 @@ Drag to move it; change or remove it in the Rotation tab.`;
 }
 
 const rid = () => Math.random().toString(36).slice(2, 8);
-const EVNAME = {groggy:'Groggy', skill:'Boss skill', phase:'Phase change', note:'Note'};
+const EVNAME = {groggy:'Groggy', skill:'Boss skill', phase:'Phase change', note:'Note', entity:'Entity'};
 function bindEventDrag(t){
   const px = pxs();
   document.querySelectorAll('.evpill[data-ev]').forEach(el=>{
@@ -1021,8 +1049,10 @@ function renderBoss(t){
     phase:['Phase change','A moment the boss changes pattern (at an HP threshold).'],
     note:['Note','Any marker of your own, for example "use Ui here".']};
   const SKP = bd ? bd.skills.filter(sk=>sk.type!=='Passive') : [];
+  const ENTS = bd ? bd.enemies.filter(en => ENTITY[en.name]).filter((en, k, a) => a.findIndex(z => z.name === en.name) === k) : [];
   $('#evadd').innerHTML = '<div style="width:100%"><b style="color:var(--dim)">Add event</b></div><div class="evcards" style="width:100%">'
     + ['groggy','phase','note'].concat(bd ? [] : ['skill']).map(k=>`<button class="btn evcard ${k}" data-add="${k}"><b>+ ${EVINFO[k][0]}</b><small>${EVINFO[k][1]}</small></button>`).join('') + '</div>'
+    + (ENTS.length ? `<div style="width:100%;margin-top:6px"><b style="color:var(--dim)">Things on the field</b> <small style="color:var(--dim)">place one where it appears, set how long it lives and who destroys it</small></div><div class="evcards" style="width:100%">${ENTS.map(en => `<button class="btn evcard entity" data-addent="${esc(en.name)}"><b>+ ${esc(en.name)}</b><small>${esc(ENTITY[en.name].tip)}</small></button>`).join('')}</div>` : '')
     + (SKP.length ? `<div style="width:100%;margin-top:6px"><b style="color:var(--dim)">Boss skills</b> <small style="color:var(--dim)">click one to put it on the timeline, then drag it to when it is cast (the game data has no cast times)</small></div><div class="sklist" style="width:100%">`
         + SKP.map(sk=>`<div class="skcard"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><b>${esc(sk.name)}</b><button class="btn" data-addsk="${sk.id}">+ Add</button></div>${(() => { const full = String(sk.desc || '').trim(), m = full.match(/^[\s\S]*?[.!?](?=\s|$)/), first = m ? m[0] : full, more = full.length > first.length + 1;   // first sentence on the card; the rest in the click popup
           return `<div class="d ${more ? 'more' : ''}" ${more ? `data-tip="${esc(sk.name)}
@@ -1030,14 +1060,14 @@ ${esc(full)}"` : ''}>${esc(first)}${more ? ' <span class="mr">&hellip; click for
     + (state.teams.length > 1 ? `<div style="width:100%;margin-top:6px"><select id="evcopysel">${state.teams.map((x,i)=>i===state.team?'':`<option value="${i}">${x.name}</option>`).join('')}</select> <button class="btn" id="evcopy" title="Copy the boss events of that team into this one">Copy events from</button></div>` : '');
   // table
   const evs = evOf(t), order = evs.map((e,k)=>k).sort((a,c)=>evs[c].t - evs[a].t);
-  let h = '<tr><th>#</th><th>Time</th><th>Type</th><th>Label</th><th>Length (s)</th><th>Boss skill</th><th title="The boss skill never lands (e.g. interrupted by a groggy)">Cancelled</th><th></th></tr>';
+  let h = '<tr><th>#</th><th>Time</th><th>Type</th><th>Label</th><th>Length (s)</th><th>Boss skill</th><th title="For a boss skill: it never lands (e.g. interrupted by a groggy). For something on the field with an area (Erosion Tower, pillar pulse): the clock times your team is inside it. Empty = not inside (Erosion Tower) / the whole pulse (Pillar pulse).">Cancelled / team in area (from, to)</th><th></th></tr>';
   order.forEach((k,n)=>{ const e = evs[k];
     h += `<tr><td>${n+1}</td><td><input type="text" value="${fmt2(e.t)}" data-et="${k}"></td>
       <td><select data-ety="${k}">${Object.keys(EVNAME).map(x=>`<option value="${x}" ${e.type===x?'selected':''}>${EVNAME[x]}</option>`).join('')}</select></td>
       <td><input type="text" style="width:150px" value="${(e.label||'').replace(/"/g,'&quot;')}" data-elb="${k}" placeholder="${EVNAME[e.type]}"></td>
       <td><input type="number" step="1" min="0" value="${e.dur ?? ''}" data-edu="${k}" ${e.type==='groggy' && bd && bd.enemies[0].groggyMs ? `placeholder="${bd.enemies[0].groggyMs/1000}"` : ''}></td>
       <td>${e.type==='skill' && bd ? `<select data-esk="${k}"><option value="">(none)</option>${bd.skills.filter(sk=>sk.type!=='Passive').map(sk=>`<option value="${sk.id}" ${e.skill===sk.id?'selected':''}>${sk.name}</option>`).join('')}</select>` : ''}</td>
-      <td>${e.type==='skill' ? `<input type="checkbox" data-eca="${k}" ${e.cancel?'checked':''} style="width:18px;height:18px">` : ''}</td>
+      <td>${e.type==='entity' && ENTITY[e.ent] && ENTITY[e.ent].area ? `<span style="white-space:nowrap"><input type="text" data-eina="${k}" value="${e.inFrom != null ? fmt2(e.inFrom) : ''}" placeholder="${ENTITY[e.ent].inDefault ? 'whole pulse' : 'not inside'}" style="width:78px" title="Clock time your team enters its area. Blank = the team is not inside it (no cost penalty) for the Erosion Tower, the whole pulse for the Pillar pulse"> &ndash; <input type="text" data-einb="${k}" value="${e.inTo != null ? fmt2(e.inTo) : ''}" placeholder="to end" style="width:78px" title="Clock time your team leaves its area (blank = until it is destroyed or ends)"></span>` : ''}${e.type==='skill' ? `<input type="checkbox" data-eca="${k}" ${e.cancel?'checked':''} style="width:18px;height:18px">` : ''}</td>
       <td style="white-space:nowrap"><button class="btn" data-edup="${k}" title="Duplicate">&#10064;</button> <button class="btn" data-edel="${k}" title="Delete">&#10005;</button></td></tr>`;
   });
   $('#evt').innerHTML = h;
@@ -1054,6 +1084,12 @@ ${esc(full)}"` : ''}>${esc(first)}${more ? ' <span class="mr">&hellip; click for
     if(type === 'groggy' && bd && bd.enemies[0].groggyMs) ev.dur = bd.enemies[0].groggyMs/1000;
     es.push(ev);
   }));
+  document.querySelectorAll('[data-addent]').forEach(btn=>btn.onclick = ()=>upd(()=>{
+    const es = evOf(t), nm = btn.dataset.addent, def = ENTITY[nm], tt = es.length ? Math.max(0, Math.min(...es.map(x=>x.t)) - 10) : Math.max(0, TOTAL - 60);
+    const ev = {id:rid(), type:'entity', ent:nm, t:+tt.toFixed(2), label:nm}; if(def.defDur) ev.dur = def.defDur; es.push(ev);
+  }));
+  document.querySelectorAll('[data-eina],[data-einb]').forEach(el=>el.onchange = ()=>upd(()=>{ const a = el.dataset.eina !== undefined, e = evs[+(a ? el.dataset.eina : el.dataset.einb)], key = a ? 'inFrom' : 'inTo';
+    if(el.value.trim() === '') delete e[key]; else { const v = parse(el.value); if(v >= 0 && v <= TOTAL) e[key] = +v.toFixed(3); } }));
   document.querySelectorAll('[data-addsk]').forEach(btn=>btn.onclick = ()=>upd(()=>{
     const es = evOf(t), sk = bd.skills.find(x=>x.id===btn.dataset.addsk), tt = es.length ? Math.max(0, Math.min(...es.map(x=>x.t)) - 10) : Math.max(0, TOTAL - 60);
     es.push({id:rid(), type:'skill', t:+tt.toFixed(2), skill:sk.id, label:sk.name});
@@ -1193,7 +1229,7 @@ $('.tl-wrap').addEventListener('wheel', e=>{
 (() => {
   const wrap = $('.tl-wrap');
   wrap.addEventListener('mousedown', e=>{
-    if(e.button!==0 || e.target.closest('.bar,.carry,circle,.lname,.evpill,.redmk')) return;
+    if(e.button!==0 || e.target.closest('.bar,.carry,circle,.lname,.evpill')) return;
     if(e.target===wrap && (e.offsetX > wrap.clientWidth || e.offsetY > wrap.clientHeight)) return;      // scrollbar
     const x0 = e.clientX, s0 = wrap.scrollLeft; wrap.classList.add('panning'); e.preventDefault();
     const mv = ev => { wrap.scrollLeft = s0 - (ev.clientX - x0)/UI(); };
@@ -1221,6 +1257,7 @@ $('#bcreate').onclick = ()=>{
   if(new Set(ids).size !== ids.length){ alert('A student is picked twice.'); return; }
   const nS = ids.filter(id=>SCHALE[id].squad==='Main').length, nP = ids.length - nS;
   if(nS > 4 || nP > 2){ alert('A team has at most 4 strikers and 2 specials (you picked '+nS+' and '+nP+').'); return; }
+  if(state.teams.length === 1 && state.teams[0].blank) state.teams = [];   // the empty team a New file starts with
   state.teams.push({name:$('#bname').value.trim()||('Team '+(state.teams.length+1)), estimated:false, source:'Your own rotation: add casts in the Rotation table or drag bars.', roster:ids, casts:[], custom:true});
   state.team = state.teams.length-1; $('#builder').style.display='none'; save(); render();
 };
@@ -1259,7 +1296,7 @@ function addCast(who){
   const box = $('#rotbox'); box.scrollTop = box.scrollHeight;     // show the new row
 }
 $('#delteam').onclick = ()=>{ if(state.teams.length<2){alert('Keep at least one team.');return;} if(confirm('Delete team "'+team().name+'"?')){state.teams.splice(state.team,1);state.team=0;save();render();} };
-$('#reset').onclick = ()=>{ if(confirm('Discard all edits and reload the bundled rotations?')){state=fresh();save();render();} };
+$('#reset').onclick = ()=>{ if(confirm('Discard all teams on screen and reload the bundled rotations?\n\nYour saved file is NOT changed. Ctrl+Z brings the teams back until you reload the page, and the next Save will ask where to save instead of reusing the old file.')){ state = fresh(); if(typeof forgetFile === 'function') forgetFile(); save(); render(); } };
 // Small dialog built from DOM nodes (team names are text, never HTML).
 function dialog(title, body, okLabel, onOk){
   const bg = document.createElement('div'); bg.className = 'dlg-bg';
@@ -1302,6 +1339,10 @@ const FILEPICK = {suggestedName: 'ba-timeline.json', id: 'ba-timeline-export', t
 const idb = (mode, fn) => new Promise((ok, no) => { const r = indexedDB.open('ba-timeline-file', 1); r.onupgradeneeded = () => r.result.createObjectStore('h'); r.onerror = () => no(r.error);
   r.onsuccess = () => { const q = fn(r.result.transaction('h', mode).objectStore('h')); q.onsuccess = () => ok(q.result); q.onerror = () => no(q.error); }; });
 let fileHandle = null;
+function forgetFile(){ fileHandle = null; idb('readwrite', st => st.delete('main')).catch(() => {}); showFile(); }   // Reset / starting over: the next Save asks where to save
+function showFile(){ const b = $('#savebtn'), l = $('#filelabel'), has = !!window.showSaveFilePicker, nm = fileHandle ? fileHandle.name : null;
+  if(b) b.title = nm ? 'Save all teams to ' + nm + ' (Ctrl+S)' : has ? 'Save all teams to a file: the first save asks where (Ctrl+S)' : 'Download all teams as ba-timeline.json (Ctrl+S)';
+  if(l){ l.textContent = has ? (nm || 'no file yet') : 'downloads'; l.title = nm ? 'Ctrl+S saves to ' + nm : 'The first Save asks where to save'; } }
 async function saveAll(forceAsk){
   const text = JSON.stringify({...state}, null, 1);
   try {
@@ -1312,12 +1353,18 @@ async function saveAll(forceAsk){
         if(perm !== 'granted') perm = await fileHandle.requestPermission({mode:'readwrite'});
         if(perm !== 'granted') fileHandle = null;
       }
+      if(fileHandle && !forceAsk){   // never replace a file that holds other work without asking: it lists what is in the file and what would replace it
+        try { const old = JSON.parse(await (await fileHandle.getFile()).text()), oldN = (old.teams || []).map(x => x.name), newN = state.teams.map(x => x.name);
+          if(oldN.length && (!oldN.some(n => newN.includes(n)) || newN.length < oldN.length)){
+            const list = a => a.map(n => '  - ' + n).join('\n');
+            if(!confirm('"' + fileHandle.name + '" currently holds:\n' + list(oldN) + '\n\nSaving now would replace it with:\n' + list(newN) + '\n\nOK = replace the file.   Cancel = save to a different file instead.')) forceAsk = true; }
+        } catch(e){ /* unreadable or not a timeline file: go on */ } }
       if(!fileHandle || forceAsk){
         fileHandle = await window.showSaveFilePicker(FILEPICK);
         idb('readwrite', st => st.put(fileHandle, 'main')).catch(() => {});
       }
       const w = await fileHandle.createWritable(); await w.write(text); await w.close();
-      flash('Saved ' + fileHandle.name);
+      flash('Saved ' + fileHandle.name); showFile();
     } else {
       const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], {type:'application/json'})); a.download = 'ba-timeline.json'; a.click();
       flash('Downloaded ba-timeline.json');
@@ -1338,6 +1385,14 @@ $('#followsel').checked = followOn(); $('#followsel').onchange = e => localStora
 $('#gear').onclick = e => { e.stopPropagation(); $('#setpop').classList.toggle('on'); };
 document.addEventListener('mousedown', e => { if(!e.target.closest('#setpop, #gear')) $('#setpop').classList.remove('on'); });
 document.addEventListener('keydown', e => { if(e.key === 'Escape') $('#setpop').classList.remove('on'); });
+$('#saveas').onclick = () => saveAll(true);
+const blankState = () => ({team:0, lv:{}, cap:{}, rc:{}, wait:{}, ext:{}, first:{}, teams:[{name:'Team 1', estimated:false, source:'Your own rotation: add casts in the Rotation table or drag bars.', roster:[], casts:[], custom:true, blank:true, events:[]}]});
+$('#newfile').onclick = () => {
+  if(!confirm('Start a new, empty file?\n\nThe teams on screen are cleared and no file is linked any more, so the next Save asks where to save. Your saved file is not changed, and Ctrl+Z brings the teams back until you reload the page.')) return;
+  state = blankState(); forgetFile(); save(); render(); lastSaved = snap(); markDirty();
+  $('#builder').style.display = ''; buildSlots();
+};
+idb('readonly', st => st.get('main')).then(h => { if(h && !fileHandle){ fileHandle = h; } showFile(); }).catch(() => showFile());
 $('#exp').onclick = () => {
   const pk = teamPicker(state.teams), body = document.createElement('div');
   body.append(pk.box);

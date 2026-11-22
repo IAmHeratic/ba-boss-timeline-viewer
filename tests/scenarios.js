@@ -87,12 +87,6 @@ t = team(['Ui', 'Mika', 'Aru']); { const u = cast(t, 'Ui', 170); u.target = id('
   const old = { name: 'old', carry: id('Mika'), roster: [id('Ui'), id('Mika')], casts: [{ t: 170, who: id('Ui') }, { t: 160, who: id('Mika') }], set: { lv: {}, ext: {}, ue: {}, wait: {} } };
   E.dropCarry(old); eq('an old team with a carry: the carry becomes the target of the casts that needed one', [old.carry, old.casts[0].target, old.casts[1].target], [undefined, id('Mika'), undefined]); }
 
-// Cost reduction markers placed by the player
-{ t = team(['Kokona', 'Mika', 'Aru']); cast(t, 'Mika', 160); cast(t, 'Mika', 140); cast(t, 'Kokona', 140.5); cast(t, 'Aru', 139); t.reds = [{ id: 'a', t: 150, n: 1, except: id('Kokona') }];
-  eq('marker: the next EX of everyone but Kokona costs 1 less, once each', [spends(t, 'Mika'), spends(t, 'Kokona'), spends(t, 'Aru')], [[6, 5], [2], [3]]);
-  t.reds = [{ id: 'b', t: 150, n: 2, to: id('Mika') }]; eq('marker for one student, 2 less', [spends(t, 'Mika'), spends(t, 'Aru')], [[6, 4], [4]]);
-  t.reds = [{ id: 'c', t: 150, n: 9, to: id('Aru') }]; eq('a marker never takes the price below 0', spends(t, 'Aru'), [0]);
-  t.reds = []; eq('no markers: normal prices', spends(t, 'Mika'), [6, 6]); }
 
 // Buff wording: direction follows the skill text, and no raw stat name leaks into a label
 { const lab = (sid, which) => { const d = D[sid]; return (which === 'pub' ? d.public.effects.filter(e => e.type === 'Buff') : d.buffs).map(b => E.buffLabel(b.stat, b.target, b.values)); };
@@ -117,6 +111,70 @@ t = team(['Ui', 'Mika', 'Aru']); { const u = cast(t, 'Ui', 170); u.target = id('
   eq('locked row stays put when the start cost changes', b.t, tb);
   eq('an unlocked one is placed again', a.t !== ta, true);
   delete b.lock; E.applyChains(t); eq('unlocking lets the planner place it again', b.t !== tb, true); }
+
+
+// Things on the field (Hod, Yesod): placed by hand, aimed at from the Rotation table, with their cost effects
+{ const near = (x, y) => Math.abs(x - y) < 1e-6, hod = E.BOSSES.find(b => b.path === 'hod'), yes = E.BOSSES.find(b => b.path === 'yesod');
+  const cost = (t, T) => { E.winCache.ok = false; return E.costAt(t, -1, T, E.castsExcept(t, -1), undefined, E.allWindows(t, t.casts)); };   // (the page clears this cache at the start of every render)
+  t = team(['Mika', 'Aru', 'Kokona']); t.boss = { raid: hod.id, diff: hod.diffs[hod.diffs.length - 1].k, terrain: hod.terrains[0] };
+  const n = 3, pen = (t, secs) => 350 * n / 10000 * (1 + E.regenInfo(t).boost) * secs;
+  const base = cost(t, 160);
+  t.events = [{ id: 'a', type: 'entity', ent: 'Erosion Tower', t: 170, dur: 30 }];
+  eq('a tower you just placed costs nothing: the team is not inside its area until you say so', near(cost(t, 160), base), true);
+  t.events[0].inFrom = 170;
+  eq('Erosion Tower: every student in its area loses 350 Cost Recovery while it lives', near(base - cost(t, 160), pen(t, 10)), true);
+  t.events[0].area = false; eq('team outside the area (old switch): nothing changes', near(cost(t, 160), base), true); delete t.events[0].area;
+  t.events[0].inFrom = 165; eq('the team enters its area at 2:45: 5 s of penalty by 2:40', near(base - cost(t, 160), pen(t, 5)), true);
+  t.events[0].inTo = 163; eq('and leaves at 2:43: 2 s in total', near(base - cost(t, 160), pen(t, 2)), true);
+  t.events[0].inFrom = 170; delete t.events[0].inTo;
+  const k = cast(t, 'Aru', 166), withTower = cost(t, 160); k.hit = 'a';
+  eq('an EX aimed at the tower destroys it: the penalty stops at that cast (4.01 s instead of 10 s)', near(cost(t, 160) - withTower, pen(t, 10) - pen(t, 4.01)), true);
+  t = team(['Mika', 'Aru', 'Kokona']); t.boss = { raid: yes.id, diff: yes.diffs[yes.diffs.length - 1].k, terrain: yes.terrains[0] };
+  const b2 = cost(t, 164); t.events = [{ id: 'l', type: 'entity', ent: 'Blue Lantern', t: 175 }];
+  const m1 = cast(t, 'Mika', 160); eq('a lantern nobody aims at: no reduction and no gain', [spends(t, 'Mika'), near(cost(t, 164), b2)], [[6], true]);
+  const a1 = cast(t, 'Aru', 168); a1.hit = 'l'; E.winCache.ok = false;
+  eq('Aru aims at the lantern: Mika is not the destroyer, so she pays full', spends(t, 'Mika'), [6]);
+  eq('the destroyer’s own EX that kills it still pays full (Aru 4)', spends(t, 'Aru'), [4]);
+  const a2 = cast(t, 'Aru', 150); eq('Aru’s next EX is the one that is halved (4 -> 2)', spends(t, 'Aru'), [4, 2]);
+  const noHit = () => { const keep = a1.hit; delete a1.hit; const v = cost(t, 160); a1.hit = keep; return v; };
+  eq('the team gets 0.6 cost per student at the moment it is destroyed (3 students: 1.8)', near(cost(t, 160) - noHit(), 1.8), true); }
+
+// Who can aim at what: an ally-aimed EX never takes an entity, an enemy-aimed one does not take an ally
+{ const side = n => { const i = id(n); return [E.targetsAlly(i), E.aimsAtEnemy(i)]; };
+  eq('Seia (Swimsuit) aims at allies only', side('Seia (Swimsuit)'), [true, false]);
+  eq('Nozomi aims at enemies only', side('Nozomi'), [false, true]);
+  eq('Rio aims at allies only', side('Rio'), [true, false]);
+  const bad = Object.keys(D).filter(k => E.targetsAlly(+k) && E.aimsAtEnemy(+k)); eq('nobody aims at both', bad, []);
+  const y = E.BOSSES.find(b => b.path === 'yesod'); t = team(['Seia (Swimsuit)', 'Aru', 'Kokona']); t.boss = { raid: y.id, diff: y.diffs[y.diffs.length - 1].k, terrain: y.terrains[0] };
+  t.events = [{ id: 'l', type: 'entity', ent: 'Blue Lantern', t: 175 }]; const sc = cast(t, 'Seia (Swimsuit)', 168); sc.hit = 'l';
+  eq('a cast by an ally-aimed student cannot destroy a lantern', E.entKills(t, t.casts), []); }
+
+
+// Specials are not on the field, so they are never targets (except the ones that summon something there)
+{ eq('a Striker can be targeted', E.allyTargetable(id('Mika')), true);
+  eq('a Special cannot (Kisaki, Nagisa Swimsuit)', [E.allyTargetable(id('Kisaki')), E.allyTargetable(id('Nagisa (Swimsuit)'))], [false, false]);
+  eq('Himari (Armed) and Reisa (Magical) can: they put something on the field', [E.allyTargetable(20054), E.allyTargetable(20051)], [true, true]); }
+
+// Raising a row's cost keeps the rows in order: the casts after it are pushed later, not jumped over
+{ t = team(['Mika', 'Aru', 'Hikari']); const a = cast(t, 'Mika', 170), b = cast(t, 'Aru', 160), c = cast(t, 'Hikari', 150); a.cb = 4; b.cb = 2; c.cb = 2; E.applyChains(t);
+  const order = () => [...t.casts].sort((x, y) => y.t - x.t).map(x => t.casts.indexOf(x)), seen = (k) => E.costAt(t, k, t.casts[k].t, E.castsExcept(t, k));
+  const o0 = order(); E.placeByCost(t, 0, 7); E.applyChains(t);
+  eq('Mika waits for 7 cost: she moves later', a.t < 170, true);
+  eq('the order of the three rows is unchanged', order(), o0);
+  eq('Mika now sees about 7 before her cast', Math.abs(seen(0) - 7) < 0.05, true);
+  eq('Aru and Hikari are still after her in time', [b.t < a.t, c.t < b.t], [true, true]);
+  E.placeByCost(t, 0, 10); E.applyChains(t);
+  eq('waiting for the full 10 cost: still the same order, and whoever had to be pushed is chained behind her', [order(), (b.after === E.cid(a) || b.t < a.t - 0.005)], [o0, true]);
+  b.lock = true; const bt = b.t; E.placeByCost(t, 0, 9); eq('a locked row below is never moved', b.t, bt); delete b.lock; }
+
+
+// A phase transition with a length: nothing can be cast during it, so casts wait for its end
+{ t = team(['Mika', 'Aru', 'Hikari']); t.startCost = 10; const a = cast(t, 'Mika', 179); a.cb = 10; const b = cast(t, 'Aru', 178); b.after = E.cid(a);
+  t.events = [{ id: 'p', type: 'phase', t: 170, dur: 3 }]; a.t = 171; delete a.cb; a.after = undefined; delete a.after;   // Mika casts at 171; Aru is chained right after her
+  E.applyChains(t); eq('Aru is chained after Mika, with 10 cost in the bank: she goes right away', b.t > 170, true);
+  a.t = 170.0; b.t = 169.9; E.applyChains(t);
+  eq('a cast chained right after one inside a phase transition waits until the transition ends (167)', b.t <= 167 + 1e-9 && b.t > 166.9, true);
+  eq('and a time inside the transition is flagged', [E.ownBusy(t, { who: id('Hikari') }, 168.5) !== null, E.ownBusy(t, { who: id('Hikari') }, 160)], [true, null]); }
 
 
 console.log(bad ? `\n${bad} scenario(s) failed` : '\nALL SCENARIOS PASS'); process.exit(bad ? 1 : 0);

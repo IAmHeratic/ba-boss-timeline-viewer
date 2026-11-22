@@ -51,6 +51,9 @@ for i in WANT:
                            'apply': e.get('ApplyFrame', 0), 'values': e['Value'][0], 'slot': e.get('OverrideSlot')})
         forms.append({'name': xs['Name'], 'costs': xs.get('Cost'), 'frames': xs.get('Duration') or ex.get('Duration', 90), 'buffs': fb})
     # Cost Recovery given to the student itself by a passive (not by the EX): timed (after an EX use) or permanent. values = one array per variant, indexed by skill level.
+    # What the EX is aimed at, for the Target column: 'enemy' when it deals damage or puts an effect on an enemy, else nothing to aim (allies are told apart by the buffs / text in index.html)
+    efx = ex.get('Effects', [])
+    ex_target = 'enemy' if (any(e.get('Type') == 'Damage' for e in efx) or any('Enemy' in (e.get('Target') or []) for e in efx) or re.search(r'target enem|enemy target|one enem|an enem|to enem|nearest enem|all enem|enemies', ex['Desc'], re.I)) else 'none'
     regen_fx = []
     for slot in ('ExtraPassive', 'Public', 'Passive'):
         for e in (x['Skills'].get(slot) or {}).get('Effects', []):
@@ -58,6 +61,6 @@ for i in WANT:
                 regen_fx.append({'slot': slot, 'ms': e.get('Duration'), 'values': e['Value']})
     out[str(i)] = {'public': pubd, 'id': i, 'name': x['Name'], 'exName': ex['Name'],
                    'desc': re.sub('<[^>]+>', '', ex['Desc']), 'params': ex.get('Parameters'),
-                   'squad': x.get('SquadType'), 'regenStat': x.get('RegenCost', 700), 'regenBoost': boost, 'cost': ex['Cost'][-1], 'costs': ex['Cost'], 'school': x.get('School'), 'armor': x.get('ArmorType'), 'bullet': x.get('BulletType'), 'regenFx': regen_fx, 'forms': forms, 'frames': ex.get('Duration', 90), 'buffs': buffs, 'extend': ext}
+                   'squad': x.get('SquadType'), 'regenStat': x.get('RegenCost', 700), 'regenBoost': boost, 'cost': ex['Cost'][-1], 'costs': ex['Cost'], 'school': x.get('School'), 'armor': x.get('ArmorType'), 'bullet': x.get('BulletType'), 'exTarget': ex_target, 'regenFx': regen_fx, 'forms': forms, 'frames': ex.get('Duration', 90), 'buffs': buffs, 'extend': ext}
 open('data.js', 'w', encoding='utf8').write('const SCHALE = ' + json.dumps(out, ensure_ascii=False) + ';\n')
 print('ok', len(out))

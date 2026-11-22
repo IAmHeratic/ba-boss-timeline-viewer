@@ -49,7 +49,6 @@ function randomRotation(t, n) {
   const bd = bossFx(t);
   if (bd && rnd() < .7) { const g = ri(0, 3); for (let i = 0; i < g; i++) t.events.push({ id: 'e' + i, type: 'groggy', t: +(E.clock().TOTAL - rnd() * (E.clock().TOTAL - 20)).toFixed(2), dur: 10 }); }
   if (rnd() < .2) t.startCost = ri(0, 6);
-  if (rnd() < .4) t.reds = Array.from({ length: ri(1, 2) }, (_, i) => ({ id: 'r' + i, t: +(E.clock().TOTAL - rnd() * (E.clock().TOTAL - 20)).toFixed(2), n: ri(1, 2), ...(rnd() < .5 ? { to: pick(t.roster) } : {}) }));   // cost reduction markers
 }
 
 const t0 = Date.now(); let worst = 0;
