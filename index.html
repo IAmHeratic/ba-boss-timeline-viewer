@@ -134,6 +134,7 @@ body.side .rotbar{top:0}
 .evcard small{color:var(--dim);font-weight:400;font-size:12px;white-space:normal}
 .evcard.entity{border-color:#2fc4bd}.evcard.groggy{border-color:#ff6b5e}.evcard.skill{border-color:#b98cff}.evcard.phase{border-color:#5dade2}.evcard.note{border-color:#8fa0c0}
 .evband{position:absolute;pointer-events:none;background:#ff6b5e1c;z-index:1}
+.evband.phase{background:repeating-linear-gradient(135deg,#2f7fb83a,#2f7fb83a 6px,#2f7fb81a 6px,#2f7fb81a 12px);border-right:2px solid #5dade2;z-index:2}   /* a phase transition: nobody can cast inside it */
 .bosslane .lname{flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:0;font-size:15px;line-height:1.2;background-size:cover;background-position:right center;background-repeat:no-repeat;text-shadow:0 1px 3px #000}
 #evt input[type=number]{width:62px}
 .chain-on{background:var(--accent,#4a7fd4);color:#fff}
@@ -776,7 +777,7 @@ function render0(){
   // boss lane: events the player placed (groggy, boss skills, phase changes, notes)
   const evs = evOf(t), bd = bossDiff(t), bb = bossOf(t);
   const EK = entKills(t, t.casts);
-  const evItems = evs.map((e,k)=>{ const label = e.label || (e.type==='entity' ? (e.ent || 'Entity') : e.type==='groggy' ? 'Groggy' : e.type==='phase' ? 'Phase change' : e.type==='skill' ? 'Boss skill' : 'Note');
+  const evItems = evs.map((e,k)=>{ const label = e.label || (e.type==='entity' ? (e.ent || 'Entity') : e.type==='groggy' ? 'Groggy' : e.type==='phase' ? 'Phase Change' : e.type==='skill' ? 'Boss skill' : 'Note');
     const kl = e.type === 'entity' ? EK.find(z => z.ev === e) : null, dur = kl ? +(e.t - kl.at).toFixed(2) : +(e.dur || 0), wpx = Math.max(dur*px, Math.min(260, label.length*7.2 + 18));
     return {k, e, label, dur, wpx, start:e.t, end:e.t - wpx/px}; });
   const BOSSL = (bb || evs.length) ? pack(evItems)*30 + 10 : 0;
@@ -802,9 +803,10 @@ function render0(){
     html += `<div class="lane bosslane" style="top:${HEAD}px;height:${BOSSL}px"><div class="lname"${bb ? ` style="background-image:linear-gradient(#141e2eb8,#141e2eb8),url(https://schaledb.com/images/raid/Boss_Portrait_${BOSS_DEV[bb.path] || bb.path}_Lobby.png)"` : ''}><b>${bb ? bb.name + (bd ? `<br><span class="bd">${bd.name}</span>` : '') : nm}</b></div></div>`;
     evItems.forEach(it=>{
       const e = it.e, x = X(e.t), full = y + 0;
+      if(e.type === 'phase' && it.dur > 0) html += `<div class="evband phase" title="Phase transition: no casting until it ends" style="left:${x}px;top:${HEAD}px;width:${it.dur*px}px;height:${full - HEAD}px"></div>`;
       if(e.type === 'groggy' && it.dur > 0) html += `<div class="evband" style="left:${x}px;top:${HEAD}px;width:${it.dur*px}px;height:${full - HEAD}px"></div>`;
       html += `<div class="evline ${e.type}" style="left:${x}px;top:${HEAD}px;height:${full - HEAD}px"></div>`;
-      const edef = e.type === 'entity' && ENTITY[e.ent], tip = `${it.label} @ ${fmt2(e.t)}${it.dur ? ' for ' + it.dur + 's (until ' + fmt2(e.t - it.dur) + ')' : ''}${(kk => kk ? '\ndestroyed by ' + SCHALE[kk.c.who].name + ' @ ' + fmt2(kk.at) : '')(EK.find(z => z.ev === e))}${edef ? '\n' + edef.tip : ''}${e.cancel ? '\nthe boss skill is cancelled' : ''}`;
+      const edef = e.type === 'entity' && ENTITY[e.ent], tip = `${it.label}\nStart: ${fmt2(e.t)}${it.dur ? '\nEnd: ' + fmt2(e.t - it.dur) + '\nDuration: ' + (+it.dur.toFixed(3)) + ' s' : ''}${(kk => kk ? '\ndestroyed by ' + SCHALE[kk.c.who].name + ' @ ' + fmt2(kk.at) : '')(EK.find(z => z.ev === e))}${edef ? '\n' + edef.tip : ''}${e.cancel ? '\nthe boss skill is cancelled' : ''}`;
       html += `<div class="evpill ${e.type} ${e.cancel?'cancel':''}" data-ev="${it.k}" data-tip="${tip.replace(/"/g,'&quot;')}" style="left:${x}px;top:${HEAD + 5 + it.row*30}px;width:${it.wpx}px">${it.label}</div>`;
     });
   }
@@ -996,7 +998,7 @@ function render0(){
 }
 
 const rid = () => Math.random().toString(36).slice(2, 8);
-const EVNAME = {groggy:'Groggy', skill:'Boss skill', phase:'Phase change', note:'Note', entity:'Entity'};
+const EVNAME = {groggy:'Groggy', skill:'Boss skill', phase:'Phase Change', note:'Note', entity:'Entity'};
 function bindEventDrag(t){
   const px = pxs();
   document.querySelectorAll('.evpill[data-ev]').forEach(el=>{
@@ -1046,7 +1048,7 @@ function renderBoss(t){
   // add events: one card per kind, then the boss's own skills to click onto the timeline
   const EVINFO = {groggy:['Groggy','The boss is stunned and takes extra damage: a red band on the timeline (length from the boss data).'],
     skill:['Boss skill','A boss attack landing at a moment you choose. Pick it from the list below, or add a blank one.'],
-    phase:['Phase change','A moment the boss changes pattern (at an HP threshold).'],
+    phase:['Phase Change','A moment the boss changes pattern (at an HP threshold).'],
     note:['Note','Any marker of your own, for example "use Ui here".']};
   const SKP = bd ? bd.skills.filter(sk=>sk.type!=='Passive') : [];
   const ENTS = bd ? bd.enemies.filter(en => ENTITY[en.name]).filter((en, k, a) => a.findIndex(z => z.name === en.name) === k) : [];
