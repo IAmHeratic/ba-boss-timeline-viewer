@@ -124,11 +124,19 @@ t = team(['Ui', 'Mika', 'Aru']); { const u = cast(t, 'Ui', 170); u.target = id('
   t.events[0].inFrom = 170;
   eq('Erosion Tower: every student in its area loses 350 Cost Recovery while it lives', near(base - cost(t, 160), pen(t, 10)), true);
   t.events[0].area = false; eq('team outside the area (old switch): nothing changes', near(cost(t, 160), base), true); delete t.events[0].area;
+  t.events[0].inFrom = 170; t.events[0].inside = [id('Mika')];
+  eq('only the students inside lose the 350: one of three inside = a third of the penalty', near(base - cost(t, 160), pen(t, 10) / 3), true);
+  delete t.events[0].inFrom; delete t.events[0].inside;
+  t.events[0].spans = [{ f: 170, to: 166, in: [id('Mika')] }, { f: 160, to: 156, in: [id('Mika'), id('Aru')] }];
+  { const withSpans = cost(t, 150), saved = t.events; t.events = []; const plain = cost(t, 150); t.events = saved;
+    eq('the zone grows and shrinks: two spans with their own students (1 student for 4 s, then 2 for 4 s)', near(plain - withSpans, 350 / 10000 * (1 + E.regenInfo(t).boost) * (1 * 4 + 2 * 4)), true); }
+  delete t.events[0].spans; t.events[0].inFrom = 170; t.events[0].inside = [id('Mika')];
+  t.events[0].inside = []; eq('nobody inside: no penalty', near(cost(t, 160), base), true); delete t.events[0].inside;
   t.events[0].inFrom = 165; eq('the team enters its area at 2:45: 5 s of penalty by 2:40', near(base - cost(t, 160), pen(t, 5)), true);
   t.events[0].inTo = 163; eq('and leaves at 2:43: 2 s in total', near(base - cost(t, 160), pen(t, 2)), true);
   t.events[0].inFrom = 170; delete t.events[0].inTo;
   const k = cast(t, 'Aru', 166), withTower = cost(t, 160); k.hit = 'a';
-  eq('an EX aimed at the tower destroys it: the penalty stops at that cast (4.01 s instead of 10 s)', near(cost(t, 160) - withTower, pen(t, 10) - pen(t, 4.01)), true);
+  eq('an EX aimed at the tower does not cut the span you set short (the cost before a cast must not depend on that cast)', near(cost(t, 160) - withTower, 0), true);
   t = team(['Mika', 'Aru', 'Kokona']); t.boss = { raid: yes.id, diff: yes.diffs[yes.diffs.length - 1].k, terrain: yes.terrains[0] };
   const b2 = cost(t, 164); t.events = [{ id: 'l', type: 'entity', ent: 'Blue Lantern', t: 175 }];
   const m1 = cast(t, 'Mika', 160); eq('a lantern nobody aims at: no reduction and no gain', [spends(t, 'Mika'), near(cost(t, 164), b2)], [[6], true]);
@@ -175,6 +183,15 @@ t = team(['Ui', 'Mika', 'Aru']); { const u = cast(t, 'Ui', 170); u.target = id('
   a.t = 170.0; b.t = 169.9; E.applyChains(t);
   eq('a cast chained right after one inside a phase transition waits until the transition ends (167)', b.t <= 167 + 1e-9 && b.t > 166.9, true);
   eq('and a time inside the transition is flagged', [E.ownBusy(t, { who: id('Hikari') }, 168.5) !== null, E.ownBusy(t, { who: id('Hikari') }, 160)], [true, null]); }
+
+
+// Typing the cost a row already has (after a reduction) must not throw the row or the rows below it around (a bug that made them red)
+{ t = team(['Seia', 'Mika', 'Aru']); const s = cast(t, 'Seia', 170); s.cb = 6; s.target = id('Mika'); const m = cast(t, 'Mika', 160); m.after = E.cid(s); const a = cast(t, 'Aru', 150); a.cb = 7;
+  E.applyChains(t); const mikaPrice = E.spendOf(t, m), before = t.casts.map(x => x.t);
+  eq('Seia halves Mika\u2019s EX (6 -> 3), so Mika\u2019s price is 3', mikaPrice, 3);
+  E.placeByCost(t, t.casts.indexOf(m), mikaPrice); E.applyChains(t);
+  eq('typing that same cost (3) leaves Mika where she was (within 0.05 s) and every other row where it was', t.casts.map((x, k) => Math.abs(x.t - before[k]) < 0.05), t.casts.map(() => true));
+  const ev = E.costModel(t, E.allResolved()).ev; eq('and nothing is flagged as not enough cost', ev.every(e => e.ok), true); }
 
 
 console.log(bad ? `\n${bad} scenario(s) failed` : '\nALL SCENARIOS PASS'); process.exit(bad ? 1 : 0);

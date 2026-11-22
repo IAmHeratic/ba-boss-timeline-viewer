@@ -133,6 +133,7 @@ body.side .rotbar{top:0}
 .evcards{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px}
 .evcard{display:flex;flex-direction:column;align-items:flex-start;gap:3px;text-align:left;padding:8px 10px;border-left:4px solid}
 .evcard small{color:var(--dim);font-weight:400;font-size:12px;white-space:normal}
+.zspan{margin-bottom:6px}.insiders{display:flex;gap:4px;margin-top:4px}.inb{padding:1px;width:30px;height:30px;opacity:.45;filter:grayscale(.7)}.inb.on{opacity:1;filter:none;border-color:#2fc4bd}.inb img{width:26px;height:26px;border-radius:5px;display:block}
 .evcard.entity{border-color:#2fc4bd}.evcard.groggy{border-color:#ff6b5e}.evcard.skill{border-color:#b98cff}.evcard.phase{border-color:#5dade2}.evcard.note{border-color:#8fa0c0}
 .evband{position:absolute;pointer-events:none;background:#ff6b5e1c;z-index:1}
 .evband.phase{background:repeating-linear-gradient(135deg,#2f7fb83a,#2f7fb83a 6px,#2f7fb81a 6px,#2f7fb81a 12px);border-right:2px solid #5dade2;z-index:2}   /* a phase transition: nobody can cast inside it */
@@ -249,7 +250,7 @@ header .btn,header select{padding:4px 12px}
       <button class="btn" id="bclear">Clear boss</button></div>
     <div id="binfo" style="margin-bottom:10px"></div>
     <div class="row addbar" id="evadd"></div>
-    <div class="rotbox" style="max-height:260px;min-height:0"><table id="evt"></table></div>
+    <div class="rotbox" style="max-height:none;min-height:0;overflow-y:visible"><table id="evt"></table></div>   <!-- as tall as its rows: the page scrolls, not this box -->
   </div>
   <div class="card" id="rotcard"><h2>Rotation</h2>
     <div class="rotbar" id="rotbar"><div class="row addbar" id="addbar"></div>
@@ -435,6 +436,11 @@ const ENTITY = {
   'Left Pillar': {action:'none', regen:-400, area:true, inDefault:true, defDur:10, tip:'Pillar of Power: immortal, cannot be attacked. When it is at full HP it hits the team and lowers their Cost Recovery by 400 for 10 s (that pulse is what this marker is).'},
   'Right Pillar': {action:'attack', tip:'Pillar of Foundation: destroying it makes Yesod’s Right Hand take 1000% more damage (stacks twice).'}
 };
+// Students standing in an area effect (Erosion Tower, pillar pulse): only Strikers are on the field. Each one inside loses that effect's Cost Recovery (350 each: it halves their
+// 700 contribution). Unless the boss event says otherwise (the student toggles in its row), every Striker counts.
+// The spans of time Strikers stand inside an area effect: ev.spans = [{f: from clock, to: to clock, in: [student ids]}]. (Older saves kept one span as inFrom / inTo / inside.)
+const spansOf = ev => Array.isArray(ev.spans) ? ev.spans : ((ev.inFrom != null || ev.inTo != null) ? [{f: ev.inFrom, to: ev.inTo, in: ev.inside}] : []);
+const insideIds = (t, ev) => { const strikers = t.roster.filter(id => SCHALE[id].squad === 'Main'); const list = Array.isArray(ev.in) ? ev.in : ev.inside; return Array.isArray(list) ? strikers.filter(id => list.includes(id)) : strikers; };
 // An entity a cast aims at (the "Hit" box in the Rotation table) is destroyed by the LAST such cast while it is alive: that cast's student is who destroyed it, and the clock
 // moment (a hair before the cast, so that cast itself still pays the old price) is when the destroyer's reduction and the team's cost gain happen.
 function entKills(t, casts){
@@ -487,9 +493,11 @@ function castWindows(t, casts){
   const boost = regenInfo(t).boost, w = [], ord = {};
   { const units = t.roster.slice(0, 6), kills = new Map(entKills(t, casts).map(k => [k.ev.id, k]));
     (t.events || []).forEach(ev => { const def = ev.type === 'entity' && ENTITY[ev.ent]; if(!def) return; const k = kills.get(ev.id), name = ev.label || ev.ent;
-      if(def.regen && ev.area !== false && (def.inDefault || ev.inFrom != null || ev.inTo != null)){ let from = ev.t, to = ev.dur > 0 ? ev.t - ev.dur : 0; if(k) to = Math.max(to, k.at);   // it ends when it is destroyed
-        if(ev.inFrom != null) from = Math.min(from, ev.inFrom); if(ev.inTo != null) to = Math.max(to, ev.inTo);   // the team is only in its area from inFrom to inTo
-        if(from > to) w.push({a:from, b:to, extra:def.regen*units.length/10000*(1 + boost), name}); }
+      if(def.regen && ev.area !== false){
+        const low = ev.dur > 0 ? ev.t - ev.dur : 0;   // its Length (blank = the end of the fight). Casts aimed at it do NOT cut a span short: set the span's end yourself
+        const sp = spansOf(ev), list = sp.length ? sp : (def.inDefault ? [{}] : []);
+        list.forEach(x => { const from = x.f != null ? Math.min(ev.t, x.f) : ev.t, to = x.to != null ? Math.max(low, x.to) : low, n = insideIds(t, x).length;
+          if(from > to && n) w.push({a:from, b:to, extra:def.regen*n/10000*(1 + boost), name}); }); }
       if(def.kill && def.kill.gain && k) w.push({a:k.at, b:k.at - 0.01, extra:def.kill.gain*units.length/0.01, name:name + ' destroyed'}); }); }
   [...casts].sort((a, b) => b.t - a.t).forEach(c => {
     const d = SCHALE[c.who], n = ord[c.who] = (ord[c.who] || 0) + 1;
@@ -565,8 +573,8 @@ function costModel(t, list){
   [...list].sort((a,b)=>b.c.t-a.c.t).forEach(({c,i})=>{
     const spend = sm.get(c);
     const before = regenAdv(t, cost, last, c.t, rate, CAP);
-    const overload = before < spend && before + 5 >= spend && od(c.t, c.who);   // the Cost Over target may spend up to 5 beyond what it holds
-    ev.push({i, t:c.t, before, after:before-spend, spend, ok: before >= spend || overload, overload});
+    const overload = before < spend - 0.012 && before + 5 >= spend && od(c.t, c.who);   // the Cost Over target may spend up to 5 beyond what it holds
+    ev.push({i, t:c.t, before, after:before-spend, spend, ok: before >= spend - 0.012 || overload, overload});
     cost = before - spend; last = c.t;
   });
   winOverride = prevW;
@@ -675,8 +683,11 @@ function applyChains(t){
         const anyRed = otherCasts.some(x => CRED[x.who]) || t.roster.some(id => CRED[id] && CRED[id].start); let need0 = anyRed ? null : spendAt(t, c, nt, otherCasts);
         const overOn = T => t.casts.some(x => x !== c && x.target === c.who && SCHALE[x.who].buffs.some(b=>b.stat==='CostOverload')
                             && resolve(x).buffs.some(b=>b.stat==='CostOverload' && b.start>=T && b.end<T));
+        // the search walks later in time, so the cost is carried along from cast to cast instead of being replayed from the start at every 0.01 s step
+        const heldAt = (() => { const rate = +(t.regen ?? regenInfo(t).auto), CAP = capOf(t); let cst = +(t.startCost ?? 0), last = COST0, kk = 0;
+          return T => { const pw = winOverride; winOverride = winC; try { while(kk < others.length && others[kk].c.t > T){ const cc = others[kk++].c; cst = regenAdv(t, cst, last, cc.t, rate, CAP) - smo.get(cc); last = cc.t; } return regenAdv(t, cst, last, T, rate, CAP); } finally { winOverride = pw; } }; })();
         while(nt > 0){ const bz = ownBusy(t, c, nt); if(bz !== null){ nt = Math.max(0, floor2(bz)); continue; }   // still in her own EX animation: wait for it to end
-          const held = costAt(t, -1, nt, others, smo, winC), need = need0 ?? spendAt(t, c, nt, otherCasts); if((held >= need - 1e-9 || (held + 5 >= need - 1e-9 && overOn(nt))) && !others.some(o => o.c.t === nt)) break; nt = +(nt - 0.01).toFixed(2); }   // never on the very instant of another cast (it would not count that cast's cost)
+          const held = heldAt(nt), need = need0 ?? spendAt(t, c, nt, otherCasts); if((held >= need - 1e-9 || (held + 5 >= need - 1e-9 && overOn(nt))) && !others.some(o => o.c.t === nt)) break; nt = +(nt - 0.01).toFixed(2); }   // never on the very instant of another cast (it would not count that cast's cost)
         if(nt !== c.t){ c.t = nt; moved = true; }
       } else if(c.cb != null){
         const others = castsExcept(t, idx);
@@ -705,7 +716,7 @@ function placeByCost(t, i, want){
   want = Math.min(want, capOf(t)); me.cb = want;
   const oldT = me.t, above = t.casts.filter(x=>x!==me && x.t >= oldT).sort((a,b)=>a.t-b.t)[0];
   const below = t.casts.filter(x=>x!==me && x.t < oldT).sort((a,b)=>b.t-a.t), lockedBelow = below.find(x=>x.lock);
-  me.t = timeForCost(t, i, want, above ? above.t - 0.01 : TOTAL, want < (me.cost ?? SCHALE[me.who].cost) ? T => overOnFor(t, me, T) : undefined, lockedBelow ? lockedBelow.t + 0.01 : 0);
+  me.t = timeForCost(t, i, want, above ? above.t - 0.01 : TOTAL, want < spendOf(t, me) - 0.012 ? T => overOnFor(t, me, T) : undefined, lockedBelow ? lockedBelow.t + 0.01 : 0);
   let prev = me;
   for(const j of below){
     if(j.lock) break;
@@ -944,7 +955,8 @@ function render0(){
       <td style="text-align:center"><button class="btn ${c.after?'chain-on':''}" data-ch="${i}" ${n===0?'disabled':''} title="${c.after?'Tied to the cast above: it follows that cast and goes off the moment the team has the cost for it. Click to untie.':'Cast right after the cast above, the moment the team has the cost for it. Click again to untie.'}">&#9193;</button></td>
       <td><select data-w="${i}">${t.roster.map(id=>`<option value="${id}" ${id==c.who?'selected':''}>${sname(id)}</option>`).join('')}</select></td>
       <td>${(() => { const ents = evOf(t).filter(e => e.type === 'entity' && ENTITY[e.ent] && ENTITY[e.ent].action === 'attack'); return ents.length && aimsAtEnemy(c.who) ? `<select data-hit="${i}" class="hit" title="Which thing on the field this EX is aimed at. The last EX aimed at one is the one that destroys it."><option value="">(boss)</option>${ents.map(e => `<option value="${e.id}" ${c.hit === e.id ? 'selected' : ''}>${String(e.label || e.ent).replace(/</g, '&lt;')} @ ${fmt(e.t)}</option>`).join('')}</select>` : ''; })()}${targetsAlly(c.who) ? `<select data-tg="${i}" class="${c.target ? '' : 'notg'}" title="${c.target ? '' : 'Pick who this EX targets: its buff or cost reduction only counts once a target is picked.'}"><option value="">(pick target)</option>${t.roster.filter(id=>id!==c.who && (allyTargetable(id) || c.target==id)).map(id=>`<option value="${id}" ${c.target==id?'selected':''}>${sname(id)}</option>`).join('')}</select>` : ''}</td>
-      <td>${SCHALE[c.who].forms && SCHALE[c.who].forms.length ? `<select data-form="${i}" style="max-width:118px" title="This student has more than one EX skill. Auto follows the usual order (e.g. Ibuki Swimsuit: first use, then the second EX); pick one for target-dependent ones.">${(() => { const fi = formIdx(t, c), ds = SCHALE[c.who], nm = f => f === null ? 'Normal' : ds.forms[f].name; return `<option value="" ${c.form === undefined ? 'selected' : ''}>Auto: ${nm(fi)}</option><option value="main" ${c.form === null ? 'selected' : ''}>Normal</option>` + ds.forms.map((f, k) => `<option value="${k}" ${c.form === k ? 'selected' : ''}>${f.name}</option>`).join(''); })()}</select><br>` : ''}<input type="number" step="1" min="0" style="width:58px" class="${c.cost!=null?'ovr':''}" data-cost="${i}" value="${c.cost ?? ''}" placeholder="${spendOf(t, c)}" title="Cost this EX spends: ${spendOf(t, c)}${c.cost!=null ? ' (set by hand)' : ''}. Blank = the skill's own cost at its EX level. Type a number to override, e.g. for Kokona's stamp reduction."></td>
+      <td>${SCHALE[c.who].forms && SCHALE[c.who].forms.length ? `<select data-form="${i}" style="max-width:118px" title="This student has more than one EX skill. The box shows the one this cast really uses (they usually follow a set order, e.g. Ibuki Swimsuit: first use, then the second EX); pick another to set it yourself.">${(() => { const fi = formIdx(t, c), ds = SCHALE[c.who], nm = f => f === null ? 'Normal' : ds.forms[f].name; const cur = c.form === undefined ? fi : c.form;   // what it will really cast (the usual order unless you picked one)
+          return `<option value="main" ${cur === null ? 'selected' : ''}>Normal</option>` + ds.forms.map((f, k) => `<option value="${k}" ${cur === k ? 'selected' : ''}>${f.name}</option>`).join(''); })()}</select><br>` : ''}<input type="number" step="1" min="0" style="width:58px" class="${c.cost!=null?'ovr':''}" data-cost="${i}" value="${c.cost ?? ''}" placeholder="${spendOf(t, c)}" title="Cost this EX spends: ${spendOf(t, c)}${c.cost!=null ? ' (set by hand)' : ''}. Blank = the skill's own cost at its EX level. Type a number to override, e.g. for Kokona's stamp reduction."></td>
       <td><input type="text" style="width:140px" value="${c.tag||''}" data-g="${i}"></td><td style="white-space:nowrap"><input type="text" class="${timed(c) ? 'ovr' : ''}${busy !== null ? ' busy' : ''}" value="${fmt2(c.t)}" data-t="${i}" title="${busy !== null ? 'Not castable here: her own EX animation, or a phase transition, is still going on. In the game this card is greyed out until ' + fmt2(busy) + '. ' : ''}${timed(c) ? 'A time you set (orange). Clear the box to let the cost place this cast again.' : 'Where the cost (or the chain) puts this cast. Type a time, for example 2:30.866, to pin it.'}"></td>
       <td style="white-space:nowrap"><button class="btn lockb ${c.lock ? 'on' : ''}" data-lock="${i}" title="${c.lock ? 'Locked: nothing on this row can change and the bar cannot be dragged. Click to unlock.' : 'Lock this row: freeze its time, cost, student and the rest, and keep the planner from moving it.'}">${c.lock ? '&#128274;' : '&#128275;'}</button> <button class="btn" data-x="${i}">✕</button></td></tr>`;
   });
@@ -1079,6 +1091,12 @@ ${esc(full)}"` : ''}>${esc(first)}${more ? ' <span class="mr">&hellip; click for
     + (state.teams.length > 1 ? `<div style="width:100%;margin-top:6px"><select id="evcopysel">${state.teams.map((x,i)=>i===state.team?'':`<option value="${i}">${x.name}</option>`).join('')}</select> <button class="btn" id="evcopy" title="Copy the boss events of that team into this one">Copy events from</button></div>` : '');
   // table
   const evs = evOf(t), order = evs.map((e,k)=>k).sort((a,c)=>evs[c].t - evs[a].t);
+  // The time spans your Strikers stand inside an area effect (an Erosion Tower grows and shrinks, so a student can be in it more than once): from, to, and who is inside.
+  const zoneCell = (e, k) => { const sp = spansOf(e), strikers = t.roster.filter(id => SCHALE[id].squad === 'Main'), def = ENTITY[e.ent];
+    return sp.map((x, j) => { const on = insideIds(t, x);
+      return `<div class="zspan"><span style="white-space:nowrap"><input type="text" data-zf="${k}:${j}" value="${x.f != null ? fmt2(x.f) : ''}" placeholder="${def.inDefault ? 'whole pulse' : 'from the start'}" style="width:78px" title="Clock time these students step into its area"> &ndash; <input type="text" data-zt="${k}:${j}" value="${x.to != null ? fmt2(x.to) : ''}" placeholder="to the end" style="width:78px" title="Clock time they step out (blank = until the tower's Length runs out, or the end of the fight)"> <button type="button" class="btn" data-zx="${k}:${j}" title="Remove this span">&#10005;</button></span>`
+        + `<div class="insiders" title="Who is standing inside it during this span: each Striker toggled on loses the Cost Recovery">${strikers.map(id => `<button type="button" class="btn inb ${on.includes(id) ? 'on' : ''}" data-zs="${k}:${j}:${id}" title="${SCHALE[id].name}: ${on.includes(id) ? 'inside the area' : 'outside the area'}"><img src="https://schaledb.com/images/student/icon/${id}.webp" onerror="this.style.visibility='hidden'" draggable="false"></button>`).join('')}</div></div>`; }).join('')
+      + `<button type="button" class="btn" data-za="${k}" style="margin-top:4px" title="Add a time span in which Strikers stand inside its area">+ Add a time in the zone</button>`; };
   let h = '<tr><th>#</th><th>Time</th><th>Type</th><th>Label</th><th>Length (s)</th><th>Boss skill</th><th title="For a boss skill: it never lands (e.g. interrupted by a groggy). For something on the field with an area (Erosion Tower, pillar pulse): the clock times your team is inside it. Empty = not inside (Erosion Tower) / the whole pulse (Pillar pulse).">Cancelled / team in area (from, to)</th><th></th></tr>';
   order.forEach((k,n)=>{ const e = evs[k];
     h += `<tr><td>${n+1}</td><td><input type="text" value="${fmt2(e.t)}" data-et="${k}"></td>
@@ -1086,7 +1104,7 @@ ${esc(full)}"` : ''}>${esc(first)}${more ? ' <span class="mr">&hellip; click for
       <td><input type="text" style="width:150px" value="${(e.label||'').replace(/"/g,'&quot;')}" data-elb="${k}" placeholder="${EVNAME[e.type]}"></td>
       <td><input type="number" step="1" min="0" value="${e.dur ?? ''}" data-edu="${k}" ${e.type==='groggy' && bd && bd.enemies[0].groggyMs ? `placeholder="${bd.enemies[0].groggyMs/1000}"` : ''}></td>
       <td>${e.type==='skill' && bd ? `<select data-esk="${k}"><option value="">(none)</option>${bd.skills.filter(sk=>sk.type!=='Passive').map(sk=>`<option value="${sk.id}" ${e.skill===sk.id?'selected':''}>${sk.name}</option>`).join('')}</select>` : ''}</td>
-      <td>${e.type==='entity' && ENTITY[e.ent] && ENTITY[e.ent].area ? `<span style="white-space:nowrap"><input type="text" data-eina="${k}" value="${e.inFrom != null ? fmt2(e.inFrom) : ''}" placeholder="${ENTITY[e.ent].inDefault ? 'whole pulse' : 'not inside'}" style="width:78px" title="Clock time your team enters its area. Blank = the team is not inside it (no cost penalty) for the Erosion Tower, the whole pulse for the Pillar pulse"> &ndash; <input type="text" data-einb="${k}" value="${e.inTo != null ? fmt2(e.inTo) : ''}" placeholder="to end" style="width:78px" title="Clock time your team leaves its area (blank = until it is destroyed or ends)"></span>` : ''}${e.type==='skill' ? `<input type="checkbox" data-eca="${k}" ${e.cancel?'checked':''} style="width:18px;height:18px">` : ''}</td>
+      <td>${e.type==='entity' && ENTITY[e.ent] && ENTITY[e.ent].area ? zoneCell(e, k) : ''}${e.type==='skill' ? `<input type="checkbox" data-eca="${k}" ${e.cancel?'checked':''} style="width:18px;height:18px">` : ''}</td>
       <td style="white-space:nowrap"><button class="btn" data-edup="${k}" title="Duplicate">&#10064;</button> <button class="btn" data-edel="${k}" title="Delete">&#10005;</button></td></tr>`;
   });
   $('#evt').innerHTML = h;
@@ -1107,8 +1125,14 @@ ${esc(full)}"` : ''}>${esc(first)}${more ? ' <span class="mr">&hellip; click for
     const es = evOf(t), nm = btn.dataset.addent, def = ENTITY[nm], tt = es.length ? Math.max(0, Math.min(...es.map(x=>x.t)) - 10) : Math.max(0, TOTAL - 60);
     const ev = {id:rid(), type:'entity', ent:nm, t:+tt.toFixed(2), label:nm}; if(def.defDur) ev.dur = def.defDur; es.push(ev);
   }));
-  document.querySelectorAll('[data-eina],[data-einb]').forEach(el=>el.onchange = ()=>upd(()=>{ const a = el.dataset.eina !== undefined, e = evs[+(a ? el.dataset.eina : el.dataset.einb)], key = a ? 'inFrom' : 'inTo';
-    if(el.value.trim() === '') delete e[key]; else { const v = parse(el.value); if(v >= 0 && v <= TOTAL) e[key] = +v.toFixed(3); } }));
+  // zone spans: older single-span saves are converted to the list the first time one is edited
+  const spansFor = e => { if(!Array.isArray(e.spans)){ e.spans = spansOf(e).map(x => ({f:x.f, to:x.to, in:x.in})); delete e.inFrom; delete e.inTo; delete e.inside; } return e.spans; };
+  const spanTime = (el, key) => { const [k, j] = el.dataset[key].split(':').map(Number), x = spansFor(evs[k])[j]; return upd(() => { const f = key === 'zf' ? 'f' : 'to'; if(el.value.trim() === '') delete x[f]; else { const v = parse(el.value); if(v >= 0 && v <= TOTAL) x[f] = +v.toFixed(3); } }); };
+  document.querySelectorAll('[data-zf]').forEach(el => el.onchange = () => spanTime(el, 'zf'));
+  document.querySelectorAll('[data-zt]').forEach(el => el.onchange = () => spanTime(el, 'zt'));
+  document.querySelectorAll('[data-zs]').forEach(el => el.onclick = () => upd(() => { const [k, j, sid] = el.dataset.zs.split(':').map(Number), x = spansFor(evs[k])[j], cur = insideIds(t, x).slice(), i = cur.indexOf(sid); if(i >= 0) cur.splice(i, 1); else cur.push(sid); x.in = cur; }));
+  document.querySelectorAll('[data-zx]').forEach(el => el.onclick = () => upd(() => { const [k, j] = el.dataset.zx.split(':').map(Number); spansFor(evs[k]).splice(j, 1); }));
+  document.querySelectorAll('[data-za]').forEach(el => el.onclick = () => upd(() => { const e = evs[+el.dataset.za]; spansFor(e).push({}); }));
   document.querySelectorAll('[data-addsk]').forEach(btn=>btn.onclick = ()=>upd(()=>{
     const es = evOf(t), sk = bd.skills.find(x=>x.id===btn.dataset.addsk), tt = es.length ? Math.max(0, Math.min(...es.map(x=>x.t)) - 10) : Math.max(0, TOTAL - 60);
     es.push({id:rid(), type:'skill', t:+tt.toFixed(2), skill:sk.id, label:sk.name});
