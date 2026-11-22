@@ -295,7 +295,9 @@ const $ = s => document.querySelector(s);
 const undoStack = [], redoStack = []; let baseline = null, gesture = false;
 const snap = () => JSON.stringify(state);
 let lastSaved = null;
-const markDirty = () => { const b = document.getElementById('savebtn'); if(b && lastSaved != null) b.classList.toggle('dirty', snap() !== lastSaved); };
+// "Unsaved changes" compares everything except which team tab is open: switching tabs is not an edit.
+const fsnap = () => { const {team: _open, ...rest} = state; return JSON.stringify(rest); };
+const markDirty = () => { const b = document.getElementById('savebtn'); if(b && lastSaved != null) b.classList.toggle('dirty', fsnap() !== lastSaved); };
 const save = () => {
   if(baseline != null && snap() !== baseline){ undoStack.push(baseline); if(undoStack.length > 100) undoStack.shift(); redoStack.length = 0; }
   localStorage.setItem(KEY, JSON.stringify(state)); markDirty();
@@ -1371,7 +1373,7 @@ async function saveAll(forceAsk){
       const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], {type:'application/json'})); a.download = 'ba-timeline.json'; a.click();
       flash('Downloaded ba-timeline.json');
     }
-    lastSaved = snap(); markDirty();
+    lastSaved = fsnap(); markDirty();
   } catch(e){
     if(e && e.name === 'AbortError') return;
     if(window.showSaveFilePicker && !forceAsk){ fileHandle = null; idb('readwrite', st => st.delete('main')).catch(() => {}); return saveAll(true); }   // the old file is gone or not writable: ask for a new one
@@ -1391,7 +1393,7 @@ $('#saveas').onclick = () => saveAll(true);
 const blankState = () => ({team:0, lv:{}, cap:{}, rc:{}, wait:{}, ext:{}, first:{}, teams:[{name:'Team 1', estimated:false, source:'Your own rotation: add casts in the Rotation table or drag bars.', roster:[], casts:[], custom:true, blank:true, events:[]}]});
 $('#newfile').onclick = () => {
   if(!confirm('Start a new, empty file?\n\nThe teams on screen are cleared and no file is linked any more, so the next Save asks where to save. Your saved file is not changed, and Ctrl+Z brings the teams back until you reload the page.')) return;
-  state = blankState(); forgetFile(); save(); render(); lastSaved = snap(); markDirty();
+  state = blankState(); forgetFile(); save(); render(); lastSaved = fsnap(); markDirty();
   $('#builder').style.display = ''; buildSlots();
 };
 idb('readonly', st => st.get('main')).then(h => { if(h && !fileHandle){ fileHandle = h; } showFile(); }).catch(() => showFile());
@@ -1431,7 +1433,7 @@ if(!state.cbMig){
   state.team = keepTeam; TOTAL = keepTotal[0]; COST0 = keepTotal[1]; state.cbMig = 1; save();
 }
 render();
-lastSaved = snap(); markDirty();
+lastSaved = fsnap(); markDirty();
 </script>
 </body>
 </html>
