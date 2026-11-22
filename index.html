@@ -153,7 +153,7 @@ th,td{border-bottom:1px solid var(--line);padding:5px 8px;text-align:left;font-s
 th{color:var(--dim);font-weight:700}
 td input[type=text]{width:92px}
 .rotbar{position:sticky;top:var(--hh,60px);z-index:10;background:var(--panel);padding-top:4px}
-.rotbox{max-height:60vh;min-height:160px;overflow:auto;overscroll-behavior:contain;border-top:1px solid var(--line)}
+.rotbox{max-height:60vh;min-height:160px;overflow:auto;border-top:1px solid var(--line)}   /* no overscroll-behavior:contain: at the end of a table (or over one that fits) the wheel must carry on to the page */
 .rotbox th{position:sticky;top:0;background:var(--panel);z-index:2}
 .dlg-bg{position:fixed;inset:0;background:#000a;z-index:100;display:flex;align-items:center;justify-content:center}
 .dlg{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 20px;min-width:340px;max-width:92vw;max-height:86vh;overflow:auto;box-shadow:0 10px 40px #000a}
