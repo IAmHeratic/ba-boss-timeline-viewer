@@ -872,7 +872,7 @@ function render0(){
     const d = SCHALE[id], L = levelOf(id);
     const effects = d.buffs.map(b=>`${buffLabel(b.stat,b.target,b.values)}${b.stat==='CostOverload'||b.stat==='Summon'?'':' '+Math.abs(pickv(b.values, L.ex))/100+'%'}, ${b.ms/1000}s`).join(' | ') || 'no timed buff';
     const ue = ueOf(t,id);
-    const ueSel = (d.extend || d.squad==='Support') ? `<label class="opt" title="Unique Equipment level. Lv 40 unlocks the + passive (Buff Retention for students that have one). Lv 60 on a Special adds 0.5 max cost.">UE <select data-ue="${id}">${UELEVELS.map(v=>`<option value="${v}" ${ue===v?'selected':''}>${v ? 'Lv ' + v : 'none'}</option>`).join('')}</select></label>` : '';
+    const ueSel = `<label class="opt" title="Unique Equipment level. It is saved with the team for reference for every student. It changes the timing only where the tool models it: Lv 40 unlocks the + passive (Buff Retention for students that have one), and Lv 60 on a Special adds 0.5 max cost.">UE <select data-ue="${id}">${UELEVELS.map(v=>`<option value="${v}" ${ue===v?'selected':''}>${v ? 'Lv ' + v : 'none'}</option>`).join('')}</select></label>`;
     const ext = (d.extend && ue>=40) ? `<label class="opt">Buff Retention <select data-ext="${id}">${d.extend.values.map((v,k)=>`<option value="${v/100}" ${(+(tset(t).ext[id] ?? 19))===v/100?'selected':''}>${v/100}%</option>`).join('')}</select></label>` : '';
     const lv = `<div class="lvls"><label>EX Lv <input type="number" min="1" max="5" data-lv="ex" data-id="${id}" value="${L.ex}"></label>`
       + (d.public ? `<label>Basic Lv <input type="number" min="1" max="10" data-lv="basic" data-id="${id}" value="${L.basic}"></label>` : '')
