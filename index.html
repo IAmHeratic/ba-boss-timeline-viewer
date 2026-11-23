@@ -40,6 +40,13 @@ body.side #bosscard .rotbox{max-height:none !important;overflow:visible}
 body.side #sbhandle{display:block;grid-column:2;grid-row:1 / span 2;cursor:col-resize;border-radius:4px;background:var(--line);opacity:.45}
 body.side #sbhandle:hover,body.side #sbhandle.drag{opacity:1;background:var(--accent)}
 body.side .rotbar{top:0}
+body.rotfull{overflow:hidden}
+body.rotfull #rotcard{position:fixed;inset:0;z-index:250;margin:0;border-radius:0;display:flex;flex-direction:column;overflow:hidden !important;background:var(--panel)}
+body.rotfull #rotcard>*{flex:none}
+body.rotfull .rotbar{position:static}
+body.rotfull #rotcard .rotbox{flex:1 1 auto;min-height:0;max-height:none !important;overflow:auto}
+#rotcard>h2{display:flex;align-items:center;justify-content:space-between}
+#rotfull{font-size:12px;padding:3px 10px;text-transform:none;letter-spacing:0}
 }
 .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
 .card h2{margin:0 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.8px;color:var(--dim)}
@@ -235,6 +242,11 @@ header .btn,header select{padding:4px 12px}
   </div>
   <div id="sbhandle" title="Drag to resize the sidebar"></div>
   <aside id="side"><div id="sidetabs"></div>
+  <div class="card" id="rotcard"><h2>Rotation<button class="btn" id="rotfull" title="Fill the screen with the rotation (Esc to leave)">Full screen</button></h2>
+    <div class="rotbar" id="rotbar"><div class="row addbar" id="addbar"></div>
+    <div class="row" style="margin-bottom:8px"><label>Cost regen /s <input type="number" id="regen" step="0.001" min="0" style="width:78px"></label><button class="btn" id="regenauto" title="Set the cost regen back to the value calculated from the team">Reset</button><span class="info" id="reginfo" tabindex="0" title="How the cost regen is calculated">&#9432;</span><div class="pop" id="regentext" hidden></div><label>Start cost <input type="number" id="scost" step="0.5" style="width:60px"></label><label>Time limit <input type="text" id="limit" style="width:62px" title="In-battle clock. Binah is 3:00; some other raid bosses start at 4:00."></label></div></div>
+    <div class="rotbox" id="rotbox"><table id="rot"></table></div>
+  </div>
   <div class="card" id="teamcard"><h2>Team</h2>
     <div class="row" style="margin-bottom:12px"><label>Name <input type="text" id="tname" style="width:220px"></label><button class="btn" id="delteam">Delete team</button>
       <small style="color:var(--dim)">Drag a card onto another in the same row to reorder.</small></div>
@@ -250,11 +262,6 @@ header .btn,header select{padding:4px 12px}
     <div id="binfo" style="margin-bottom:10px"></div>
     <div class="row addbar" id="evadd"></div>
     <div class="rotbox" style="max-height:none;min-height:0;overflow-y:visible"><table id="evt"></table></div>   <!-- as tall as its rows: the page scrolls, not this box -->
-  </div>
-  <div class="card" id="rotcard"><h2>Rotation</h2>
-    <div class="rotbar" id="rotbar"><div class="row addbar" id="addbar"></div>
-    <div class="row" style="margin-bottom:8px"><label>Cost regen /s <input type="number" id="regen" step="0.001" min="0" style="width:78px"></label><button class="btn" id="regenauto" title="Set the cost regen back to the value calculated from the team">Reset</button><span class="info" id="reginfo" tabindex="0" title="How the cost regen is calculated">&#9432;</span><div class="pop" id="regentext" hidden></div><label>Start cost <input type="number" id="scost" step="0.5" style="width:60px"></label><label>Time limit <input type="text" id="limit" style="width:62px" title="In-battle clock. Binah is 3:00; some other raid bosses start at 4:00."></label></div></div>
-    <div class="rotbox" id="rotbox"><table id="rot"></table></div>
   </div>
   </aside>
 </main>
@@ -1336,28 +1343,42 @@ $('#bcreate').onclick = ()=>{
 };
 // The add buttons and settings stay pinned under the page header; the cast list takes the rest of the window and scrolls on its own.
 function fitRot(){
+  if(document.body.classList.contains('rotfull')){ $('#rotbox').style.maxHeight = 'none'; return; }
   const hh = $('header').offsetHeight, vh = innerHeight / UI();
   document.documentElement.style.setProperty('--hh', hh + 'px');
   document.documentElement.style.setProperty('--ui', UI());
   $('#rotbox').style.maxHeight = (document.body.classList.contains('side')
     ? Math.max(160, $('#side').clientHeight - $('#sidetabs').offsetHeight - $('#rotbar').offsetHeight - 70)
-    : Math.max(160, vh - hh - $('#rotbar').offsetHeight - 24)) + 'px';
+    : Math.max(200, vh - hh - $('#tl').closest('.card').offsetHeight - $('#rotbar').offsetHeight - 100)) + 'px';   // stacked: the list scrolls inside, so the timeline and the list fit on one screen
 }
+const setRotFull = on => { document.body.classList.toggle('rotfull', on); $('#rotfull').textContent = on ? 'Exit full screen' : 'Full screen'; fitRot(); if(!on) render(); };
+$('#rotfull').onclick = () => setRotFull(!document.body.classList.contains('rotfull'));
+document.addEventListener('keydown', e => { if(e.key === 'Escape' && document.body.classList.contains('rotfull') && !document.querySelector('select:focus, #setpop.on')) setRotFull(false); });
 addEventListener('resize', () => { fitRot(); if(document.body.classList.contains('side')) render(); });
 document.addEventListener('mousedown', e => { if(!e.target.closest('#rowmenu')) document.getElementById('rowmenu')?.remove(); });
 document.addEventListener('keydown', e => { if(e.key === 'Escape') document.getElementById('rowmenu')?.remove(); });
 function insertCast(row, where){
-  const t = team(), sorted = [...t.casts].sort((a, b) => b.t - a.t), k = sorted.indexOf(row), n = {who: row.who};
+  // The new row goes exactly where it was asked, whether or not the team can pay for it there: it is then shown as unaffordable, like any cast placed by hand.
+  const t = team(), sorted = [...t.casts].sort((a, b) => b.t - a.t), k = sorted.indexOf(row), n = {who: row.who},
+    follow = (list, from) => { let prev = from;   // the unlocked rows after the new one move later to follow it, each right after the one before it
+      for(const j of list){ if(j.lock) break; if(j.after){ prev = j; continue; } if(j.cb != null && j.cb > spendOf(t, j) + 0.012) break; delete j.cb; j.after = cid(prev); prev = j; } };
   if(targetsAlly(n.who) && row.target != null) n.target = row.target;
+  const taken = T => t.casts.some(c => c.t === T);
   if(where === 'below'){
-    n.after = cid(row);
+    n.t = +Math.max(0, row.t - 0.01).toFixed(2); while(n.t > 0 && taken(n.t)) n.t = +(n.t - 0.01).toFixed(2);
     t.casts.forEach(c => { if(c.after === cid(row) && !c.lock) c.after = cid(n); });   // what followed the row now follows the new cast
+    cid(n); follow(sorted.slice(k + 1), n);
   } else {
-    const prev = sorted[k - 1];
-    if(prev){ n.after = cid(prev); t.casts.forEach(c => { if(c.after === cid(prev) && !c.lock) c.after = cid(n); }); }   // the row (and anything else chained to prev) now comes after the new cast
-    else { n.cb = spendOf(t, {who: n.who, t: TOTAL}); }
+    const prev = sorted[k - 1], hi = prev ? prev.t : TOTAL;
+    n.t = +Math.min(hi, row.t + 0.01).toFixed(2); if(prev && n.t >= hi) n.t = +((hi + row.t)/2).toFixed(2); while(n.t < TOTAL && taken(n.t)) n.t = +(n.t + 0.01).toFixed(2);
+    if(prev) t.casts.forEach(c => { if(c.after === cid(prev) && !c.lock) c.after = cid(n); });
+    cid(n); follow(sorted.slice(k), n);
   }
-  cid(n); t.casts.push(n); hlRow = cid(n); save(); render(); markSel(true);
+  t.casts.push(n); hlRow = cid(n); save(); render(); markSel(true);
+  const idx = team().casts.indexOf(n), order = [...team().casts].sort((a, b) => b.t - a.t), pos = order.indexOf(n), tr = document.querySelector('#rot tr[data-row="' + idx + '"]'), box = $('#rotbox');
+  if(tr && box){ const b = box.getBoundingClientRect(), r = tr.getBoundingClientRect(); box.scrollTop += (r.top + r.height/2) - (b.top + b.height/2); }
+  const seen = costAt(team(), idx, n.t, castsExcept(team(), idx)), need = spendOf(team(), n);
+  flash('Added row ' + (pos + 1) + (seen < need - 0.02 ? ': ' + SCHALE[n.who].name + ' needs ' + +need.toFixed(1) + ' cost but the team only has ' + +Math.max(0, seen).toFixed(1) + ' there' : ''));
 }
 function addCast(who){
   const t = team(), prev = t.casts.length ? t.casts.reduce((a,c)=>c.t<a.t?c:a) : null, last = prev ? prev.t : TOTAL;
@@ -1427,7 +1448,7 @@ async function saveAll(forceAsk){
   }
 }
 function flash(msg){ let n = document.getElementById('flash'); if(!n){ n = document.createElement('div'); n.id = 'flash'; n.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#1f3a5f;color:#fff;padding:8px 16px;border-radius:8px;z-index:300;font-size:14px'; document.body.append(n); }
-  n.textContent = msg; n.style.display = 'block'; clearTimeout(n.t); n.t = setTimeout(() => n.style.display = 'none', 2200); }
+  n.textContent = msg; n.style.display = 'block'; clearTimeout(n.t); n.t = setTimeout(() => n.style.display = 'none', Math.max(2200, msg.length * 60)); }
 $('#savebtn').onclick = () => saveAll(false);
 document.addEventListener('keydown', e => { if((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 's'){ e.preventDefault(); saveAll(false); } });
 // Settings panel (zoom, UI size, basic skills): opens under the gear, closes on a click elsewhere or Esc.
