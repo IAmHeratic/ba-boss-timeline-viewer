@@ -118,6 +118,8 @@ body.rotfull #rotcard .rotbox{flex:1 1 auto;min-height:0;max-height:none !import
 #rot tr.locked :disabled{opacity:1 !important;cursor:default;color:var(--text);-webkit-text-fill-color:var(--text)}
 #rot tr.locked input:disabled,#rot tr.locked select:disabled{border-color:#2b3a52;background:#111a28}
 #rot tr.locked button:disabled{filter:none}
+#rot tr.locked td.cost-od input:disabled{color:#ff7de0;-webkit-text-fill-color:#ff7de0;border-color:#ff7de0}
+#rot tr.locked td.cost-bad input:disabled{color:var(--warn);-webkit-text-fill-color:var(--warn);border-color:var(--warn)}
 .bar.est{outline:1px dashed #ffd98a}
 .bar.sel{outline:3px solid #ffd54a !important;outline-offset:1px;z-index:4;box-shadow:0 0 12px #ffd54a99}   /* below the sticky student names (5), so a marked bar slides under them */
 .bar.cancelled{background:transparent !important;border:2px dashed var(--warn);color:var(--warn);cursor:default}
