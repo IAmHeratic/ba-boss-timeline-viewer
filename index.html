@@ -181,8 +181,9 @@ input,select{background:#0f1520;color:var(--text);border:1px solid var(--line);b
 header .row{gap:14px 18px;justify-content:flex-end}
 header .row label{display:flex;align-items:center;gap:8px;white-space:nowrap}
 header .sep{width:1px;align-self:stretch;background:var(--line)}
-header .filelabel{color:var(--dim);font-size:12px;max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-left:-8px}
-header #savedot{display:none;width:7px;height:7px;border-radius:50%;background:#ffb347;margin-left:7px;vertical-align:middle}
+header .filelabel{color:var(--dim);font-size:12px;max-width:190px;display:inline-flex;align-items:center;cursor:pointer}
+header .filelabel #filelabel{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+header #savedot{display:none;flex:none;width:7px;height:7px;border-radius:50%;background:#ffb347;margin-left:6px}
 header #savebtn.dirty #savedot{display:inline-block}
 header .row{position:relative}
 #setpop{display:none;position:absolute;top:calc(100% + 10px);right:0;z-index:60;flex-direction:column;align-items:stretch;gap:14px;padding:14px 16px;background:#141e2e;border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px #000a}
@@ -207,11 +208,9 @@ header .btn,header select{padding:4px 12px}
     <button class="btn" id="undobtn" title="Undo (Ctrl+Z)">&#8630;</button><button class="btn" id="redobtn" title="Redo (Ctrl+Y)">&#8631;</button>
     <span class="sep"></span>
     <button class="btn" id="newfile" title="Start a new, empty file. Your saved file is not touched.">New</button>
-    <button class="btn" id="savebtn" title="Save all teams to a file (Ctrl+S)">Save<i id="savedot"></i></button>
-    <span id="filelabel" class="filelabel"></span>
-    <button class="btn" id="saveas" title="Save all teams to a different file">Save as&hellip;</button>
-    <button class="btn" id="exp" title="Save a copy of only some of the teams">Export</button>
-    <button class="btn" id="imp">Import</button>
+    <button class="btn" id="openfile" title="Open a saved file. It replaces the teams you have now, and Ctrl+S then saves back to it.">Open</button>
+    <button class="btn" id="saveas" title="Save all teams to a new file">Save as&hellip;</button>
+    <span id="savebtn" class="filelabel"><span id="filelabel"></span><i id="savedot"></i></span>
     <span class="sep"></span>
     <button class="btn" id="sbtoggle" title="Show Team, Boss and Rotation as tabs in a panel on the right (drag its edge to resize) or stacked under the timeline">Sidebar</button>
     <button class="btn" id="gear" title="Settings: zoom, UI size, basic skills">&#9881;</button>
@@ -810,17 +809,7 @@ function render0(){
   const evItems = evs.map((e,k)=>{ const label = e.label || (e.type==='entity' ? (e.ent || 'Entity') : e.type==='groggy' ? 'Groggy' : e.type==='phase' ? 'Phase Change' : e.type==='end' ? 'Fight End' : e.type==='skill' ? 'Boss skill' : 'Note');
     const kl = e.type === 'entity' ? EK.find(z => z.ev === e) : null, down = e.type === 'entity' && ENTITY[e.ent] && ENTITY[e.ent].after ? (kl ? kl.at : e.dur > 0 ? e.t - e.dur : null) : null, dur = down != null ? +(e.t - down + ENTITY[e.ent].after.buff).toFixed(2) : kl ? +(e.t - kl.at).toFixed(2) : +(e.type === 'entity' ? entLife(e, t.casts) : e.dur || 0), wpx = Math.max(dur*px, Math.min(260, label.length*7.2 + 18));
     return {k, e, label, dur, wpx, down, start:e.t, end:e.t - wpx/px}; });
-  evItems.slice().forEach(it => { if(it.down == null) return; const af = ENTITY[it.e.ent].after, at = +(it.down - af.buff).toFixed(3), dmg = bd && /Torment|Lunatic/.test(bd.name),   // the relic's buffs: they land a moment after its HP reaches 0 and last the rest of the fight
-      label = 'Violet Relic buffs: Strikers ATK +25%' + (dmg ? ', DMG +25%' : '') + ', healing -70%; boss DEF -1500', wpx = Math.max(at*px, Math.min(420, label.length*7.2 + 18));
-    it.end = Math.min(it.end, 0);   // for packing: the relic's row stays taken by its buff bar, so nothing else is drawn under it
-    evItems.push({k:null, same:it, e:{type:'heal', t:at}, label, dur:at, wpx, start:at, end:0, mark:{cls:'buff', tip:['Violet Relic buffs', 'From ' + fmt2(at) + ' to the end of the fight', '', 'Your Strikers: ATK +25%' + (dmg ? ', damage dealt +25%' : ''), 'Your Strikers: healing received -70%', 'Hieronymus: DEF -1500'].join('\n')}}); });
-  evs.forEach((e, k) => { if(e.type !== 'entity') return; const def = ENTITY[e.ent]; if(!def || !def.heals) return;   // each heal of a relic: a bar as long as its healing debuff
-    relicHeals(e, t.casts).forEach((h, j, a) => { const d = +(h.d ?? def.heals.debuff), label = 'Heal ' + (j + 1) + '/' + def.heals.max + '  +' + (def.heals.bonus*(j + 1)) + '%', nx = a[j + 1], shown = nx ? Math.min(d, h.t - nx.t) : d, wpx = Math.max(shown*px, 110);   // the next heal replaces the debuff, so a bar stops where the next one starts
-      evItems.push({k:null, of:evItems.find(z => z.e === e), e:{type:'heal', t:h.t}, label, dur:d, wpx, start:h.t, end:h.t - wpx/px, heal:{n:j + 1, d, by:h.cast, name:e.label || e.ent, last:j + 1 === def.heals.max}}); }); });
-  // Rows: everything except heals is packed as usual; a relic's heals then get one row of their own right under that relic, so they read as belonging to it
-  let nrows = pack(evItems.filter(z => !z.of && !z.same)); evItems.forEach(z => { if(z.same) z.row = z.same.row; });   // the Violet Relic's buffs continue on its own row, from where its bar ends
-   const healed = evItems.filter(z => z.of).reduce((m, z) => m.set(z.of, (m.get(z.of) || []).concat(z)), new Map());
-  [...healed.keys()].sort((a, b) => b.row - a.row).forEach(rel => { evItems.forEach(z => { if(!z.of && z.row > rel.row) z.row++; }); healed.get(rel).forEach(z => z.row = rel.row + 1); nrows++; });
+  let nrows = pack(evItems);   // relic heals and the Violet Relic's buffs are not drawn: the timeline is about EX and Basic skills
   const BOSSL = (bb || evs.length) ? nrows*30 + 10 : 0;
   let y = HEAD + BOSSL;
   lanes.forEach(L=>{ L.exRows = pack(L.ex); L.bsRows = showBasic() ? pack(L.bs) : 0; });
@@ -1395,29 +1384,6 @@ function dialog(title, body, okLabel, onOk){
   acts.append(no, ok); d.append(acts); bg.append(d); document.body.append(bg);
   return d;
 }
-// A list of teams with a tick box each (all ticked), plus "all / none" links.
-function teamPicker(teams){
-  const box = document.createElement('div'), boxes = [];
-  teams.forEach((tm, i) => {
-    const l = document.createElement('label'), c = document.createElement('input'); c.type = 'checkbox'; c.checked = true; boxes.push(c);
-    const n = (tm.casts || []).length, sp = document.createElement('span'); sp.textContent = (tm.name || 'Team ' + (i+1)) + ' (' + n + ' casts)';
-    l.append(c, sp); box.append(l);
-  });
-  const all = document.createElement('div'); all.style.cssText = 'font-size:12px;color:var(--dim);margin:2px 0 8px';
-  const mk = (txt, v) => { const a = document.createElement('a'); a.textContent = txt; a.href = '#'; a.style.marginRight = '10px'; a.onclick = e => { e.preventDefault(); boxes.forEach(b => b.checked = v); }; return a; };
-  all.append(mk('Select all', true), mk('Select none', false)); box.prepend(all);
-  return {box, picked: () => teams.filter((_, i) => boxes[i].checked)};
-}
-// Save as: Chrome and Edge open a Save dialog and, because of the fixed id, start in the folder used last time. Other browsers just download the file.
-async function saveJson(name, text){
-  if(window.showSaveFilePicker){
-    try {
-      const h = await window.showSaveFilePicker({suggestedName: name, id: 'ba-timeline-export', types: [{description: 'Timeline export (JSON)', accept: {'application/json': ['.json']}}]});
-      const w = await h.createWritable(); await w.write(text); await w.close(); return;
-    } catch(e){ if(e && e.name === 'AbortError') return; /* picker unavailable here: fall back to a plain download */ }
-  }
-  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], {type:'application/json'})); a.download = name; a.click();
-}
 // Save (Ctrl+S): all teams into one file. Chrome and Edge keep the file chosen the first time (remembered between visits) and overwrite it; other browsers download a copy.
 const FILEPICK = {suggestedName: 'ba-timeline.json', id: 'ba-timeline-export', types: [{description: 'Timeline export (JSON)', accept: {'application/json': ['.json']}}]};
 const idb = (mode, fn) => new Promise((ok, no) => { const r = indexedDB.open('ba-timeline-file', 1); r.onupgradeneeded = () => r.result.createObjectStore('h'); r.onerror = () => no(r.error);
@@ -1425,7 +1391,7 @@ const idb = (mode, fn) => new Promise((ok, no) => { const r = indexedDB.open('ba
 let fileHandle = null;
 function forgetFile(){ fileHandle = null; idb('readwrite', st => st.delete('main')).catch(() => {}); showFile(); }   // Reset / starting over: the next Save asks where to save
 function showFile(){ const b = $('#savebtn'), l = $('#filelabel'), has = !!window.showSaveFilePicker, nm = fileHandle ? fileHandle.name : null;
-  if(b) b.title = nm ? 'Save all teams to ' + nm + ' (Ctrl+S)' : has ? 'Save all teams to a file: the first save asks where (Ctrl+S)' : 'Download all teams as ba-timeline.json (Ctrl+S)';
+  if(b) b.title = (nm ? 'Click or press Ctrl+S to save to ' + nm : has ? 'Click or press Ctrl+S to save: the first save asks where' : 'Click or press Ctrl+S to download ba-timeline.json') + (b.classList.contains('dirty') ? ' (unsaved changes)' : '');
   if(l){ l.textContent = has ? (nm || 'no file yet') : 'downloads'; l.title = nm ? 'Ctrl+S saves to ' + nm : 'The first Save asks where to save'; } }
 async function saveAll(forceAsk){
   const text = JSON.stringify({...state}, null, 1);
@@ -1477,35 +1443,23 @@ $('#newfile').onclick = () => {
   $('#builder').style.display = ''; buildSlots();
 };
 idb('readonly', st => st.get('main')).then(h => { if(h && !fileHandle){ fileHandle = h; } showFile(); }).catch(() => showFile());
-$('#exp').onclick = () => {
-  const pk = teamPicker(state.teams), body = document.createElement('div');
-  body.append(pk.box);
-  dialog('Export teams', body, 'Export', () => {
-    const picked = pk.picked(); if(!picked.length){ alert('Tick at least one team.'); return false; }
-    const name = 'ba-timeline.json';   // Chrome and Edge let you rename it in the Save dialog
-    const out = {...state, teams: picked, team: Math.max(0, picked.indexOf(team()))};   // the open team stays the open one if it is exported
-    saveJson(name, JSON.stringify(out, null, 1));
-  });
-};
-$('#imp').onclick = () => { const i = document.createElement('input'); i.type = 'file'; i.accept = '.json,application/json'; i.onchange = () => i.files[0].text().then(x => {
-  let d; try { d = JSON.parse(x); } catch(e){ alert('That file is not valid JSON.'); return; }
-  if(!d || !Array.isArray(d.teams) || !d.teams.length || d.teams.some(tm => !tm || !Array.isArray(tm.roster) || !Array.isArray(tm.casts))){ alert('That file does not look like a timeline export.'); return; }
-  const pk = teamPicker(d.teams), body = document.createElement('div');
-  const mode = document.createElement('div'), mk = (v, txt, on) => { const l = document.createElement('label'), r = document.createElement('input'); r.type = 'radio'; r.name = 'impmode'; r.value = v; r.checked = on; l.append(r, txt); return l; };
-  mode.style.marginTop = '8px'; mode.append(mk('add', 'Add to my teams', true), mk('replace', 'Replace all my teams (cannot be undone)', false)); body.append(pk.box, mode);
-  dialog('Import teams', body, 'Import', () => {
-    const picked = pk.picked(); if(!picked.length){ alert('Tick at least one team.'); return false; }
-    if(mode.querySelector('input:checked').value === 'replace'){
-      if(!confirm('Replace all ' + state.teams.length + ' of your teams with ' + picked.length + ' from the file?')) return false;
-      state = {...d, teams: picked, team: 0};
-    } else {
-      const names = new Set(state.teams.map(tm => tm.name)), first = state.teams.length;
-      picked.forEach(tm => { let n = tm.name || 'Team', k = 2; while(names.has(n)) n = (tm.name || 'Team') + ' (' + k++ + ')'; tm.name = n; names.add(n); dropCarry(tm); state.teams.push(tm); });
-      state.team = first;
-    }
-    save(); render();
-  });
-}); i.click(); };
+// Open: load every team from a saved file in place of the current ones. In Chrome and Edge the file is remembered, so Ctrl+S saves back into it.
+async function openFile(){
+  let handle = null, text;
+  try {
+    if(window.showOpenFilePicker){ [handle] = await window.showOpenFilePicker({id: FILEPICK.id, types: FILEPICK.types}); text = await (await handle.getFile()).text(); }
+    else text = await new Promise((ok, no) => { const i = document.createElement('input'); i.type = 'file'; i.accept = '.json,application/json'; i.onchange = () => i.files[0] ? i.files[0].text().then(ok, no) : no(); i.click(); });
+  } catch(e){ return; }
+  let d; try { d = JSON.parse(text); } catch(e){ alert('That file is not valid JSON.'); return; }
+  if(!d || !Array.isArray(d.teams) || !d.teams.length || d.teams.some(tm => !tm || !Array.isArray(tm.roster) || !Array.isArray(tm.casts))){ alert('That file does not look like a timeline file.'); return; }
+  if(fsnap() !== lastSaved && !confirm('You have unsaved changes. Open the file anyway? (Ctrl+Z undoes it.)')) return;
+  state = {...d, team: Math.min(Math.max(0, d.team || 0), d.teams.length - 1)};
+  if(handle){ fileHandle = handle; idb('readwrite', st => st.put(handle, 'main')).catch(() => {}); } else forgetFile();
+  save(); render(); lastSaved = fsnap(); markDirty(); showFile();
+  $('#builder').style.display = 'none';
+  flash('Opened ' + (handle ? handle.name : 'file'));
+}
+$('#openfile').onclick = openFile;
 if(!state.cbMig){
   const keepTeam = state.team, keepTotal = [TOTAL, COST0];
   state.teams.forEach((t,k)=>{ state.team = k; TOTAL = +(t.limit ?? 180); COST0 = TOTAL - 1.6;
