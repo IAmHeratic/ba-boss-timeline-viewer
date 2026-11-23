@@ -41,6 +41,8 @@ body.side #sbhandle{display:block;grid-column:2;grid-row:1 / span 2;cursor:col-r
 body.side #sbhandle:hover,body.side #sbhandle.drag{opacity:1;background:var(--accent)}
 body.side .rotbar{top:0}
 #rot th.colh{cursor:grab;user-select:none}
+#rot select[data-w],#rot select[data-tg],#rot select[data-hit]{width:100%;min-width:96px;max-width:210px;box-sizing:border-box}   /* the student and target boxes shrink too, long names are cut off instead of forcing a scrollbar */
+#rot input[data-g]{width:100% !important;min-width:80px;max-width:200px;box-sizing:border-box}   /* the Note box gives way before the table needs a sideways scrollbar */
 #rot th.dragging{opacity:.45}
 #rot th.dropl{box-shadow:inset 3px 0 0 var(--accent)}
 #rot th.dropr{box-shadow:inset -3px 0 0 var(--accent)}
