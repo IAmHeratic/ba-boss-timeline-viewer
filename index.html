@@ -259,7 +259,6 @@ header .btn,header select{padding:4px 12px}
     <div class="row" style="margin-bottom:8px"><label>Cost regen /s <input type="number" id="regen" step="0.001" min="0" style="width:78px"></label><button class="btn" id="regenauto" title="Set the cost regen back to the value calculated from the team">Reset</button><span class="info" id="reginfo" tabindex="0" title="How the cost regen is calculated">&#9432;</span><div class="pop" id="regentext" hidden></div><label>Start cost <input type="number" id="scost" step="0.5" style="width:60px"></label><label>Time limit <input type="text" id="limit" style="width:62px" title="In-battle clock. Binah is 3:00; some other raid bosses start at 4:00."></label><button class="btn" id="colbtn" style="margin-left:auto" title="Choose which columns of the table show. Drag a column heading to move it.">Columns</button><div id="colpop"></div></div></div>
     <div class="rotbox" id="rotbox"><table id="rot"></table></div>
   </div>
-  <div class="card" id="notescard"><h2>Notes</h2><textarea id="notes" placeholder="Anything about this rotation that does not belong to one skill: the plan, what to watch for, reminders..." spellcheck="true"></textarea></div>
   <div class="card" id="teamcard"><h2>Team</h2>
     <div class="row" style="margin-bottom:12px"><label>Name <input type="text" id="tname" style="width:220px"></label><button class="btn" id="delteam">Delete team</button>
       <small style="color:var(--dim)">Drag a card onto another in the same row to reorder.</small></div>
@@ -276,6 +275,7 @@ header .btn,header select{padding:4px 12px}
     <div class="row addbar" id="evadd"></div>
     <div class="rotbox" style="max-height:none;min-height:0;overflow-y:visible"><table id="evt"></table></div>   <!-- as tall as its rows: the page scrolls, not this box -->
   </div>
+  <div class="card" id="notescard"><h2>Notes</h2><textarea id="notes" placeholder="Anything about this rotation that does not belong to one skill: the plan, what to watch for, reminders..." spellcheck="true"></textarea></div>
   </aside>
 </main>
 <script src="data.js?v=10"></script>
