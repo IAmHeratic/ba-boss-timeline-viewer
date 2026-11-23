@@ -40,13 +40,14 @@ body.side #bosscard .rotbox{max-height:none !important;overflow:visible}
 body.side #sbhandle{display:block;grid-column:2;grid-row:1 / span 2;cursor:col-resize;border-radius:4px;background:var(--line);opacity:.45}
 body.side #sbhandle:hover,body.side #sbhandle.drag{opacity:1;background:var(--accent)}
 body.side .rotbar{top:0}
+}   /* end of the wide-window block: everything below applies at any width */
 #rot th.colh{cursor:grab;user-select:none}
 #rot select[data-w],#rot select[data-tg],#rot select[data-hit]{width:100%;min-width:96px;max-width:210px;box-sizing:border-box}   /* the student and target boxes shrink too, long names are cut off instead of forcing a scrollbar */
 #rot input[data-g]{width:100% !important;min-width:80px;max-width:200px;box-sizing:border-box}   /* the Note box gives way before the table needs a sideways scrollbar */
 #rot th.dragging{opacity:.45}
 #rot th.dropl{box-shadow:inset 3px 0 0 var(--accent)}
 #rot th.dropr{box-shadow:inset -3px 0 0 var(--accent)}
-#colpop{position:absolute;z-index:260;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 10px;box-shadow:0 8px 24px #0008;display:none;font-size:13px}
+#colpop{position:absolute;width:max-content;max-width:calc(100% - 8px);z-index:260;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 10px;box-shadow:0 8px 24px #0008;display:none;font-size:13px}
 #colpop.on{display:block}
 #colpop label{display:flex;gap:6px;align-items:center;padding:2px 0;white-space:nowrap}
 #colpop a{color:var(--dim);font-size:12px;cursor:pointer;text-decoration:underline}
@@ -59,7 +60,6 @@ body.rotfull .rotbar{position:static}
 body.rotfull #rotcard .rotbox{flex:1 1 auto;min-height:0;max-height:none !important;overflow:auto}
 #rotcard>h2{display:flex;align-items:center;justify-content:space-between}
 #rotfull{font-size:12px;padding:3px 10px;text-transform:none;letter-spacing:0}
-}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
 .card h2{margin:0 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.8px;color:var(--dim)}
 .banner{background:#3a2d17;border:1px solid #8a6a2b;color:#ffd98a;border-radius:8px;padding:8px 12px;font-size:13px}
@@ -847,7 +847,15 @@ function render0(){
   lanes.forEach(L=>{ L.exRows = pack(L.ex); L.bsRows = showBasic() ? pack(L.bs) : 0; });
   const maxRows = Math.max(1, ...lanes.map(L => L.exRows + L.bsRows));   // every student row is as tall as the busiest one, so the rows all look alike
   // Sidebar mode: the timeline card fills the window height. The cost graph shrinks to half and the student rows share the space, so the bars get taller (up to 46 px).
-  const side = document.body.classList.contains('side'), avail = side ? $('.tl-wrap').offsetHeight - 2 - 20 : 0, CLmin = side && avail > 0 ? 50 : 130;   // avail: box height minus border and the horizontal scrollbar (always counted, so nothing causes a vertical scrollbar)
+  const wrapEl = $('.tl-wrap'), onSide = document.body.classList.contains('side');
+  let squeeze = onSide;
+  if(!onSide){   // Stacked layout: the timeline keeps its natural height unless that is taller than the window; then it is squeezed to fit the window (rows get smaller) so the cost graph stays on screen
+    const chrome = wrapEl.closest('.card').offsetHeight - wrapEl.offsetHeight, capH = Math.max(320, innerHeight / UI() - $('header').offsetHeight - chrome - 34);
+    const natural = HEAD + BOSSL + lanes.length*(PAD*2 + maxRows*(ROW+GAP) - GAP) + 130 + AXIS + 22;
+    squeeze = natural > capH;
+    wrapEl.style.height = squeeze ? capH + 'px' : '';
+  } else wrapEl.style.height = '';
+  const side = squeeze, avail = side ? wrapEl.offsetHeight - 2 - 20 : 0, CLmin = side && avail > 0 ? 50 : 130;   // avail: box height minus border and the horizontal scrollbar (always counted, so nothing causes a vertical scrollbar)
   if(side && avail > 0){ const rows = lanes.length*maxRows; if(rows) ROW = Math.max(14, Math.min(46, Math.floor((avail - HEAD - BOSSL - CLmin - AXIS - lanes.length*(2*PAD - GAP))/rows - GAP))); }
   lanes.forEach(L=>{ L.top = y; L.h = PAD*2 + maxRows*(ROW+GAP) - GAP; y += L.h; });
   const CL = Math.max(CLmin, avail > 0 ? avail - y - AXIS : 0), costTop = y; y += CL; costGeo = {top:costTop, h:CL, px};
@@ -1393,14 +1401,17 @@ function buildColMenu(){ const hide = colPrefs().hide, pop = $('#colpop');
   pop.innerHTML = rotCols().map(id => { const cd = ROTCOLS.find(x => x.id === id); return `<label><input type="checkbox" data-colshow="${id}" ${hide.includes(id) ? '' : 'checked'}>${cd.label}</label>`; }).join('') + '<div style="margin-top:6px"><a id="colreset">Reset order and show all</a></div>';
   pop.querySelectorAll('[data-colshow]').forEach(cb => cb.onchange = () => { const h = colPrefs().hide.filter(x => x !== cb.dataset.colshow); if(!cb.checked) h.push(cb.dataset.colshow); setColPrefs(rotCols(), h); render(); buildColMenu(); });
   $('#colreset').onclick = () => { localStorage.removeItem(COLKEY); render(); buildColMenu(); }; }
-$('#colbtn').onclick = e => { e.stopPropagation(); const p = $('#colpop'); if(p.classList.toggle('on')){ buildColMenu(); const b = e.currentTarget.getBoundingClientRect(), bar = p.offsetParent ? p.offsetParent.getBoundingClientRect() : {left:0, top:0}; p.style.left = Math.max(0, b.right - bar.left - p.offsetWidth) + 'px'; p.style.top = (b.bottom - bar.top + 4) + 'px'; } };
+$('#colbtn').onclick = e => { e.stopPropagation(); const p = $('#colpop'), btn = e.currentTarget; if(p.classList.toggle('on')){ buildColMenu(); p.style.left = '0px'; p.style.top = '0px';   // measure at the left edge first: an absolute box with a far-right left would shrink to fit and clip its labels
+  const par = p.offsetParent || document.body, same = btn.offsetParent === par, right = same ? btn.offsetLeft + btn.offsetWidth : par.clientWidth, bottom = same ? btn.offsetTop + btn.offsetHeight : 0;
+  p.style.left = Math.max(0, Math.min(right - p.offsetWidth, par.clientWidth - p.offsetWidth - 4)) + 'px'; p.style.top = (bottom + 4) + 'px';
+  const pr = p.getBoundingClientRect(); if(pr.bottom > innerHeight - 8 && same && btn.getBoundingClientRect().top - pr.height - 8 > 0) p.style.top = (btn.offsetTop - p.offsetHeight - 4) + 'px'; } };   // no room below the button on screen: open it upwards
 document.addEventListener('mousedown', e => { if(!e.target.closest('#colpop, #colbtn')) $('#colpop').classList.remove('on'); });
 // Notes: free text kept with the team (and in saved files)
 $('#notes').oninput = () => { const t = team(); t.notes = $('#notes').value; localStorage.setItem(KEY, JSON.stringify(state)); markDirty(); };
 $('#notes').onchange = () => save();
 $('#rotfull').onclick = () => setRotFull(!document.body.classList.contains('rotfull'));
 document.addEventListener('keydown', e => { if(e.key === 'Escape' && document.body.classList.contains('rotfull') && !document.querySelector('select:focus, #setpop.on')) setRotFull(false); });
-addEventListener('resize', () => { fitRot(); if(document.body.classList.contains('side')) render(); });
+addEventListener('resize', () => { fitRot(); render(); });
 document.addEventListener('mousedown', e => { if(!e.target.closest('#rowmenu')) document.getElementById('rowmenu')?.remove(); });
 document.addEventListener('keydown', e => { if(e.key === 'Escape') document.getElementById('rowmenu')?.remove(); });
 function insertCast(row, where){
