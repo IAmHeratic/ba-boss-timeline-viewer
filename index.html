@@ -40,6 +40,16 @@ body.side #bosscard .rotbox{max-height:none !important;overflow:visible}
 body.side #sbhandle{display:block;grid-column:2;grid-row:1 / span 2;cursor:col-resize;border-radius:4px;background:var(--line);opacity:.45}
 body.side #sbhandle:hover,body.side #sbhandle.drag{opacity:1;background:var(--accent)}
 body.side .rotbar{top:0}
+#rot th.colh{cursor:grab;user-select:none}
+#rot th.dragging{opacity:.45}
+#rot th.dropl{box-shadow:inset 3px 0 0 var(--accent)}
+#rot th.dropr{box-shadow:inset -3px 0 0 var(--accent)}
+#colpop{position:absolute;z-index:260;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 10px;box-shadow:0 8px 24px #0008;display:none;font-size:13px}
+#colpop.on{display:block}
+#colpop label{display:flex;gap:6px;align-items:center;padding:2px 0;white-space:nowrap}
+#colpop a{color:var(--dim);font-size:12px;cursor:pointer;text-decoration:underline}
+#notescard textarea{width:100%;box-sizing:border-box;min-height:220px;resize:vertical;background:#0f1622;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:10px;font:inherit;line-height:1.45}
+body.side #side>#notescard.pane-on textarea{flex:1 1 auto;resize:none}
 body.rotfull{overflow:hidden}
 body.rotfull #rotcard{position:fixed;inset:0;z-index:250;margin:0;border-radius:0;display:flex;flex-direction:column;overflow:hidden !important;background:var(--panel)}
 body.rotfull #rotcard>*{flex:none}
@@ -244,9 +254,10 @@ header .btn,header select{padding:4px 12px}
   <aside id="side"><div id="sidetabs"></div>
   <div class="card" id="rotcard"><h2>Rotation<button class="btn" id="rotfull" title="Fill the screen with the rotation (Esc to leave)">Full screen</button></h2>
     <div class="rotbar" id="rotbar"><div class="row addbar" id="addbar"></div>
-    <div class="row" style="margin-bottom:8px"><label>Cost regen /s <input type="number" id="regen" step="0.001" min="0" style="width:78px"></label><button class="btn" id="regenauto" title="Set the cost regen back to the value calculated from the team">Reset</button><span class="info" id="reginfo" tabindex="0" title="How the cost regen is calculated">&#9432;</span><div class="pop" id="regentext" hidden></div><label>Start cost <input type="number" id="scost" step="0.5" style="width:60px"></label><label>Time limit <input type="text" id="limit" style="width:62px" title="In-battle clock. Binah is 3:00; some other raid bosses start at 4:00."></label></div></div>
+    <div class="row" style="margin-bottom:8px"><label>Cost regen /s <input type="number" id="regen" step="0.001" min="0" style="width:78px"></label><button class="btn" id="regenauto" title="Set the cost regen back to the value calculated from the team">Reset</button><span class="info" id="reginfo" tabindex="0" title="How the cost regen is calculated">&#9432;</span><div class="pop" id="regentext" hidden></div><label>Start cost <input type="number" id="scost" step="0.5" style="width:60px"></label><label>Time limit <input type="text" id="limit" style="width:62px" title="In-battle clock. Binah is 3:00; some other raid bosses start at 4:00."></label><button class="btn" id="colbtn" style="margin-left:auto" title="Choose which columns of the table show. Drag a column heading to move it.">Columns</button><div id="colpop"></div></div></div>
     <div class="rotbox" id="rotbox"><table id="rot"></table></div>
   </div>
+  <div class="card" id="notescard"><h2>Notes</h2><textarea id="notes" placeholder="Anything about this rotation that does not belong to one skill: the plan, what to watch for, reminders..." spellcheck="true"></textarea></div>
   <div class="card" id="teamcard"><h2>Team</h2>
     <div class="row" style="margin-bottom:12px"><label>Name <input type="text" id="tname" style="width:220px"></label><button class="btn" id="delteam">Delete team</button>
       <small style="color:var(--dim)">Drag a card onto another in the same row to reorder.</small></div>
@@ -309,6 +320,13 @@ let lastSaved = null;
 // "Unsaved changes" compares everything except which team tab is open: switching tabs is not an edit.
 const fsnap = () => { const {team: _open, ...rest} = state; return JSON.stringify(rest); };
 const markDirty = () => { const b = document.getElementById('savebtn'); if(b && lastSaved != null) b.classList.toggle('dirty', fsnap() !== lastSaved); };
+// Rotation table columns: the order and which ones are shown are a preference of this browser, not part of the teams.
+const ROTCOLS = [{id:'num', label:'#'}, {id:'cost', label:'Cost'}, {id:'chain', label:'Chain', tip:'Chain: tie this cast to the cast above it, so it goes off the moment the team has the cost.'}, {id:'student', label:'Student'}, {id:'target', label:'Target'},
+  {id:'ex', label:'EX cost', tip:'Cost this EX spends. Leave blank for the normal cost of the skill; type a number for cost reductions (Kokona stamps, a Rio copy, ...).'}, {id:'note', label:'Note'}, {id:'time', label:'Approx. Time'}];
+const COLKEY = 'ba-ui-rotcols';
+const colPrefs = () => { try { const p = JSON.parse(localStorage.getItem(COLKEY)); if(p && Array.isArray(p.order)) return {order: p.order, hide: Array.isArray(p.hide) ? p.hide : []}; } catch(e){} return {order: [], hide: []}; };
+const rotCols = () => { const o = colPrefs().order.filter(id => ROTCOLS.some(cd => cd.id === id)); ROTCOLS.forEach(cd => { if(!o.includes(cd.id)) o.push(cd.id); }); return o; };   // columns added later still appear
+const setColPrefs = (order, hide) => localStorage.setItem(COLKEY, JSON.stringify({order, hide}));
 const save = () => {
   if(baseline != null && snap() !== baseline){ undoStack.push(baseline); if(undoStack.length > 100) undoStack.shift(); redoStack.length = 0; }
   localStorage.setItem(KEY, JSON.stringify(state)); markDirty();
@@ -908,7 +926,7 @@ function render0(){
 
 
   // roster
-  $('#tname').value = t.name;
+  $('#tname').value = t.name; if($('#notes').value !== (t.notes || '')) $('#notes').value = t.notes || '';
   const cardHtml = id => {
     const d = SCHALE[id], L = levelOf(id);
     const effects = d.buffs.map(b=>`${buffLabel(b.stat,b.target,b.values)}${b.stat==='CostOverload'||b.stat==='Summon'?'':' '+Math.abs(pickv(b.values, L.ex))/100+'%'}, ${b.ms/1000}s`).join(' | ') || 'no timed buff';
@@ -964,28 +982,39 @@ function render0(){
   // rotation table
   const ri = regenInfo(t); $('#regen').value = +(t.regen ?? ri.auto).toFixed(3); $('#scost').value = +(t.startCost ?? 0); $('#limit').value = fmt(TOTAL).replace(/\.0$/,''); $('#regentext').textContent = (t.regen != null ? 'Set by hand (Reset returns to ' + ri.auto.toFixed(3) + '/s). Calculated: ' : 'Calculated: ') + ri.text + '. Max cost ' + capOf(t) + '.';
   $('#regenauto').disabled = t.regen == null;
-  let rt = '<tr><th>#</th><th>Cost</th><th title="Chain: tie this cast to the cast above it, so it goes off the moment the team has the cost.">Chain</th><th>Student</th><th>Target</th><th title="Cost this EX spends. Leave blank for the normal cost of the skill; type a number for cost reductions (Kokona stamps, a Rio copy, ...).">EX cost</th><th>Note</th><th>Approx. Time</th><th style="white-space:nowrap"><button class="btn" id="lockall" style="padding:2px 8px;font-size:12px"></button></th></tr>';
+  const colDefs = ROTCOLS.map(cd => `<th data-col="${cd.id}" class="colh" draggable="true" title="${cd.tip ? cd.tip + ' ' : ''}Drag to move this column.">${cd.label}</th>`), colShown = rotCols().filter(id => !colPrefs().hide.includes(id));
+  let rt = '<tr>' + colShown.map(id => colDefs[ROTCOLS.findIndex(cd => cd.id === id)]).join('') + '<th style="white-space:nowrap"><button class="btn" id="lockall" style="padding:2px 8px;font-size:12px"></button></th></tr>';
   const order = [...t.casts.keys()].sort((a,b)=>t.casts[b].t-t.casts[a].t);
   order.forEach((i,n)=>{
     const c = t.casts[i], ce = costOf[i];
     const busy = ownBusy(t, c, c.t);   // her own earlier EX is still playing
     const cls = ce && !ce.ok ? 'cost-bad' : (ce && ce.overload ? 'cost-od' : '');
     const tip = ce ? `Cost ${ce.before.toFixed(1)} -> ${ce.after.toFixed(1)} (spend ${ce.spend})${!ce.ok ? ' - NOT ENOUGH COST' : (ce.overload ? ' - paid with Cost Over' : '')}. Type the cost you want before this cast and the time moves to match. Up/Down: +-1 (Shift: 0.1)` : '';
-    rt += `<tr data-row="${i}" class="${hlRow === cid(c) ? 'hl' : ''}${c.lock ? ' locked' : ''}"><td>${n+1}</td>
-      <td class="${cls}"><input type="number" step="1" min="-5" max="${capOf(t)}" data-cb="${i}" value="${ce ? (c.cb != null && Math.abs(ce.before - c.cb) <= 0.02 ? c.cb : +ce.before.toFixed(1)) : ''}" style="width:70px" title="${tip}"></td>
-      <td style="text-align:center"><button class="btn ${c.after?'chain-on':''}" data-ch="${i}" ${n===0?'disabled':''} title="${c.after?'Tied to the cast above: it follows that cast and goes off the moment the team has the cost for it. Click to untie.':'Cast right after the cast above, the moment the team has the cost for it. Click again to untie.'}">&#9193;</button></td>
-      <td><select data-w="${i}">${t.roster.map(id=>`<option value="${id}" ${id==c.who?'selected':''}>${sname(id)}</option>`).join('')}</select></td>
-      <td>${(() => { const ents = evOf(t).filter(e => e.type === 'entity' && ENTITY[e.ent] && (ENTITY[e.ent].action === 'attack' && aimsAtEnemy(c.who) || ENTITY[e.ent].action === 'heal' && healsRelic(c.who))), nm = e => String(e.label || e.ent).replace(/</g, '&lt;') + ' @ ' + fmt(e.t);
+    const cell = {
+      num: `<td>${n+1}</td>`,
+      cost: `<td class="${cls}"><input type="number" step="1" min="-5" max="${capOf(t)}" data-cb="${i}" value="${ce ? (c.cb != null && Math.abs(ce.before - c.cb) <= 0.02 ? c.cb : +ce.before.toFixed(1)) : ''}" style="width:70px" title="${tip}"></td>`,
+      chain: `<td style="text-align:center"><button class="btn ${c.after?'chain-on':''}" data-ch="${i}" ${n===0?'disabled':''} title="${c.after?'Tied to the cast above: it follows that cast and goes off the moment the team has the cost for it. Click to untie.':'Cast right after the cast above, the moment the team has the cost for it. Click again to untie.'}">&#9193;</button></td>`,
+      student: `<td><select data-w="${i}">${t.roster.map(id=>`<option value="${id}" ${id==c.who?'selected':''}>${sname(id)}</option>`).join('')}</select></td>`,
+      target: `<td>${(() => { const ents = evOf(t).filter(e => e.type === 'entity' && ENTITY[e.ent] && (ENTITY[e.ent].action === 'attack' && aimsAtEnemy(c.who) || ENTITY[e.ent].action === 'heal' && healsRelic(c.who))), nm = e => String(e.label || e.ent).replace(/</g, '&lt;') + ' @ ' + fmt(e.t);
         if(targetsAlly(c.who)){ const picked = c.target || c.hit;   // one list: your allies, and (for a heal) the relics on the field
           return `<select data-tg="${i}" class="${picked ? '' : 'notg'}" title="${picked ? '' : 'Pick who this EX targets: its buff or cost reduction only counts once a target is picked.'}"><option value="">(pick target)</option>${t.roster.filter(id=>id!==c.who && (allyTargetable(id) || c.target==id)).map(id=>`<option value="${id}" ${c.target==id && !c.hit ? 'selected' : ''}>${sname(id)}</option>`).join('')}${ents.length ? '<optgroup label="On the field">' + ents.map(e => `<option value="e:${e.id}" ${c.hit === e.id ? 'selected' : ''}>${nm(e)}</option>`).join('') + '</optgroup>' : ''}</select>`; }
-        return ents.length ? `<select data-hit="${i}" class="hit" title="Which thing on the field this EX is aimed at. The last attack aimed at one destroys it."><option value="">(boss)</option>${ents.map(e => `<option value="${e.id}" ${c.hit === e.id ? 'selected' : ''}>${nm(e)}</option>`).join('')}</select>` : ''; })()}</td>
-      <td>${SCHALE[c.who].forms && SCHALE[c.who].forms.length ? `<select data-form="${i}" style="max-width:118px" title="This student has more than one EX skill. The box shows the one this cast really uses (they usually follow a set order, e.g. Ibuki Swimsuit: first use, then the second EX); pick another to set it yourself.">${(() => { const fi = formIdx(t, c), ds = SCHALE[c.who], nm = f => f === null ? 'Normal' : ds.forms[f].name; const cur = c.form === undefined ? fi : c.form;   // what it will really cast (the usual order unless you picked one)
-          return `<option value="main" ${cur === null ? 'selected' : ''}>Normal</option>` + ds.forms.map((f, k) => `<option value="${k}" ${cur === k ? 'selected' : ''}>${f.name}</option>`).join(''); })()}</select><br>` : ''}<input type="number" step="1" min="0" style="width:58px" class="${c.cost!=null?'ovr':''}" data-cost="${i}" value="${c.cost ?? ''}" placeholder="${spendOf(t, c)}" title="Cost this EX spends: ${spendOf(t, c)}${c.cost!=null ? ' (set by hand)' : ''}. Blank = the skill's own cost at its EX level. Type a number to override, e.g. for Kokona's stamp reduction."></td>
-      <td><input type="text" style="width:140px" value="${c.tag||''}" data-g="${i}"></td><td style="white-space:nowrap"><input type="text" class="${timed(c) ? 'ovr' : ''}${busy !== null ? ' busy' : ''}" value="${fmt2(c.t)}" data-t="${i}" title="${busy !== null ? 'Not castable here: her own EX animation, or a phase transition, is still going on. In the game this card is greyed out until ' + fmt2(busy) + '. ' : ''}${timed(c) ? 'A time you set (orange). Clear the box to let the cost place this cast again.' : 'Where the cost (or the chain) puts this cast. Type a time, for example 2:30.866, to pin it.'}"></td>
-      <td style="white-space:nowrap"><button class="btn lockb ${c.lock ? 'on' : ''}" data-lock="${i}" title="${c.lock ? 'Locked: nothing on this row can change and the bar cannot be dragged. Click to unlock.' : 'Lock this row: freeze its time, cost, student and the rest, and keep the planner from moving it.'}">${c.lock ? '&#128274;' : '&#128275;'}</button> <button class="btn" data-x="${i}">✕</button></td></tr>`;
+        return ents.length ? `<select data-hit="${i}" class="hit" title="Which thing on the field this EX is aimed at. The last attack aimed at one destroys it."><option value="">(boss)</option>${ents.map(e => `<option value="${e.id}" ${c.hit === e.id ? 'selected' : ''}>${nm(e)}</option>`).join('')}</select>` : ''; })()}</td>`,
+      ex: `<td>${SCHALE[c.who].forms && SCHALE[c.who].forms.length ? `<select data-form="${i}" style="max-width:118px" title="This student has more than one EX skill. The box shows the one this cast really uses (they usually follow a set order, e.g. Ibuki Swimsuit: first use, then the second EX); pick another to set it yourself.">${(() => { const fi = formIdx(t, c), ds = SCHALE[c.who], nm = f => f === null ? 'Normal' : ds.forms[f].name; const cur = c.form === undefined ? fi : c.form;   // what it will really cast (the usual order unless you picked one)
+          return `<option value="main" ${cur === null ? 'selected' : ''}>Normal</option>` + ds.forms.map((f, k) => `<option value="${k}" ${cur === k ? 'selected' : ''}>${f.name}</option>`).join(''); })()}</select><br>` : ''}<input type="number" step="1" min="0" style="width:58px" class="${c.cost!=null?'ovr':''}" data-cost="${i}" value="${c.cost ?? ''}" placeholder="${spendOf(t, c)}" title="Cost this EX spends: ${spendOf(t, c)}${c.cost!=null ? ' (set by hand)' : ''}. Blank = the skill's own cost at its EX level. Type a number to override, e.g. for Kokona's stamp reduction."></td>`,
+      note: `<td><input type="text" style="width:140px" value="${c.tag||''}" data-g="${i}"></td>`,
+      time: `<td style="white-space:nowrap"><input type="text" class="${timed(c) ? 'ovr' : ''}${busy !== null ? ' busy' : ''}" value="${fmt2(c.t)}" data-t="${i}" title="${busy !== null ? 'Not castable here: her own EX animation, or a phase transition, is still going on. In the game this card is greyed out until ' + fmt2(busy) + '. ' : ''}${timed(c) ? 'A time you set (orange). Clear the box to let the cost place this cast again.' : 'Where the cost (or the chain) puts this cast. Type a time, for example 2:30.866, to pin it.'}"></td>`,
+      act: `<td style="white-space:nowrap"><button class="btn lockb ${c.lock ? 'on' : ''}" data-lock="${i}" title="${c.lock ? 'Locked: nothing on this row can change and the bar cannot be dragged. Click to unlock.' : 'Lock this row: freeze its time, cost, student and the rest, and keep the planner from moving it.'}">${c.lock ? '&#128274;' : '&#128275;'}</button> <button class="btn" data-x="${i}">✕</button></td>`};
+    rt += `<tr data-row="${i}" class="${hlRow === cid(c) ? 'hl' : ''}${c.lock ? ' locked' : ''}">${colShown.map(id => cell[id]).join('')}${cell.act}</tr>`;
   });
   const keepScroll = $('#rotbox').scrollTop;
   $('#rot').innerHTML = rt;
+  document.querySelectorAll('#rot th.colh').forEach(th => {   // drag a heading to move its column
+    th.ondragstart = e => { e.dataTransfer.setData('text/plain', th.dataset.col); e.dataTransfer.effectAllowed = 'move'; th.classList.add('dragging'); };
+    th.ondragend = () => document.querySelectorAll('#rot th').forEach(x => x.classList.remove('dragging', 'dropl', 'dropr'));
+    th.ondragover = e => { e.preventDefault(); const r = th.getBoundingClientRect(), left = e.clientX < r.left + r.width/2; document.querySelectorAll('#rot th').forEach(x => x.classList.remove('dropl', 'dropr')); th.classList.add(left ? 'dropl' : 'dropr'); };
+    th.ondrop = e => { e.preventDefault(); const from = e.dataTransfer.getData('text/plain'), r = th.getBoundingClientRect(), left = e.clientX < r.left + r.width/2; if(!from || from === th.dataset.col) return;
+      const o = rotCols().filter(id => id !== from); o.splice(o.indexOf(th.dataset.col) + (left ? 0 : 1), 0, from); setColPrefs(o, colPrefs().hide); render(); };
+  });
   document.querySelectorAll('#rot tr.locked input, #rot tr.locked select, #rot tr.locked button:not(.lockb)').forEach(e => e.disabled = true);
   { const b = $('#lockall'), all = t.casts.length > 0 && t.casts.every(c => c.lock); b.disabled = !t.casts.length;
     b.innerHTML = all ? '&#128274; Unlock all' : '&#128275; Lock all'; b.title = all ? 'Unlock every row' : 'Lock every row so nothing on the table can change or be moved by the planner';
@@ -1245,8 +1274,8 @@ let sbOn = localStorage.getItem(SBKEY) !== 'off', sbTab = localStorage.getItem(S
 function applySide(){
   document.body.classList.toggle('side', sbOn); $('#sbtoggle').textContent = 'Sidebar: ' + (sbOn ? 'on' : 'off');
   document.documentElement.style.setProperty('--sbw', (+localStorage.getItem(SBW) || 560) + 'px');
-  $('#sidetabs').innerHTML = [['teamcard','Team'],['bosscard','Boss'],['rotcard','Rotation']].map(([id, l]) => `<button class="tab ${id === sbTab ? 'on' : ''}" data-pane="${id}">${l}</button>`).join('');
-  ['teamcard','bosscard','rotcard'].forEach(id => $('#' + id).classList.toggle('pane-on', id === sbTab));
+  $('#sidetabs').innerHTML = [['teamcard','Team'],['bosscard','Boss'],['rotcard','Rotation'],['notescard','Notes']].map(([id, l]) => `<button class="tab ${id === sbTab ? 'on' : ''}" data-pane="${id}">${l}</button>`).join('');
+  ['teamcard','bosscard','rotcard','notescard'].forEach(id => $('#' + id).classList.toggle('pane-on', id === sbTab));
   document.querySelectorAll('#sidetabs .tab').forEach(b => b.onclick = () => { sbTab = b.dataset.pane; localStorage.setItem(SBTAB, sbTab); applySide(); });
   fitRot();
 }
@@ -1352,6 +1381,16 @@ function fitRot(){
     : Math.max(200, vh - hh - $('#tl').closest('.card').offsetHeight - $('#rotbar').offsetHeight - 100)) + 'px';   // stacked: the list scrolls inside, so the timeline and the list fit on one screen
 }
 const setRotFull = on => { document.body.classList.toggle('rotfull', on); $('#rotfull').textContent = on ? 'Exit full screen' : 'Full screen'; fitRot(); if(!on) render(); };
+// Columns menu: tick a column to show it, untick to hide it. (Dragging a heading moves it.)
+function buildColMenu(){ const hide = colPrefs().hide, pop = $('#colpop');
+  pop.innerHTML = rotCols().map(id => { const cd = ROTCOLS.find(x => x.id === id); return `<label><input type="checkbox" data-colshow="${id}" ${hide.includes(id) ? '' : 'checked'}>${cd.label}</label>`; }).join('') + '<div style="margin-top:6px"><a id="colreset">Reset order and show all</a></div>';
+  pop.querySelectorAll('[data-colshow]').forEach(cb => cb.onchange = () => { const h = colPrefs().hide.filter(x => x !== cb.dataset.colshow); if(!cb.checked) h.push(cb.dataset.colshow); setColPrefs(rotCols(), h); render(); buildColMenu(); });
+  $('#colreset').onclick = () => { localStorage.removeItem(COLKEY); render(); buildColMenu(); }; }
+$('#colbtn').onclick = e => { e.stopPropagation(); const p = $('#colpop'); if(p.classList.toggle('on')){ buildColMenu(); const b = e.currentTarget.getBoundingClientRect(), bar = p.offsetParent ? p.offsetParent.getBoundingClientRect() : {left:0, top:0}; p.style.left = Math.max(0, b.right - bar.left - p.offsetWidth) + 'px'; p.style.top = (b.bottom - bar.top + 4) + 'px'; } };
+document.addEventListener('mousedown', e => { if(!e.target.closest('#colpop, #colbtn')) $('#colpop').classList.remove('on'); });
+// Notes: free text kept with the team (and in saved files)
+$('#notes').oninput = () => { const t = team(); t.notes = $('#notes').value; localStorage.setItem(KEY, JSON.stringify(state)); markDirty(); };
+$('#notes').onchange = () => save();
 $('#rotfull').onclick = () => setRotFull(!document.body.classList.contains('rotfull'));
 document.addEventListener('keydown', e => { if(e.key === 'Escape' && document.body.classList.contains('rotfull') && !document.querySelector('select:focus, #setpop.on')) setRotFull(false); });
 addEventListener('resize', () => { fitRot(); if(document.body.classList.contains('side')) render(); });
