@@ -108,7 +108,7 @@ body.rotfull #rotcard .rotbox{flex:1 1 auto;min-height:0;max-height:none !import
 .bar .btext{position:sticky;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bar.waste{border-color:var(--warn);box-shadow:0 0 0 2px #ff6b5e55}
 .rowmenu-x{}
-#rowmenu{position:fixed;z-index:400;background:#141e2e;border:1px solid var(--line);border-radius:8px;padding:4px;box-shadow:0 8px 24px #000a;display:flex;flex-direction:column}
+#rowmenu{position:fixed;width:max-content;white-space:nowrap;z-index:400;background:#141e2e;border:1px solid var(--line);border-radius:8px;padding:4px;box-shadow:0 8px 24px #000a;display:flex;flex-direction:column}
 #rowmenu button{background:none;border:0;color:var(--text);font:inherit;padding:7px 16px;text-align:left;cursor:pointer;border-radius:5px}
 #rowmenu button:hover{background:var(--panel2)}
 .bar.lk::after{content:'';position:absolute;right:-6px;top:-7px;width:15px;height:15px;border-radius:50%;background:#101826 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 14'%3E%3Cpath d='M3 6V4a3 3 0 0 1 6 0v2' fill='none' stroke='%23ffd54a' stroke-width='1.8'/%3E%3Crect x='1' y='6' width='10' height='7.5' rx='1.5' fill='%23ffd54a'/%3E%3C/svg%3E") center/8px no-repeat;border:1px solid #ffd54a;z-index:3}   /* a badge on the corner: never over the text */
@@ -1049,6 +1049,9 @@ function render0(){
     const m = document.createElement('div'); m.id = 'rowmenu'; m.style.cssText = `left:${e.clientX}px;top:${e.clientY}px`;
     [['Add row above', 'above'], ['Add row below', 'below']].forEach(([txt, where]) => { const b = document.createElement('button'); b.textContent = txt; b.onclick = () => { m.remove(); insertCast(row, where); }; m.append(b); });
     document.body.append(m);
+    const r = m.getBoundingClientRect(), z = UI();   // keep the menu on screen: shift it left / up when the click was near the right or bottom edge
+    if(r.right > innerWidth - 6) m.style.left = Math.max(0, e.clientX - (r.right - innerWidth + 6) / z) + 'px';
+    if(r.bottom > innerHeight - 6) m.style.top = Math.max(0, e.clientY - (r.bottom - innerHeight + 6) / z) + 'px';
   };
   $('#rotbox').scrollTop = keepScroll;
   $('#addbar').innerHTML = '<b style="color:var(--dim)">Add cast:</b>' + t.roster.map(id=>`<button class="btn addq" data-aq="${id}" title="Add ${SCHALE[id].name}'s EX at the first moment the team can pay for it"><img src="https://schaledb.com/images/student/icon/${id}.webp" onerror="this.style.visibility='hidden'" draggable="false">${sname(id)} <small>${baseCost(t, id)}</small></button>`).join('')
