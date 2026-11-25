@@ -1,0 +1,174 @@
+{
+ "team": 0,
+ "lv": {},
+ "cap": {},
+ "rc": {},
+ "wait": {},
+ "ext": {},
+ "first": {},
+ "teams": [
+  {
+   "name": "Team 1",
+   "estimated": false,
+   "source": "Your own rotation: add casts in the Rotation table or drag bars.",
+   "roster": [
+    10135,
+    10029,
+    10099,
+    10064,
+    20048,
+    20039
+   ],
+   "casts": [
+    {
+     "t": 220.21,
+     "who": 20048,
+     "cb": 9,
+     "id": "3e8wlo",
+     "target": 10099,
+     "lock": true
+    },
+    {
+     "t": 214.27,
+     "who": 10135,
+     "id": "6xsvv1",
+     "cb": 9,
+     "lock": true
+    },
+    {
+     "t": 210.31,
+     "who": 10099,
+     "id": "odmbqi",
+     "cb": 9,
+     "lock": true
+    },
+    {
+     "t": 210.3,
+     "who": 20039,
+     "after": "odmbqi",
+     "id": "2qajcz",
+     "target": 10099,
+     "lock": true
+    },
+    {
+     "t": 204.37,
+     "who": 10029,
+     "after": "2qajcz",
+     "id": "xjyldo",
+     "lock": true
+    },
+    {
+     "t": 200.41,
+     "who": 10064,
+     "after": "xjyldo",
+     "id": "bkrdgy",
+     "target": 10099,
+     "lock": true
+    },
+    {
+     "t": 196,
+     "who": 10099,
+     "id": "nx8z4r",
+     "lock": true
+    },
+    {
+     "t": 175.67,
+     "who": 10135,
+     "id": "pgxsz6",
+     "cb": 6.5,
+     "lock": true
+    },
+    {
+     "t": 170.72,
+     "who": 20048,
+     "target": 10099,
+     "id": "w22gde",
+     "cb": 7,
+     "lock": true
+    },
+    {
+     "t": 164.78,
+     "who": 10064,
+     "target": 10099,
+     "id": "zzjflm",
+     "cb": 7,
+     "lock": true
+    },
+    {
+     "t": 154.89,
+     "who": 10099,
+     "id": "x08dlu",
+     "cb": 10,
+     "lock": true
+    },
+    {
+     "t": 154.88,
+     "who": 20039,
+     "after": "x08dlu",
+     "target": 10099,
+     "id": "9nnwto",
+     "lock": true
+    },
+    {
+     "t": 149.94,
+     "who": 10135,
+     "id": "6evk3m",
+     "cb": 3.5,
+     "lock": true
+    },
+    {
+     "t": 148.94,
+     "who": 10064,
+     "after": "6evk3m",
+     "target": 10099,
+     "id": "3zcm9i",
+     "lock": true
+    },
+    {
+     "t": 146.97,
+     "who": 10099,
+     "after": "3zcm9i",
+     "id": "1hoi0z",
+     "lock": true
+    }
+   ],
+   "custom": true,
+   "mv": 3,
+   "events": [],
+   "set": {
+    "lv": {
+     "10126": {
+      "basic": 7
+     }
+    },
+    "ext": {},
+    "ue": {
+     "10029": 50,
+     "10085": 40,
+     "10099": 50,
+     "10135": 40,
+     "20039": 60,
+     "20048": 60
+    },
+    "wait": {}
+   },
+   "boss": {
+    "raid": 6,
+    "diff": 6,
+    "terrain": "Indoor"
+   },
+   "limit": 240,
+   "startOrder": [
+    20048,
+    10135,
+    10099,
+    20039,
+    10029
+   ]
+  }
+ ],
+ "chainNew": true,
+ "v": 15,
+ "cbMig": 1,
+ "images": {}
+}

@@ -1,0 +1,301 @@
+{
+ "team": 0,
+ "lv": {},
+ "cap": {},
+ "rc": {},
+ "wait": {},
+ "ext": {},
+ "first": {},
+ "teams": [
+  {
+   "name": "Hod Yellow Torment Indoor",
+   "estimated": false,
+   "source": "Your own rotation: add casts in the Rotation table or drag bars.",
+   "roster": [
+    10110,
+    10059,
+    10084,
+    10089,
+    20041,
+    20039
+   ],
+   "casts": [
+    {
+     "t": 226.14,
+     "who": 10110,
+     "cb": 6,
+     "id": "j0769i",
+     "target": 10059,
+     "lock": true
+    },
+    {
+     "t": 224.12,
+     "who": 20041,
+     "cb": 4,
+     "id": "k157do",
+     "target": 10059,
+     "lock": true
+    },
+    {
+     "t": 216.64,
+     "who": 10084,
+     "id": "9versy",
+     "hit": "o4u2tb",
+     "after": "k157do",
+     "lock": true
+    },
+    {
+     "t": 211.31,
+     "who": 10059,
+     "id": "13apbx",
+     "tag": "COPY",
+     "hit": "o4u2tb",
+     "after": "9versy",
+     "lock": true
+    },
+    {
+     "t": 142.47,
+     "who": 10110,
+     "target": 10084,
+     "id": "c22vww",
+     "cb": 5.8
+    },
+    {
+     "t": 142.12,
+     "who": 10084,
+     "after": "c22vww",
+     "id": "uh5q88",
+     "hit": "6ir68c"
+    },
+    {
+     "t": 137.33,
+     "who": 10059,
+     "after": "uh5q88",
+     "id": "o3anx7",
+     "hit": "6ir68c"
+    },
+    {
+     "t": 128.19,
+     "who": 10089,
+     "target": 10059,
+     "id": "edlajy",
+     "cb": 5.46
+    },
+    {
+     "t": 127.28,
+     "who": 10110,
+     "after": "edlajy",
+     "target": 10059,
+     "id": "3z5tqx"
+    },
+    {
+     "t": 122.44,
+     "who": 10059,
+     "after": "3z5tqx",
+     "id": "u0f99k",
+     "hit": "kf7v6l",
+     "tag": "COPY"
+    },
+    {
+     "t": 116.54,
+     "who": 10059,
+     "after": "u0f99k",
+     "id": "e1xb3t",
+     "hit": "kayz5h"
+    },
+    {
+     "t": 193.08,
+     "who": 10084,
+     "id": "rq7o3d",
+     "after": "dsrnq1",
+     "hit": "6ir68c",
+     "lock": true
+    },
+    {
+     "t": 189.09,
+     "who": 10059,
+     "after": "rq7o3d",
+     "id": "2z1pxa",
+     "hit": "6ir68c",
+     "lock": true
+    },
+    {
+     "t": 173.63,
+     "who": 20039,
+     "after": "k5453d",
+     "id": "he8f7n",
+     "target": 10059
+    },
+    {
+     "t": 163.75,
+     "who": 10059,
+     "after": "he8f7n",
+     "id": "5gosng",
+     "tag": "COPY"
+    },
+    {
+     "t": 157.81,
+     "who": 10110,
+     "after": "5gosng",
+     "target": 10059,
+     "id": "oo7qb3"
+    },
+    {
+     "t": 152.27,
+     "who": 10059,
+     "after": "oo7qb3",
+     "id": "9k74pn"
+    },
+    {
+     "t": 107.32,
+     "who": 10089,
+     "target": 10059,
+     "id": "akxnxq",
+     "cb": 7
+    },
+    {
+     "t": 107.31,
+     "who": 10084,
+     "after": "akxnxq",
+     "id": "2n8icm"
+    },
+    {
+     "t": 95.71,
+     "who": 10059,
+     "after": "2n8icm",
+     "id": "8333xk",
+     "tag": "COPY"
+    },
+    {
+     "t": 83.83,
+     "who": 10059,
+     "after": "8333xk",
+     "id": "x0bjah",
+     "hit": "6ir68c"
+    },
+    {
+     "who": 10089,
+     "t": 196.33,
+     "id": "opjze8",
+     "cb": 8,
+     "target": 10059,
+     "lock": true
+    },
+    {
+     "who": 10110,
+     "target": 10084,
+     "t": 196.32,
+     "id": "dsrnq1",
+     "after": "opjze8",
+     "lock": true
+    },
+    {
+     "who": 20041,
+     "target": 10059,
+     "t": 173.65,
+     "id": "w4hc90",
+     "cb": 8
+    },
+    {
+     "who": 10089,
+     "target": 10059,
+     "t": 173.64,
+     "id": "k5453d",
+     "after": "w4hc90"
+    }
+   ],
+   "custom": true,
+   "mv": 3,
+   "set": {
+    "lv": {},
+    "ext": {},
+    "ue": {
+     "10059": 60,
+     "10084": 40,
+     "10089": 50,
+     "10110": 40,
+     "20039": 40,
+     "20041": 40
+    },
+    "wait": {}
+   },
+   "events": [
+    {
+     "id": "o4u2tb",
+     "type": "entity",
+     "ent": "Erosion Tower",
+     "t": 240,
+     "label": "Erosion Tower",
+     "by": 10117,
+     "dur": 33.067,
+     "spans": [
+      {
+       "f": 224.7,
+       "to": 213,
+       "in": [
+        10059
+       ]
+      },
+      {
+       "in": [
+        10059
+       ],
+       "f": 209.667,
+       "to": 207
+      }
+     ]
+    },
+    {
+     "id": "6ir68c",
+     "type": "entity",
+     "ent": "Erosion Tower",
+     "t": 196.233,
+     "label": "Erosion Tower",
+     "dur": 11.566,
+     "inside": []
+    },
+    {
+     "id": "bqld6b",
+     "type": "phase",
+     "t": 176.667,
+     "dur": 3
+    },
+    {
+     "id": "kf7v6l",
+     "type": "entity",
+     "ent": "Erosion Tower",
+     "t": 165.433,
+     "label": "Erosion Tower Bottom",
+     "inside": [],
+     "dur": 4.5
+    },
+    {
+     "id": "kayz5h",
+     "type": "entity",
+     "ent": "Erosion Tower",
+     "t": 165.266,
+     "label": "Erosion Tower Top",
+     "spans": [],
+     "dur": 10.566
+    }
+   ],
+   "startOrder": [
+    10110,
+    20041,
+    10084,
+    10089,
+    10059
+   ],
+   "boss": {
+    "raid": 7,
+    "diff": 6,
+    "terrain": "Indoor"
+   },
+   "limit": 240
+  }
+ ],
+ "chainNew": false,
+ "v": 15,
+ "cbMig": 1,
+ "images": {}
+}

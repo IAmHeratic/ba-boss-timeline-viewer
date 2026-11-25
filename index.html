@@ -655,7 +655,7 @@ function costAt0(t, skip, T, sorted, smap){
 }
 // All casts but `skip`, and but the casts tied (directly or through other ties) to it: those follow `skip`, so their old times must not count against it.
 const castsExcept = (t, skip) => {
-  const gone = new Set(); if(skip >= 0){ const todo = [t.casts[skip]]; while(todo.length){ const x = todo.pop(); if(x.id) t.casts.forEach(y=>{ if(y.after === x.id && !gone.has(y)){ gone.add(y); todo.push(y); } }); } }
+  const gone = new Set(); if(skip >= 0){ const todo = [t.casts[skip]]; while(todo.length){ const x = todo.pop(); if(x.id) t.casts.forEach(y=>{ if(y.after === x.id && !gone.has(y) && !y.lock){ gone.add(y); todo.push(y); } }); } }
   return t.casts.map((c,i)=>({c,i})).filter(x=>x.i!==skip && !gone.has(x.c)).sort((a,b)=>b.c.t-a.c.t);
 };
 // True if, at clock time T, cast c's student holds Cost Over (it may then spend up to 5 beyond what it holds).
@@ -663,22 +663,25 @@ const overOnFor = (t, c, T) => t.casts.some(x => x !== c && x.target === c.who &
   && resolve(x).buffs.some(b=>b.stat==='CostOverload' && b.start>=T && b.end<T));
 // Time at which cast i sees `want` cost before it. If several moments qualify (cost passes the same value again after other casts) the one nearest to
 // where the cast already is wins; at the cost cap the first moment it is reached counts.
-function timeForCost(t, i, want, maxT = TOTAL, accept, minT = 0){
+function timeForCost(t, i, want, maxT = TOTAL, accept, minT = 0, dir = 0){
   const prev = winOverride; winOverride = allWindows(t, castsExcept(t, i).map(x => x.c));
-  try { return timeForCost0(t, i, want, maxT, accept, minT); } finally { winOverride = prev; }
+  try { return timeForCost0(t, i, want, maxT, accept, minT, dir); } finally { winOverride = prev; }
 }
-function timeForCost0(t, i, want, maxT = TOTAL, accept, minT = 0){   // maxT: the cast must not come before this clock time (it stays after the cast above it)
+function timeForCost0(t, i, want, maxT = TOTAL, accept, minT = 0, dir = 0){   // maxT: the cast must not come before this clock time (it stays after the cast above it). dir: when the exact cost cannot be had (a phase transition or her own EX animation blocks it), 1 = take the next cost above it that can, -1 = the next one below, 0 = the nearest
   const T0 = t.casts[i].t, sorted = castsExcept(t, i), X = Math.min(want, capOf(t));
-  const hits = []; let bestErr = 1e9, bestT = T0, bestAccErr = 1e9, bestAccT = null;
+  const hits = []; let bestErr = 1e9, bestT = T0, bestAccErr = 1e9, bestAccT = null, hiC = 1e9, hiT = null, loC = -1e9, loT = null;
   // One sweep from late-fight to early: the cost after each other cast is carried along, so a step costs one short regen piece instead of a replay of the fight.
   const rate = +(t.regen ?? regenInfo(t).auto), CAP = capOf(t), sm = spendMap(t, sorted.map(x => x.c)); let cost = +(t.startCost ?? 0), last = COST0, k = 0;
   for(let T = Math.min(TOTAL, maxT); T >= 0; T = +(T - 0.01).toFixed(2)){
     while(k < sorted.length && sorted[k].c.t > T){ const c = sorted[k++].c; cost = regenAdv(t, cost, last, c.t, rate, CAP) - sm.get(c); last = c.t; }
-    const err = Math.abs(regenAdv(t, cost, last, T, rate, CAP) - X);
+    const cNow = regenAdv(t, cost, last, T, rate, CAP), err = Math.abs(cNow - X);
     if(err <= 0.012 && T >= minT && (!accept || accept(T))) hits.push([T, err]);
+    if(dir && T >= minT){ if(cNow > X + 0.012 && cNow < hiC && (!accept || accept(T))){ hiC = cNow; hiT = T; } else if(cNow < X - 0.012 && cNow > loC && (!accept || accept(T))){ loC = cNow; loT = T; } }   // the closest reachable cost on each side
     if(accept && T >= minT && err < bestAccErr && accept(T)){ bestAccErr = err; bestAccT = T; }   // closest moment the cast could really be paid for
     if(err < bestErr && T >= minT){ bestErr = err; bestT = T; }   // the closest miss may not hop over the cast below (that made casts drift later on every re-render)
   }
+  if(!hits.length && dir > 0 && hiT !== null) return hiT;
+  if(!hits.length && dir < 0 && loT !== null) return loT;
   if(!hits.length) return accept ? (bestAccT !== null ? bestAccT : bestT) : bestT;
   hits.sort((a,b)=>Math.abs(a[0]-T0) - Math.abs(b[0]-T0));
   const near = hits.filter(h=>Math.abs(h[0]-hits[0][0]) <= 0.05).sort((a,b)=>a[1]-b[1]);
@@ -719,12 +722,32 @@ function setForm(c, v){
 const cid = c => c.id || (c.id = Math.random().toString(36).slice(2, 8));
 // Casts are placed by cost (c.cb = cost wanted before the cast) or tied to the cast above (c.after); only a cast you timed by hand keeps its own time.
 // So when the cost model changes, the planned costs stay and the times follow.
-const cbSig = new WeakMap(), cbOwn = new WeakMap();
+const cbSig = new WeakMap(), cbOwn = new WeakMap(), cbEnv = new WeakMap(), chSig = new WeakMap(), chEnv = new WeakMap(), settledTeams = new WeakSet();
+// A row is re-timed only when something about the row itself changed (its cost, student, the cast it is tied to, the regen or cap). A change somewhere else in the rotation never moves it:
+// if the team can no longer pay for it, it turns red instead. Only the first solve of a team that was never settled before (an old file, a new cost model) looks at the whole rotation.
 // Bump when the cost model changes: every team is then settled from scratch once. Otherwise the times saved with a team (or imported with it) are kept as they are:
 // searching again from nothing can pick a different one of several moments with the same cost, so a reload would move casts.
 const MODEL_V = 3;
+// The casts tied (directly or through others) to cast `me`: they follow it. And the earliest clock-side limit of a cast's slot: just after the nearest cast below it that is not one of those.
+function chainKids(t, me){ const kids = new Set(), todo = [me]; while(todo.length){ const x = todo.pop(); if(x.id) t.casts.forEach(y => { if(y.after === x.id && !kids.has(y) && !y.lock){ kids.add(y); todo.push(y); } }); } return kids; }   // a locked row tied to a cast does not follow it (and what is tied to that locked row follows the locked row)
+function slotFloor(t, c, refT = c.t){ const kids = chainKids(t, c), ci = t.casts.indexOf(c); let f = 0;   // refT: a cast that must go below the cast it is tied to measures from there
+  t.casts.forEach((x, xi) => { if(x === c || (kids.has(x) && !x.lock)) return;   // a locked row tied to it does not follow it, so it still limits it
+    if(x.t < refT - 1e-9){ if(x.t + 0.01 > f) f = +(x.t + 0.01).toFixed(2); }
+    else if(xi > ci && Math.abs(x.t - c.t) < 1e-9 && x.t > f && !chainKids(t, x).has(c)) f = x.t; });   // a row at the very same time that comes after it in the table: it may not go later than that (unless the cast is tied to that row, which is then above it by definition)
+  return f; }
+// The clock time of the nearest cast above `c` (earlier in the fight), read live, not from a sorted list taken earlier in the same pass: casts tied to `c` do not count, they are placed after it.
+function ceilOf(t, c){ const kids = chainKids(t, c), ci = t.casts.indexOf(c); let m = Infinity; t.casts.forEach((x, xi) => { if(x !== c && (!kids.has(x) || x.lock) && (x.t > c.t + 1e-9 || (Math.abs(x.t - c.t) <= 1e-9 && xi < ci)) && x.t < m) m = x.t; }); return m; }   // a row at the very same time counts as above it only when it comes first in the table
+const cbOwnSig = (t, c) => JSON.stringify([c.cb, c.cost ?? null, c.form ?? null, c.who, +(t.regen ?? regenInfo(t).auto), capOf(t), COST0, +(t.startCost ?? 0), tset(t).ue, tset(t).ext, tset(t).lv]);
+// Which moments could cast `c` when it is planned at cost `cb`: not while its own EX or a phase transition is running; with price reductions around, only where the cost seen pays the price at that moment.
+function castable(t, c, cb, others){
+  const spendC = spendOf(t, c), oc = others.map(x => x.c), redPlay = oc.some(x => CRED[x.who]) || t.roster.some(id => CRED[id] && CRED[id].start);
+  const acc = (cb < spendC || redPlay) ? T => { const X = Math.min(cb, capOf(t)), sp = redPlay ? spendAt(t, c, T, oc) : spendC; return X >= sp - 0.012 || (X + 5 >= sp - 0.012 && overOnFor(t, c, T)); } : undefined;
+  const accB = T => ownBusy(t, c, T) === null;
+  return acc ? (T => accB(T) && acc(T)) : accB;
+}
 function applyChains(t){
   const trust = t.mv === MODEL_V; t.mv = MODEL_V;
+  const fresh = !settledTeams.has(t); settledTeams.add(t);   // a team that was just loaded / restored by undo: its casts stay as they were saved
   for(let pass = 0; pass <= t.casts.length; pass++){
     let moved = false;
     const byTime = [...t.casts].sort((a,b)=>b.t-a.t);
@@ -734,8 +757,16 @@ function applyChains(t){
       if(c.after){
         const p = t.casts.find(x=>x.id === c.after);
         if(!p || p === c){ delete c.after; return; }
+        { const own = JSON.stringify([c.after, p.t, c.cost ?? null, c.form ?? null, c.who, +(t.regen ?? regenInfo(t).auto), capOf(t), COST0, +(t.startCost ?? 0), tset(t).ue, tset(t).ext, tset(t).lv]);
+          const env = trust ? null : JSON.stringify([own, castsExcept(t, idx).map(o => [o.c.t, spendOf(t, o.c), o.c.who, o.c.target ?? null, o.c.hit ?? null]), regenWindows(t).map(w => [w.a, w.b, w.extra])]);
+          const same = trust ? chSig.get(c) === own : chEnv.get(c) === env, seen = chSig.has(c);
+          chSig.set(c, own); if(env) chEnv.set(c, env);
+          if(same || (trust && fresh && !seen)) return; }   // nothing about this row changed (or it was loaded as saved): it stays
         // Right after = the first moment the team can pay for it. EX skills of different students can overlap their animations, so the animation length is not a gap.
-        let nt = Math.max(0, +(p.t - 0.01).toFixed(2));
+        // ...but never earlier than the row just above it in the table: a chained cast keeps its place in the order (otherwise a row chained to a far-away cast
+        // jumped up in front of every row between them whenever something above it moved, and shuffled all the rows below).
+        const above = trust ? ceilOf(t, c) : (k && byTime[k-1] !== c ? byTime[k-1].t : Infinity);   // the first solve of a team keeps the order it was sorted in; after that the neighbour is read live
+        let nt = Math.max(0, +(Math.min(p.t, above) - 0.01).toFixed(2));
         // The Cost Over target may go up to 5 below zero while the buff runs, so such a cast needs only (cost - 5) held.
         const others = castsExcept(t, idx), otherCasts = others.map(x => x.c), smo = spendMap(t, otherCasts), winC = allWindows(t, otherCasts);
         // a cost reduction can only change the price at the few moments reductions are granted; without reduction givers in the team the price is fixed
@@ -745,43 +776,108 @@ function applyChains(t){
         // the search walks later in time, so the cost is carried along from cast to cast instead of being replayed from the start at every 0.01 s step
         const heldAt = (() => { const rate = +(t.regen ?? regenInfo(t).auto), CAP = capOf(t); let cst = +(t.startCost ?? 0), last = COST0, kk = 0;
           return T => { const pw = winOverride; winOverride = winC; try { while(kk < others.length && others[kk].c.t > T){ const cc = others[kk++].c; cst = regenAdv(t, cst, last, cc.t, rate, CAP) - smo.get(cc); last = cc.t; } return regenAdv(t, cst, last, T, rate, CAP); } finally { winOverride = pw; } }; })();
-        while(nt > 0){ const bz = ownBusy(t, c, nt); if(bz !== null){ nt = Math.max(0, floor2(bz)); continue; }   // still in her own EX animation: wait for it to end
-          const held = heldAt(nt), need = need0 ?? spendAt(t, c, nt, otherCasts); if((held >= need - 1e-9 || (held + 5 >= need - 1e-9 && overOn(nt))) && !others.some(o => o.c.t === nt)) break; nt = +(nt - 0.01).toFixed(2); }   // never on the very instant of another cast (it would not count that cast's cost)
+        const lowT = trust ? slotFloor(t, c, Math.min(c.t, p.t)) : 0; let found = false;   // a chained cast never moves past the next row below it: if the team cannot pay for it inside its slot it sits at the end of the slot (red)
+        while(nt > lowT){ const bz = ownBusy(t, c, nt); if(bz !== null){ nt = Math.max(0, floor2(bz)); continue; }   // still in her own EX animation: wait for it to end
+          const held = heldAt(nt), need = need0 ?? spendAt(t, c, nt, otherCasts); if((held >= need - 1e-9 || (held + 5 >= need - 1e-9 && overOn(nt))) && !others.some(o => o.c.t === nt)){ found = true; break; } nt = +(nt - 0.01).toFixed(2); }   // never on the very instant of another cast (it would not count that cast's cost)
+        if(!found && lowT > 0) nt = Math.min(lowT, p.t, above);   // (never earlier in the table than its parent, even when the slot is narrower than 0.01 s)
         if(nt !== c.t){ c.t = nt; moved = true; }
       } else if(c.cb != null){
         const others = castsExcept(t, idx);
-        const sig = JSON.stringify([c.cb, c.cost ?? null, spendOf(t, c), c.who, +(t.regen ?? regenInfo(t).auto), capOf(t), COST0, +(t.startCost ?? 0), regenWindows(t).map(w=>[w.a, w.b, w.extra]), others.map(o=>[o.c.t, spendOf(t, o.c), o.c.who, o.c.target ?? null, o.c.hit ?? null, o.c.who === c.who ? animDur(t, o.c) : 0]), (t.events || []).filter(e => e.type === 'entity'), c.hit ?? null, tset(t).ue, tset(t).ext, tset(t).lv]);   // everything the Cost Over window depends on too
-        const own = JSON.stringify([c.cb, c.cost ?? null, spendOf(t, c), c.who, +(t.regen ?? regenInfo(t).auto), capOf(t), COST0, +(t.startCost ?? 0), regenWindows(t).map(w=>[w.a, w.b, w.extra]), tset(t).ue, tset(t).ext, tset(t).lv]), ownSame = cbOwn.get(c) === own; cbOwn.set(c, own);
-        if(trust && !cbSig.has(c)){ cbSig.set(c, sig); cbOwn.set(c, own); return; }   // a cast loaded as it was saved: leave it where it is
-        if(cbSig.get(c) !== sig){ cbSig.set(c, sig); const spendC = spendOf(t, c);
+        const own = cbOwnSig(t, c), ownSame = cbOwn.get(c) === own; cbOwn.set(c, own);
+        const env = trust ? null : JSON.stringify([own, regenWindows(t).map(w=>[w.a, w.b, w.extra]), others.map(o=>[o.c.t, spendOf(t, o.c), o.c.who, o.c.target ?? null, o.c.hit ?? null, o.c.who === c.who ? animDur(t, o.c) : 0]), (t.events || []).filter(e => e.type === 'entity'), c.hit ?? null]);   // the first solve also depends on everything the Cost Over window depends on
+        if(trust && !cbSig.has(c)){ cbSig.set(c, own); return; }   // a cast loaded as it was saved: leave it where it is
+        const changed = trust ? cbSig.get(c) !== own : cbEnv.get(c) !== env; cbSig.set(c, own); if(env) cbEnv.set(c, env);
+        if(changed){ const spendC = spendOf(t, c);
           // Already sitting where it sees the planned cost: leave it. (Searching again could pick another moment with the same cost and hop over the casts below it, which made tightly packed casts creep later on every re-render.)
           if(Math.abs(costAt(t, idx, c.t, others) - Math.min(c.cb, capOf(t))) <= 0.012 && (c.cb >= spendC || overOnFor(t, c, c.t)) && ownBusy(t, c, c.t) === null) return;
-          // With cost reductions around the price depends on the moment: only moments where the cost seen is enough for the price at that moment count.
-          const oc = others.map(x => x.c), redPlay = oc.some(x => CRED[x.who]) || t.roster.some(id => CRED[id] && CRED[id].start);
-          const acc = (c.cb < spendC || redPlay) ? T => { const X = Math.min(c.cb, capOf(t)), sp = redPlay ? spendAt(t, c, T, oc) : spendC; return X >= sp - 0.012 || (X + 5 >= sp - 0.012 && overOnFor(t, c, T)); } : undefined;
-          const accB = T => ownBusy(t, c, T) === null, accF = acc ? (T => accB(T) && acc(T)) : accB;
-          const nt = timeForCost(t, idx, c.cb, k ? byTime[k-1].t - 0.01 : TOTAL, accF, ownSame && k + 1 < byTime.length ? byTime[k+1].t : 0); if(nt !== c.t){ c.t = nt; moved = true; } }
+          const accF = castable(t, c, c.cb, others);
+          const nt = timeForCost(t, idx, c.cb, trust ? Math.min(TOTAL, ceilOf(t, c) - 0.01) : (k ? byTime[k-1].t - 0.01 : TOTAL), accF, trust ? slotFloor(t, c) : (ownSame && k + 1 < byTime.length ? byTime[k+1].t : 0)); if(nt !== c.t){ c.t = nt; moved = true; } }
       }
     });
     if(!moved) break;
   }
 }
-// "Cost before" of a row: the cast moves to the moment the team has that much cost. The casts that come after it in the table keep their place in the order: any that would now
-// end up before it are chained right after it (the chain button turns on for them), so raising a cost never makes rows jump over each other. Locked rows are not moved,
-// and the cast cannot move past a locked row below it.
-function placeByCost(t, i, want){
+// "Cost before" of a row: the cast moves to the moment the team has that much cost. Typing a cost means the row's place in the rotation is settled, so it only moves inside its slot,
+// between the row above and the row below it, and no other row is touched (rows tied to it follow it). If the cost cannot be reached inside the slot it goes as close as it can,
+// and if the team cannot pay for the cast there it turns red.
+function placeByCost(t, i, want, dir = 0){
   const me = t.casts[i]; delete me.after;
   { const sp = spendOf(t, me); want = Math.max(want, t.casts.some(x=>x!==me && x.target === me.who && SCHALE[x.who].buffs.some(b=>b.stat==='CostOverload')) ? sp - 5 : sp); }   // less cost than it spends is only possible with Cost Over (up to 5 short)
-  want = Math.min(want, capOf(t)); me.cb = want;
-  const oldT = me.t, above = t.casts.filter(x=>x!==me && x.t >= oldT).sort((a,b)=>a.t-b.t)[0];
-  const below = t.casts.filter(x=>x!==me && x.t < oldT).sort((a,b)=>b.t-a.t), lockedBelow = below.find(x=>x.lock);
-  me.t = timeForCost(t, i, want, above ? above.t - 0.01 : TOTAL, want < spendOf(t, me) - 0.012 ? T => overOnFor(t, me, T) : undefined, lockedBelow ? lockedBelow.t + 0.01 : 0);
-  let prev = me;
-  for(const j of below){
-    if(j.lock) break;
-    if(j.t > prev.t - 0.01 + 1e-9 && j.cb != null && !j.after){ delete j.cb; j.after = cid(prev); }   // it would now come before the cast: it goes right after it instead (chained: it casts the moment the team can pay for it)
-    if(j.t < prev.t) prev = j;
+  want = Math.min(want, capOf(t));
+  { const seenNow = costAt(t, i, me.t, castsExcept(t, i)); if(Math.abs(seenNow - want) <= 0.02){ if(me.cb != null) me.cb = want; cbSig.set(me, 'edited'); return {want, got: +seenNow.toFixed(2), T: me.t}; } }   // it already sees that cost: typing it again changes nothing
+  // The order of the rows is the player's: the rows below this one stay below it, whatever time it ends up at. So when it looks for its moment, only the rows above it count (the rows below
+  // will come after it anyway); it may go as late as it needs. Afterwards the rows below get times after it, in their old order.
+  const oldT = me.t, kids = chainKids(t, me);
+  const order = t.casts.map((c, k) => [c, k]).sort((a, b) => b[0].t - a[0].t || a[1] - b[1]).map(x => x[0]), pos = order.indexOf(me);   // the table's order (rows at the same time keep their list order)
+  const below = new Set(order.filter((x, k) => k > pos && !kids.has(x) && !x.lock));
+  const above = order.slice(0, pos).filter(x => !kids.has(x) || x.lock).pop();   // (a locked row tied to this one stays where it is, so it still limits it)
+  const tt = Object.assign(Object.create(t), { casts: t.casts.filter(x => !below.has(x) && !kids.has(x)) }), ii = tt.casts.indexOf(me);
+  // a locked row below it cannot be pushed: the cast may not go later than that row (the rows between them are pushed in the 0.01 s steps just above it)
+  const lockIdx = order.findIndex((x, k) => k > pos && x.lock),   // (a locked row tied to this one does not follow it either)
+     minT = Math.max(+(0.01 * (order.length - 1 - pos)).toFixed(2), lockIdx < 0 ? 0 : +(order[lockIdx].t + 0.01 * (lockIdx - pos)).toFixed(2));   // (and the rows pushed under it need room before the end of the fight)
+  me.t = timeForCost(tt, ii, want, above ? above.t - 0.01 : TOTAL, castable(tt, me, want, castsExcept(tt, ii)), minT, dir);
+  const got = +costAt(tt, ii, me.t, castsExcept(tt, ii)).toFixed(2);
+  let at = me.t, atMoved = true, atMe = true;   // atMoved: the row just before was this one or was pushed, so a row at the very same time could land above it
+  order.filter((x, k) => k > pos && !x.lock && (below.has(x) || kids.has(x))).forEach(x => {   // (the rows tied to it are stacked too, so each keeps its old place among the others; they re-time right after it afterwards) in their old order: only a row that would now sit above (or on) this one moves, just under it. Rows that already sat at the same time as the one before them stay as they are
+    const tied = Math.abs(x.t - at) <= 1e-9, mustMove = atMe ? (x.t > at + 1e-9 || (tied && t.casts.indexOf(x) < i)) : atMoved ? x.t >= at - 1e-9 : x.t > at + 1e-9;   // next to the edited row itself, a row at the same time only has to move when the list would put it first
+    atMe = false;
+    if(mustMove){ at = Math.max(0, +(at - 0.01).toFixed(2)); x.t = at; atMoved = true; if(x.after) chSig.delete(x); else cbSig.set(x, 'edited'); }
+    else { at = x.t; atMoved = false; }
+  });
+  me.cb = Math.abs(got - want) > 0.012 ? got : want;   // when the exact cost cannot be had, the row keeps the cost it really sees: the box and the next step agree with what is on the table
+  cbSig.set(me, 'edited');   // the planner re-checks this row inside the same slot; first-sight trust must not skip it
+  return {want, got, T: me.t};
+}
+// ---- Edits of the Rotation table, with no page in them: the table's handlers call these and so do the tests (tests/rotation_model.js), so what is tested is what ships.
+const rowOrder = t => t.casts.map((c, k) => [c, k]).sort((a, b) => b[0].t - a[0].t || a[1] - b[1]).map(x => x[0]);   // the table's order: by time, rows at the same time keep their list order
+function opSetTime(t, i, v){ const c = t.casts[i]; delete c.after; delete c.cb; c.t = Math.max(0, Math.min(TOTAL, +(+v).toFixed(3))); t.estimated = false; }
+function opClearTime(t, i){ const c = t.casts[i]; if(timed(c)) c.cb = +Math.max(0, costAt(t, -1, c.t, castsExcept(t, i))).toFixed(2); }   // emptied: back to being placed by cost
+function opNudgeTime(t, i, d){ const c = t.casts[i]; delete c.after; delete c.cb; c.t = +Math.max(0, Math.min(TOTAL, c.t + d)).toFixed(3); t.estimated = false; }
+function opToggleChain(t, i){
+  const c = t.casts[i], order = [...t.casts.keys()].sort((a, b) => t.casts[b].t - t.casts[a].t), n = order.indexOf(i);
+  if(c.after){ delete c.after; c.cb = +Math.max(0, costAt(t, -1, c.t, castsExcept(t, i))).toFixed(2); }   // untied: it stays where it is, placed by the cost it sees there (not turned into a time you set by hand)
+  else if(n > 0){ c.after = cid(t.casts[order[n-1]]); delete c.cb; }
+  t.estimated = false;
+}
+function opSetWho(t, i, who){ const c = t.casts[i]; c.who = +who; delete c.cost; delete c.form; }   // an EX-cost override belongs to the student it was set for
+function opRemove(t, i){ t.casts.splice(i, 1); }
+function opLock(t, i){ const c = t.casts[i]; if(c.lock) delete c.lock; else c.lock = true; }
+// Arrow keys in a cost box: the next whole cost up or down (0.1 with Shift). 8.99 on the table is a 9: the next step is 10 (or 8), not 9.99.
+const stepWant = (cur, up, fine) => { const base = Math.abs(cur - Math.round(cur)) <= 0.02 ? Math.round(cur) : cur; return +(base + (up ? 1 : -1) * (fine ? 0.1 : 1)).toFixed(2); };
+function opStepCost(t, i, cur, up, fine){ return placeByCost(t, i, stepWant(cur, up, fine), up ? 1 : -1); }
+// A new row exactly next to `row` ('above' = earlier, 'below' = later), whether or not the team can pay for it there; the unlocked rows after it follow it.
+function opInsert(t, row, where){
+  const sorted = [...t.casts].sort((a, b) => b.t - a.t), k = sorted.indexOf(row), n = {who: row.who},
+    follow = (list, from) => { let prev = from;   // the unlocked rows after the new one move later to follow it, each right after the one before it
+      for(const j of list){ if(j.lock) break; if(j.after){ prev = j; continue; } if(j.cb != null && j.cb > spendOf(t, j) + 0.012) break; delete j.cb; j.after = cid(prev); prev = j; } };
+  if(targetsAlly(n.who) && row.target != null) n.target = row.target;
+  const taken = T => t.casts.some(c => c.t === T);
+  if(where === 'below'){
+    const nxt = sorted[k + 1];
+    n.t = +Math.max(0, row.t - 0.01).toFixed(2);
+    if(nxt && n.t <= nxt.t + 1e-9) n.t = +((row.t + nxt.t)/2).toFixed(3);   // the row below is closer than 0.01 s: the new row goes in the middle, never below that row
+    while(n.t > 0 && taken(n.t) && (!nxt || n.t - 0.01 > nxt.t)) n.t = +(n.t - 0.01).toFixed(3);
+    t.casts.forEach(c => { if(c.after === cid(row) && !c.lock) c.after = cid(n); });   // what followed the row now follows the new cast
+    cid(n); follow(sorted.slice(k + 1), n);
+  } else {
+    const prev = sorted[k - 1], hi = prev ? prev.t : TOTAL;
+    n.t = +Math.min(hi, row.t + 0.01).toFixed(2);
+    if(prev && n.t >= hi - 1e-9) n.t = +((hi + row.t)/2).toFixed(3);   // the row above is closer than 0.01 s: the new row goes in the middle (times keep three decimals), never above that row
+    while(n.t < TOTAL && taken(n.t) && (!prev || n.t + 0.01 < hi)) n.t = +(n.t + 0.01).toFixed(3);
+    if(prev) t.casts.forEach(c => { if(c.after === cid(prev) && !c.lock) c.after = cid(n); });
+    cid(n); follow(sorted.slice(k), n);
   }
+  t.casts.splice(t.casts.indexOf(row) + (where === 'below' ? 1 : 0), 0, n);   // rows at exactly the same time are ordered by their place in the list, so the new row goes right next to the one it was asked beside
+  return n;
+}
+// "Add cast" button: a new row at the end of the table, at the first moment the team can pay for it.
+function opAddCast(t, who, chainNew){
+  const prev = t.casts.length ? t.casts.reduce((a, c) => c.t < a.t ? c : a) : null, last = prev ? prev.t : TOTAL;
+  const sp = spendOf(t, {who, t: +(last - 0.01).toFixed(2)});
+  const c = {t: +firstAffordable(t, sp, +(last - 0.01).toFixed(2), who).toFixed(2), who};
+  if(prev && (chainNew || sp === 0)) c.after = cid(prev); else c.cb = spendOf(t, c);   // a free EX (Hina Dress's follow-ups) has no cost to wait for: it follows the cast before; otherwise it keeps its cost if the cost model changes
+  if(targetsAlly(who)){ const lastC = t.casts.filter(x => x.who === who && x.target != null).sort((a, b) => a.t - b.t)[0]; if(lastC) c.target = lastC.target; }   // same target as last time
+  t.casts.push(c); return c;
 }
 function allResolved(){
   const t = team(); const list = t.casts.map((c,i)=>({c,i,r:resolve(c)}));
@@ -1053,7 +1149,7 @@ function render0(){
   { const b = $('#lockall'), all = t.casts.length > 0 && t.casts.every(c => c.lock); b.disabled = !t.casts.length;
     b.innerHTML = all ? '&#128274; Unlock all' : '&#128275; Lock all'; b.title = all ? 'Unlock every row' : 'Lock every row so nothing on the table can change or be moved by the planner';
     b.onclick = () => { t.casts.forEach(c => { if(all) delete c.lock; else c.lock = true; }); save(); render(); }; }
-  document.querySelectorAll('[data-lock]').forEach(b => b.onclick = () => { const c = t.casts[+b.dataset.lock]; if(c.lock) delete c.lock; else c.lock = true; save(); render(); });
+  document.querySelectorAll('[data-lock]').forEach(b => b.onclick = () => { opLock(t, +b.dataset.lock); save(); render(); });
   // Click a row (not one of its boxes or buttons) to mark the cast you just did; click it again to clear. Kept while you edit, not saved.
   $('#rot').onclick = e => {
     const tr = e.target.closest('tr[data-row]'); if(!tr || e.target.closest('input,select,button,label,textarea')) return;
@@ -1086,21 +1182,22 @@ function render0(){
   fitRot();
   const ch2 = (sel,fn)=>document.querySelectorAll(sel).forEach(e=>e.onchange=()=>{fn(e);save();render();});
   document.querySelectorAll('[data-ch]').forEach(b=>b.onclick=()=>{
-    const c = t.casts[+b.dataset.ch], n = order.indexOf(+b.dataset.ch);
-    if(c.after){ const i = +b.dataset.ch; delete c.after; c.cb = +Math.max(0, costAt(t, -1, c.t, castsExcept(t, i))).toFixed(2); }   // untied: it stays where it is, placed by the cost it sees there (not turned into a time you set by hand)
-    else if(n > 0){ c.after = cid(t.casts[order[n-1]]); delete c.cb; }
-    t.estimated = false; save(); render(); });
+    opToggleChain(t, +b.dataset.ch); save(); render(); });
   ch2('[data-t]',e=>{const i=+e.dataset.t, c=t.casts[i];
-    if(e.value.trim()===''){ if(timed(c)) c.cb = +Math.max(0, costAt(t, -1, c.t, castsExcept(t, i))).toFixed(2); return; }   // emptied: back to being placed by cost
-    delete c.after;delete c.cb;c.t=Math.max(0,Math.min(TOTAL,+parse(e.value).toFixed(3)));t.estimated=false;});
+    if(e.value.trim()===''){ opClearTime(t, i); return; }
+    opSetTime(t, i, parse(e.value)); });
   // Cost before: type or step a value and the cast moves to the moment the team has that much cost.
-  const applyCost = (i, want) => { if(!isFinite(want)) return; placeByCost(t, i, want); t.estimated = false; save(); render();
-    const n = document.querySelector('[data-cb="'+i+'"]'); if(n){ n.focus(); n.select(); } };
+  const applyCost = (i, want, dir = 0) => { if(!isFinite(want)) return; const r = placeByCost(t, i, want, dir); t.estimated = false; save(); render();
+    const n = document.querySelector('[data-cb="'+i+'"]'); if(n){ n.focus(); n.select(); }
+    if(Math.abs(r.got - Math.min(r.want, capOf(t))) > 0.05){   // the exact cost cannot be had: say why, and what it got instead
+      const ph = (t.events || []).find(e => e.type === 'phase' && e.dur > 0 && (Math.abs(r.T - (e.t + 0.01)) < 0.06 || Math.abs(r.T - (e.t - e.dur)) < 0.06));
+      flash('Cost ' + +r.want.toFixed(2) + ' cannot be had there: ' + (ph ? 'casting is blocked during the phase transition (' + fmt(ph.t) + ' to ' + fmt(ph.t - ph.dur) + ')' : (r.got > r.want ? 'right after the row above it the team already holds ' + +r.got.toFixed(1) + ', so it cannot see less than that here' : 'the team never reaches that much cost between the row above it and the end of the fight, with the rows above it as they are')) + '. Placed at the nearest cost that works: ' + +r.got.toFixed(1) + '.'); }
+    else { const f = document.getElementById('flash'); if(f) f.style.display = 'none'; } };   // an earlier explanation does not linger after a move that worked
   document.querySelectorAll('[data-cb]').forEach(inp=>{
     inp.oninput = ()=>{ const cap = capOf(t); if(inp.value !== '' && +inp.value > cap) inp.value = cap; if(inp.value !== '' && +inp.value < -5) inp.value = -5; };   // never above the max cost
     inp.onchange = ()=>applyCost(+inp.dataset.cb, +inp.value);
     inp.onkeydown = e=>{ if(e.key!=='ArrowUp' && e.key!=='ArrowDown') return; e.preventDefault();
-      applyCost(+inp.dataset.cb, +(+inp.value + (e.key==='ArrowUp'?1:-1)*(e.shiftKey?0.1:1)).toFixed(2)); };
+      applyCost(+inp.dataset.cb, stepWant(+inp.value, e.key==='ArrowUp', e.shiftKey), e.key==='ArrowUp' ? 1 : -1); };
   });
   // Up / Down arrows in a time box: +1 s / -1 s (Shift: 0.1 s). The cost columns update straight away.
   document.querySelectorAll('[data-t]').forEach(inp=>{
@@ -1108,18 +1205,17 @@ function render0(){
       if(e.key!=='ArrowUp' && e.key!=='ArrowDown') return;
       e.preventDefault();
       const i = +inp.dataset.t, c = t.casts[i], step = e.shiftKey ? 0.1 : 1;
-      delete c.after; delete c.cb; c.t = +Math.max(0, Math.min(TOTAL, c.t + (e.key==='ArrowUp' ? step : -step))).toFixed(3);
-      t.estimated = false; save(); render();
+      opNudgeTime(t, i, e.key==='ArrowUp' ? step : -step); save(); render();
       const n = document.querySelector('[data-t="'+i+'"]'); if(n){ n.focus(); n.select(); }
     };
   });
-  ch2('[data-w]',e=>{ const c = t.casts[e.dataset.w]; c.who = +e.value; delete c.cost; delete c.form; });   // an EX-cost override belongs to the student it was set for
+  ch2('[data-w]',e=>opSetWho(t, +e.dataset.w, e.value));
   ch2('[data-hit]',e=>{ const c=t.casts[e.dataset.hit]; if(e.value==='') delete c.hit; else { c.hit=e.value; if(targetsAlly(c.who)) delete c.target; } });   // aimed at a relic: no ally is its target
   ch2('[data-tg]',e=>{ const c=t.casts[e.dataset.tg]; if(e.value.startsWith('e:')){ c.hit = e.value.slice(2); delete c.target; } else { delete c.hit; if(e.value==='') delete c.target; else c.target=+e.value; } });
   ch2('[data-g]',e=>t.casts[e.dataset.g].tag=e.value);
   ch2('[data-cost]',e=>setSpend(t.casts[e.dataset.cost], e.value));
   ch2('[data-form]',e=>setForm(t.casts[e.dataset.form], e.value));
-  document.querySelectorAll('[data-x]').forEach(b=>b.onclick=()=>{t.casts.splice(+b.dataset.x,1);save();render();});
+  document.querySelectorAll('[data-x]').forEach(b=>b.onclick=()=>{opRemove(t, +b.dataset.x);save();render();});
 }
 
 const rid = () => Math.random().toString(36).slice(2, 8);
@@ -1443,35 +1539,15 @@ addEventListener('resize', () => { fitRot(); render(); });
 document.addEventListener('mousedown', e => { if(!e.target.closest('#rowmenu')) document.getElementById('rowmenu')?.remove(); });
 document.addEventListener('keydown', e => { if(e.key === 'Escape') document.getElementById('rowmenu')?.remove(); });
 function insertCast(row, where){
-  // The new row goes exactly where it was asked, whether or not the team can pay for it there: it is then shown as unaffordable, like any cast placed by hand.
-  const t = team(), sorted = [...t.casts].sort((a, b) => b.t - a.t), k = sorted.indexOf(row), n = {who: row.who},
-    follow = (list, from) => { let prev = from;   // the unlocked rows after the new one move later to follow it, each right after the one before it
-      for(const j of list){ if(j.lock) break; if(j.after){ prev = j; continue; } if(j.cb != null && j.cb > spendOf(t, j) + 0.012) break; delete j.cb; j.after = cid(prev); prev = j; } };
-  if(targetsAlly(n.who) && row.target != null) n.target = row.target;
-  const taken = T => t.casts.some(c => c.t === T);
-  if(where === 'below'){
-    n.t = +Math.max(0, row.t - 0.01).toFixed(2); while(n.t > 0 && taken(n.t)) n.t = +(n.t - 0.01).toFixed(2);
-    t.casts.forEach(c => { if(c.after === cid(row) && !c.lock) c.after = cid(n); });   // what followed the row now follows the new cast
-    cid(n); follow(sorted.slice(k + 1), n);
-  } else {
-    const prev = sorted[k - 1], hi = prev ? prev.t : TOTAL;
-    n.t = +Math.min(hi, row.t + 0.01).toFixed(2); if(prev && n.t >= hi) n.t = +((hi + row.t)/2).toFixed(2); while(n.t < TOTAL && taken(n.t)) n.t = +(n.t + 0.01).toFixed(2);
-    if(prev) t.casts.forEach(c => { if(c.after === cid(prev) && !c.lock) c.after = cid(n); });
-    cid(n); follow(sorted.slice(k), n);
-  }
-  t.casts.push(n); hlRow = cid(n); save(); render(); markSel(true);
+  const t = team(), n = opInsert(t, row, where);
+  hlRow = cid(n); save(); render(); markSel(true);
   const idx = team().casts.indexOf(n), order = [...team().casts].sort((a, b) => b.t - a.t), pos = order.indexOf(n), tr = document.querySelector('#rot tr[data-row="' + idx + '"]'), box = $('#rotbox');
   if(tr && box){ const b = box.getBoundingClientRect(), r = tr.getBoundingClientRect(); box.scrollTop += (r.top + r.height/2) - (b.top + b.height/2); }
   const seen = costAt(team(), idx, n.t, castsExcept(team(), idx)), need = spendOf(team(), n);
   flash('Added row ' + (pos + 1) + (seen < need - 0.02 ? ': ' + SCHALE[n.who].name + ' needs ' + +need.toFixed(1) + ' cost but the team only has ' + +Math.max(0, seen).toFixed(1) + ' there' : ''));
 }
 function addCast(who){
-  const t = team(), prev = t.casts.length ? t.casts.reduce((a,c)=>c.t<a.t?c:a) : null, last = prev ? prev.t : TOTAL;
-  const sp = spendOf(t, {who, t:+(last - 0.01).toFixed(2)});
-  const c = {t:+firstAffordable(t, sp, +(last - 0.01).toFixed(2), who).toFixed(2), who};
-  if(prev && (state.chainNew || sp === 0)) c.after = cid(prev); else c.cb = spendOf(t, c);   // a free EX (Hina Dress's follow-ups) has no cost to wait for: it follows the cast before   // plans by cost: it keeps that cost if the cost model changes
-  if(targetsAlly(who)){ const lastC = t.casts.filter(x => x.who === who && x.target != null).sort((a, b) => a.t - b.t)[0]; if(lastC) c.target = lastC.target; }   // same target as last time
-  t.casts.push(c); save(); render();
+  opAddCast(team(), who, state.chainNew); save(); render();
   const box = $('#rotbox'); box.scrollTop = box.scrollHeight;     // show the new row
 }
 $('#delteam').onclick = ()=>{ if(state.teams.length<2){alert('Keep at least one team.');return;} if(confirm('Delete team "'+team().name+'"?')){state.teams.splice(state.team,1);state.team=0;save();render();} };

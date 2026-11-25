@@ -194,6 +194,32 @@ t = team(['Ui', 'Mika', 'Aru']); { const u = cast(t, 'Ui', 170); u.target = id('
   const ev = E.costModel(t, E.allResolved()).ev; eq('and nothing is flagged as not enough cost', ev.every(e => e.ok), true); }
 
 
+// A chained row far below the cast it is tied to must not jump up in front of the rows between them when something above it moves (it used to, and that reshuffled everything below)
+{ t = team(['Mika', 'Aru', 'Seia']); t.startCost = 0;
+  const p = cast(t, 'Aru', 170); p.cb = 4; const m = cast(t, 'Seia', 100); m.cb = 6; const x = cast(t, 'Mika', 60); x.after = E.cid(p);
+  E.applyChains(t);
+  eq('a chained row stays below the row that sits above it, even when it is tied to a cast higher up', x.t < m.t, true);
+  E.placeByCost(t, t.casts.indexOf(p), 5); E.applyChains(t);
+  eq('moving the cast it is tied to does not throw it above the rows in between', [p.t > m.t, x.t < m.t], [true, true]); }
+
+// Typing a cost on a row means its place is settled: only that row moves (inside its slot); no other row moves, and the order stays
+{ t = team(['Mika', 'Aru', 'Seia', 'Rio']); t.startCost = 10;
+  const r1 = cast(t, 'Mika', 175); r1.cb = 10; const r2 = cast(t, 'Aru', 135); r2.cb = 5; const r3 = cast(t, 'Seia', 95); r3.cb = 5; const r4 = cast(t, 'Rio', 55); r4.after = E.cid(r3);
+  E.applyChains(t); const b = t.casts.map(c => c.t); E.placeByCost(t, t.casts.indexOf(r2), 7); E.applyChains(t);
+  eq('typing a cost moves that row and no other row', [r1.t === b[0], r3.t === b[2], r4.t === b[3], r2.t !== b[1]], [true, true, true, true]);
+  eq('and every row keeps its place in the order', r1.t > r2.t && r2.t > r3.t && r3.t > r4.t, true);
+  const c0 = t.casts.map(c => c.t); E.placeByCost(t, t.casts.indexOf(r2), 10); E.applyChains(t);
+  const i2 = t.casts.indexOf(r2), seen2 = E.costAt(t, i2, r2.t, E.castsExcept(t, i2));
+  eq('a cost that cannot be reached before the next row is still given: the row goes where the team has it and the rows below are pushed down after it', [Math.abs(seen2 - 10) < 0.05, r1.t === c0[0], r2.t > r3.t, r3.t > r4.t], [true, true, true, true]); }
+
+// A cost that falls inside a phase transition cannot be had (nobody can cast there): the arrow keys take the next cost that can, in the direction pressed, and the row keeps what it really sees
+{ t = team(['Aru', 'Mika']); t.events = [{ id: 'ph', type: 'phase', t: 120, dur: 6 }];
+  const a = cast(t, 'Aru', 100); a.cb = 3; E.applyChains(t); const i = t.casts.indexOf(a), rate = +(t.regen ?? E.regenInfo(t).auto);
+  const want = +(E.costAt(t, i, 117, E.castsExcept(t, i))).toFixed(2);   // a cost only reached inside the transition (114 to 120)
+  const up = E.placeByCost(t, i, want, 1); eq('Up: the cost it asked for is blocked, so it takes the next higher cost that can be had, after the transition', [up.got > want, up.T <= 114 + 1e-6, a.cb === up.got], [true, true, true]);
+  const dn = E.placeByCost(t, i, want, -1); eq('Down: the next lower cost, before the transition', [dn.got < want, dn.T >= 120 - 1e-6, a.cb === dn.got], [true, true, true]);
+  E.applyChains(t); eq('and the planner leaves it there', [a.t === dn.T], [true]); }
+
 // Green Relic heals: numbered in time order, the fifth makes the relic leave
 { const ev = {ent: 'Green Relic', t: 240, heals: [{t: 100, d: 20}, {t: 220}, {t: 200}, {t: 180}, {t: 160}, {t: 140}]};
   eq('heals are sorted in time order and capped at 5', E.relicHeals(ev).map(h => h.t), [220, 200, 180, 160, 140]);
