@@ -598,7 +598,8 @@ const CRED = {10035:{kind:'half', uses:2, to:'target', frames:77}, 20022:{kind:'
   20027:{kind:'minus', n:1, uses:1, to:'all', start:true}, 20053:{kind:'minus', n:1, uses:1, to:'all', start:true}};
 function spendMap(t, list){   // price of every cast in the list, in the order they happen (a reduction is used up by the next EX of its target)
   const sorted = [...list].sort((a, b) => b.t - a.t || list.indexOf(a) - list.indexOf(b)), pend = {}, out = new Map();
-  const give = (g, spec, who) => { const uses = typeof spec.uses === 'function' ? spec.uses(exLv(t, g.who)) : spec.uses; (pend[who] = pend[who] || []).push({kind:spec.kind, n:spec.n, uses}); };
+  // casting the same giver's EX again on an ally who still has that reduction waiting does not add a second one: it renews the one waiting (back to full uses)
+  const give = (g, spec, who) => { const uses = typeof spec.uses === 'function' ? spec.uses(exLv(t, g.who)) : spec.uses; pend[who] = (pend[who] || []).filter(r => r.src !== g.who); pend[who].push({kind:spec.kind, n:spec.n, uses, src:g.who}); };
   t.roster.forEach(id => { const sp = CRED[id]; if(sp && sp.start) t.roster.forEach(x => { if(x !== id) give({who:id}, sp, x); }); });
   const grants = sorted.filter(g => CRED[g.who] && !CRED[g.who].start && formIdx(t, g, list) == null).map(g => ({at:g.t - CRED[g.who].frames/FPS, g}));
   entKills(t, list).forEach(k => { const d = ENTITY[k.ev.ent]; if(d.kill && d.kill.half) grants.push({at:k.at, mk:{to:k.c.who, kind:'half'}}); });   // whoever destroys a lantern

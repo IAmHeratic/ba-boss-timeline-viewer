@@ -46,6 +46,15 @@ t = team(['Seia', 'Mika', 'Aru'], { [id('Seia')]: { ex: 5, basic: 10, sub: 10 } 
   eq('Seia at EX 5: two reduced EX', spends(t, 'Mika'), [3, 3, 6]); }
 t = team(['Seia', 'Mika', 'Aru'], { [id('Seia')]: { ex: 3, basic: 10, sub: 10 } }); { const s1 = cast(t, 'Seia', 170); s1.target = id('Mika'); [160, 150].forEach(x => cast(t, 'Mika', x));
   eq('Seia below EX 5: one reduced EX', spends(t, 'Mika'), [3, 6]); }
+// Casting Seia on Mika again before Mika has used the reduction must not stack a second one (reported 2026-11-24: Mika's EX kept getting cheaper)
+t = team(['Seia', 'Mika', 'Aru'], { [id('Seia')]: { ex: 3, basic: 10, sub: 10 } }); { [170, 150, 130].forEach(x => { const s = cast(t, 'Seia', x); s.target = id('Mika'); }); [100, 90].forEach(x => cast(t, 'Mika', x));
+  eq('Seia three times on Mika, no Mika cast between: one reduced EX, not a quarter', spends(t, 'Mika'), [3, 6]); }
+t = team(['Seia', 'Mika', 'Aru'], { [id('Seia')]: { ex: 5, basic: 10, sub: 10 } }); { [170, 150, 130].forEach(x => { const s = cast(t, 'Seia', x); s.target = id('Mika'); }); [100, 90, 80].forEach(x => cast(t, 'Mika', x));
+  eq('Seia at EX 5 repeated: still two reduced EX in a row (renewed, not stacked)', spends(t, 'Mika'), [3, 3, 6]); }
+t = team(['Seia', 'Mika', 'Aru'], { [id('Seia')]: { ex: 5, basic: 10, sub: 10 } }); { const s1 = cast(t, 'Seia', 170); s1.target = id('Mika'); cast(t, 'Mika', 160); const s2 = cast(t, 'Seia', 150); s2.target = id('Mika'); [140, 130, 120].forEach(x => cast(t, 'Mika', x));
+  eq('Seia renews after Mika used one: back to two reduced EX', spends(t, 'Mika'), [3, 3, 3, 6]); }
+t = team(['Seia', 'Ui', 'Mika'], { [id('Seia')]: { ex: 3, basic: 10, sub: 10 } }); { const s = cast(t, 'Seia', 170); s.target = id('Mika'); const u = cast(t, 'Ui', 165); u.target = id('Mika'); cast(t, 'Mika', 150);
+  eq('two different givers on Mika still both apply (6 -> 3 -> 2)', spends(t, 'Mika'), [2]); }
 t = team(['Yuzu (Armed)', 'Mika', 'Aru']); { const y = cast(t, 'Yuzu (Armed)', 170); y.target = id('Mika'); [160, 150, 140, 130].forEach(x => cast(t, 'Mika', x));
   eq('Yuzu (Armed): three reduced EX', spends(t, 'Mika'), [3, 3, 3, 6]); }
 t = team(['Kisaki (Swimsuit)', 'Mika', 'Aru']); { cast(t, 'Kisaki (Swimsuit)', 170); [160, 150].forEach(x => cast(t, 'Mika', x)); [160].forEach(x => cast(t, 'Aru', x));
