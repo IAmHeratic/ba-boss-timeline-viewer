@@ -122,6 +122,32 @@ t = team(['Ui', 'Mika', 'Aru']); { const u = cast(t, 'Ui', 170); u.target = id('
   delete b.lock; E.applyChains(t); eq('unlocking lets the planner place it again', b.t !== tb, true); }
 
 
+// Geburah: the heater (Overload = +500 Cost Recovery for every ally) and the Ice Pillar can be put on the timeline (reported 2026-11-25: neither could be added)
+{ const near = (x, y) => Math.abs(x - y) < 1e-6, geb = E.BOSSES.find(b => b.path === 'geburah'), dg = geb.diffs[geb.diffs.length - 1];
+  const cost = (t, T) => { E.winCache.ok = false; return E.costAt(t, -1, T, E.castsExcept(t, -1), undefined, E.allWindows(t, t.casts)); };
+  eq('every Geburah difficulty offers the Heater and the Ice Pillar in "Things on the field"', geb.diffs.map(d => ['Heater', 'Ice Pillar'].every(n => d.enemies.some(en => en.name === n && E.ENTITY[en.name]))), geb.diffs.map(() => true));
+  t = team(['Mika', 'Aru', 'Kokona']); t.boss = { raid: geb.id, diff: dg.k, terrain: geb.terrains[0] };
+  const T0 = 180, M = T0 - 25, base = cost(t, M), n = t.roster.length, gain = secs => 500 * n / 10000 * (1 + E.regenInfo(t).boost) * secs;
+  t.events = [{ id: 'h', type: 'entity', ent: 'Heater', t: T0 }];
+  eq('a heater with no Overload span changes nothing', near(cost(t, M), base), true);
+  t.events[0].spans = [{ f: T0 - 5, to: T0 - 15 }];
+  eq('Overload for 10 s: every ally gets +500 Cost Recovery (specials too: all units count)', near(cost(t, M) - base, gain(10)), true);
+  t.events[0].spans = [{ f: T0 - 5, to: T0 - 15 }, { f: T0 - 18, to: T0 - 23 }];
+  eq('two Overloads add up', near(cost(t, M) - base, gain(15)), true);
+  t.events[0].spans = [{ f: T0 - 5, to: T0 - 15, in: [id('Mika')] }];
+  eq('toggling allies off in a span takes their share away', near(cost(t, M) - base, gain(10) / 3), true);
+  t.events = [{ id: 'p', type: 'entity', ent: 'Ice Pillar', t: 180 }];
+  eq('an Ice Pillar has no Cost Recovery effect', near(cost(t, M), base), true);
+  { const m = cast(t, 'Mika', 170); m.hit = 'p'; const k = E.entKills(t, t.casts);
+    eq('an EX aimed at the Ice Pillar destroys it (who and when are known)', [k.length, k[0] && k[0].c === m], [1, true]); }
+  // the Target box: a healing EX can be aimed at the Heater (reported 2026-11-25: it was missing), an attacking EX at the Ice Pillar
+  t.events = [{ id: 'h', type: 'entity', ent: 'Heater', t: 180 }, { id: 'p', type: 'entity', ent: 'Ice Pillar', t: 170 }];
+  { const healer = +Object.keys(E.SCHALE).find(k => E.SCHALE[k].exHeal && !E.aimsAtEnemy(+k)), hitter = id('Mika'), names = who => E.aimableEnts(t, who).map(e => e.ent);
+    eq('a healing EX can be aimed at the Heater, not at the Ice Pillar', names(healer), ['Heater']);
+    eq('an attacking EX can be aimed at the Ice Pillar, not at the Heater', names(hitter), ['Ice Pillar']); }
+  { const allyHealer = +Object.keys(E.SCHALE).find(k => E.SCHALE[k].exHeal && E.targetsAlly(+k));
+    eq('also a healer that picks an ally as target gets the Heater in her list', E.aimableEnts(t, allyHealer).map(e => e.ent), ['Heater']); } }
+
 // Things on the field (Hod, Yesod): placed by hand, aimed at from the Rotation table, with their cost effects
 { const near = (x, y) => Math.abs(x - y) < 1e-6, hod = E.BOSSES.find(b => b.path === 'hod'), yes = E.BOSSES.find(b => b.path === 'yesod');
   const cost = (t, T) => { E.winCache.ok = false; return E.costAt(t, -1, T, E.castsExcept(t, -1), undefined, E.allWindows(t, t.casts)); };   // (the page clears this cache at the start of every render)
