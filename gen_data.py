@@ -6,12 +6,7 @@ WANT = [int(k) for k,v in s.items() if v.get('IsReleased',[True])[0] and 'Ex' in
 
 CAMEL = re.compile(r'(?<=[a-z])(?=[A-Z])')
 NICE = {'CostRegen':'Cost Recovery','EnhanceExplosionRate':'Explosive DMG','EnhanceMysticRate':'Mystic DMG','EnhancePierceRate':'Piercing DMG','EnhanceSonicRate':'Sonic DMG','CriticalDamageRate':'Crit DMG','CriticalChanceResist':'Crit Rate Resist','ExDamage':'EX Skill DMG','ATK':'ATK','DEF':'DEF'}
-# Skill names SchaleDB only has in Japanese so far (not localized yet): my own plain translations, so the whole site reads in English
-JP_EN = {'フロイラインのスーツケース': "Fraulein's Suitcase", 'お互い苦労しますね': "We Both Have It Rough, Don't We", 'イブキのお友達！': "Ibuki's Friend", 'イブキも手伝う！': 'Ibuki Helps Too!', 'どれがいいかな？': 'Which One Should I Pick?', '万魔殿の良心+': "Pandemonium's Conscience+"}
-def en(text):
-    if not isinstance(text, str): return text
-    for k, v in JP_EN.items(): text = text.replace(k, v)
-    return text
+from gen_common import JP_EN, en   # Japanese-only skill names -> English (shared with gen_skills.py)
 def skill_text(raw, st):
     """A skill description for display: {1}, {2} stand for the numbers (one array per number, indexed by skill level); tags become plain names."""
     def tag(m):

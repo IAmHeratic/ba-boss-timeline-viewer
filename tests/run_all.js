@@ -15,6 +15,7 @@ const run = (name, args, env = {}, gating = true) => {
 if (process.argv[2]) run('student audit', ['tests/audit_students.js', process.argv[2], '--icons']);
 else console.log('\n(student audit skipped: pass the students.min.json path)');
 run('scenarios', ['tests/scenarios.js']);
+run('skills window: wording, icons and tags against SchaleDB', ['tests/skills.js']);
 run('boss audit', ['tests/audit_bosses.js', '--icons']);
 run('stress: hand-set times, cost overrides, odd targets, settled once (information only, not gating)', ['tests/invariants.js', '300', '1'], {}, false);
 [2, 5].forEach(sd => run(`rotation table: random edit sequences, every rule after every edit, seed ${sd} (tests/ROTATION_TESTING.md)`, ['tests/rotation_model.js', '40', String(sd)]));

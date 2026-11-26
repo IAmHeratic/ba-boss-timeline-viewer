@@ -161,6 +161,38 @@ body.rotfull #rotcard .rotbox{flex:1 1 auto;min-height:0;max-height:none !import
 .evline.groggy{border-color:#ff6b5e}.evline.skill{border-color:#b98cff;border-left-style:dashed}.evline.phase{border-color:#5dade2;border-left-style:dotted}.evline.note{border-color:#8fa0c0;border-left-style:dotted}
 .tbadge{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px 0 0;border-radius:6px;overflow:hidden;font-size:12.5px;font-weight:700;color:#fff;border:1px solid #0004}
 .stu .types{display:flex;gap:6px;margin:3px 0 2px}.stu .tbadge{height:20px;font-size:11px;padding-right:8px}.stu .tbadge i{font-size:9px;padding:0 6px}
+.stu .skbtn{margin-top:6px;padding:2px 12px;font-size:12px;border-radius:6px;background:#0f1520}.stu .skbtn:hover{border-color:var(--accent)}
+/* Skills window (Team tab): SchaleDB's wording, colours and icons. Centred, never taller than the screen (the box scrolls inside itself, the header stays). */
+#skillwin{position:fixed;inset:0;z-index:80;display:none;background:#000b;overflow:auto;padding:12px;align-items:center;justify-content:center}
+#skillwin .box{position:relative;margin:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;width:min(620px,100%);max-height:calc(100vh - 24px);overflow:auto;padding:0 14px 6px;box-shadow:0 8px 40px #000c;font-size:13px}
+#skillwin .skhead{position:sticky;top:0;z-index:2;background:var(--panel);display:flex;align-items:center;gap:10px;padding:10px 0 6px}#skillwin .skhead img{width:44px;height:44px;border-radius:10px;object-fit:cover;background:#0f1520}#skillwin .skhead h3{margin:0 0 3px;font-size:18px}
+#skillwin .skx{margin-left:auto;align-self:flex-start;background:transparent;border:0;color:var(--dim);font-size:19px;cursor:pointer}#skillwin .skx:hover{color:#fff}
+#skillwin .sk-note{color:var(--dim);font-size:11.5px;margin:0 0 8px}
+#skillwin .sk-panel{background:#00000040;border-radius:4px;padding:8px 10px 2px;margin-bottom:6px}
+#skillwin .sk-sep{border-top:1px solid #ffffff24;margin:2px 0 9px}
+#skillwin .sk-head{display:flex;gap:10px;align-items:flex-start;margin-bottom:4px}
+#skillwin .sk-icon{position:relative;flex:none;width:48px;height:48px;filter:drop-shadow(0 3px 3px #0003)}
+#skillwin .sk-icon svg{position:absolute;inset:0;width:100%;height:100%;fill:var(--sk-bg,#777)}
+#skillwin .sk-icon img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+#skillwin .sk-icon.small{width:40px;height:40px}
+#skillwin .sk-pierce{--sk-bg:#b26d1f}#skillwin .sk-explosion{--sk-bg:#a70c19}#skillwin .sk-mystic{--sk-bg:#216f9c}#skillwin .sk-sonic{--sk-bg:#9431a5}
+#skillwin .sk-title{flex:1;min-width:0}#skillwin .sk-title h4{margin:0;font-size:16px;display:inline}#skillwin .sk-title h5{margin:0;font-size:14px;display:inline}
+#skillwin .sk-type{margin-top:2px}#skillwin .sk-type i{font-weight:500}#skillwin .sk-type .sl{margin:0 4px}#skillwin .sk-type .cost{font-weight:700}
+#skillwin .sk-text{display:block;margin:0;white-space:pre-line;line-height:1.45}
+#skillwin .sk-title .sk-text{margin-top:4px}#skillwin .sk>.sk-text{margin:2px 2px 3px}
+#skillwin .ba-col-pierce{color:#da8d34;font-weight:700}#skillwin .ba-col-explosion{color:#ff2e40;font-weight:700}#skillwin .ba-col-mystic{color:#2d96d2;font-weight:700}#skillwin .ba-col-sonic{color:#b84eca;font-weight:700}#skillwin .ba-col-emph{color:#54a8ff;font-weight:700}
+#skillwin .no-wrap{white-space:nowrap}
+#skillwin .text-hits{text-decoration:underline dotted;text-decoration-thickness:2px;text-underline-offset:3px;cursor:help}
+#skillwin .block-icon{height:15px;width:auto;vertical-align:-3px;margin-right:2px}
+#skillwin .ba-skill-buff,#skillwin .ba-skill-debuff,#skillwin .ba-skill-cc,#skillwin .ba-skill-special{display:inline-flex;align-items:center;vertical-align:text-bottom;line-height:20px;font-weight:400;border-radius:1rem;padding:0 .35rem;white-space:nowrap;cursor:default}
+#skillwin .buff-icon{height:20px;width:auto}#skillwin .buff-label{padding-left:3px}
+#skillwin .ba-skill-buff{background:#4c0f0c6e;color:#ff4f32}#skillwin .ba-skill-debuff{background:#0c274c70;color:#3f9eee}#skillwin .ba-skill-cc{background:#320c4e5c;color:#ae6af7}#skillwin .ba-skill-special{background:#6f351d7a;color:#ffcb33}
+#skillwin .sk-pills{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0 4px;align-items:center}
+#skillwin .sk-pill{display:inline-flex;align-items:center;gap:5px;height:22px;background:#00000040;border:0;border-radius:11px;padding:0 9px 0 6px;font-weight:600;white-space:nowrap;cursor:default;color:var(--text);font-size:12px}
+#skillwin .sk-pill svg{height:15px;width:15px;fill:currentColor}#skillwin .sk-pill .s{opacity:.55}#skillwin .sk-pill img{height:15px;width:15px;object-fit:contain}
+#skillwin .sk-relbtn{margin-left:auto;cursor:pointer;font:inherit;font-weight:600;font-size:12px}#skillwin .sk-relbtn:hover{background:#ffffff1f}#skillwin .sk-relbtn b{display:inline-block;transition:transform .15s}#skillwin .sk-relbtn.open b{transform:rotate(180deg)}
+#skillwin .sk-rel{margin:3px 0 6px;padding-left:12px}#skillwin .sk-rel .sk-sep{margin:6px 0 8px}
+#skillwin .upgrade{color:#8fd17a}
 .tbadge i{font-style:normal;font-size:10px;letter-spacing:.06em;height:100%;display:flex;align-items:center;padding:0 7px;background:#0005;color:#ffffffcc}
 .chip{display:inline-block;padding:3px 9px;border-radius:6px;background:#2a3348;border:1px solid var(--line);font-size:12.5px;color:var(--dim)}.chip b{color:var(--text)}
 .terr{display:inline-block;width:26px;height:26px;vertical-align:middle;background:#5a6a8a;border-radius:6px;padding:2px;box-sizing:border-box}
@@ -287,7 +319,8 @@ header .btn,header select{padding:4px 12px}
     <div class="rowhead"><b>Specials <span id="nspc"></span></b><select id="addspc"></select><button class="btn" id="addspcbtn">Add</button></div>
     <div class="roster" id="rosterSpc"></div>
     <div class="rowhead"><b>Starting skills</b><small style="color:var(--dim)">the order of the first five EX skills, as set in the team selection menu</small></div>
-    <div class="row" id="startorder" style="gap:8px;margin:6px 0 4px"></div></div>
+    <div class="row" id="startorder" style="gap:8px;margin:6px 0 4px"></div>
+</div>
   <div class="card" id="bosscard"><h2>Boss</h2>
     <div class="row" style="margin-bottom:8px"><label>Boss <select id="bsel"></select></label><label>Difficulty <select id="bdiff"></select></label><label>Terrain <img id="bterricon" class="terr" alt="" style="display:none"> <select id="bterr"></select></label><label title="Total Assault bosses have one armor type. In Grand Assault you pick the armor type per season: choose it here. HP and skills below are the Total Assault ones.">Armor <select id="barm"></select></label>
       <button class="btn" id="bclear">Clear boss</button></div>
@@ -298,7 +331,8 @@ header .btn,header select{padding:4px 12px}
   <div class="card" id="notescard"><h2>Notes</h2><textarea id="notes" placeholder="Anything about this rotation that does not belong to one skill: the plan, what to watch for, reminders..." spellcheck="true"></textarea></div>
   </aside>
 </main>
-<script src="data.js?v=10"></script>
+<div id="skillwin"><div class="box" id="skillbox"></div></div>
+<script src="data.js?v=11"></script>
 <script src="bosses.js?v=4"></script>
 <script src="rotations.js"></script>
 <script>
@@ -493,6 +527,75 @@ const ENTITY = {
     tip:'Field Response: Heater Operation / Overload. Its output is its HP and drops over time: 30-70% heals every ally except it (10,000 / 6 s), over 70% heals 16,000 / 6 s and cuts damage taken 25%. At 100% it overloads: all allies +500 Cost Recovery, ATK +30%, Crit Damage +60% until the output falls under 30%. Only EX skills can target it (a healing EX restores its output: pick the Heater in that student’s Target box in the Rotation table) and it cannot be shielded. Add one "Overload" span for each time it overloads. The +500 Cost Recovery is what the cost graph uses: how much a heal raises its output, and so when it overloads, is not modelled.'},
   'Ice Pillar': {color:'#7fd3f0', action:'attack', tip:'Pillars of Severity: appears after Water Amidst Fire, Fire Amidst Water. Immortal for 2.5 s, then a shield of 400% of its max HP for up to 20 s; if it is still there after 20 s it takes 70% of its max HP. While it stands: all allies DEF -45%, healing received capped to 1 and 30% ATK damage every 4 s. Destroying it: heater healing +100% and allies’ healing +200% for 20 s. It is destroyed at once when Geburah enters phase 2. Normal attacks and Basic skills cannot target it: aim an EX at it with the Hit box in the Rotation table and its bar ends there. No Cost Recovery effect.'}
 };
+// ---- Skill texts (Team tab > Skills): SchaleDB's own wording and markup, drawn the way the site draws them ----
+// skills.js (made by gen_skills.py) is loaded the first time a student's skills are opened. A description holds <?1> (a number that depends on the skill level), <b:ATK> / <d:DEF> /
+// <c:Stun> / <s:..> (a buff, debuff, crowd control or status tag, drawn with its icon), <kb:1> (a knockback distance) and plain <b>..</b>.
+const SKIMG = 'https://schaledb.com/images/';
+const skAttr = s => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const skNum = n => (+n).toLocaleString('en-US');
+const skAtLevel = (arr, lv) => arr[Math.min(Math.max(lv, 1), arr.length) - 1];
+const skSecs = frames => +(frames / 30).toFixed(2) + 's';
+function skillHitsTip(e, level){   // the hover text of a damage number: how many hits and what each one does (the site's own sums), and whether it ignores cover
+  const hits = e.h && e.h.length ? e.h : [10000], total = skAtLevel(e.s, level), rows = [];
+  hits.forEach(w => { const v = +(w / 1e4 * total).toFixed(0); if(rows.length && rows[rows.length - 1][0] === v) rows[rows.length - 1][1]++; else rows.push([v, 1]); });
+  return [hits.length === 1 ? '1 hit' : hits.length + ' hits'].concat(rows.map(([v, n]) => (v / 100) + '% ×' + n), e.b === 0 ? ['Ignores Cover'] : e.b === 2 ? ['Partially Ignores Cover'] : []).join('\n');
+}
+function skillTextHtml(sk, level, bullet){
+  const cls = bullet ? 'ba-col-' + String(bullet).toLowerCase() : 'ba-col-emph', kinds = {b:'Buff', d:'Debuff', c:'CC', s:'Special'};
+  const byId = {}, kbs = []; (sk.e || []).forEach(e => { if(e.id !== undefined) byId[e.id] = e; else if(e.k) kbs.push(e); });
+  const tag = (kind, name, label) => { const id = kinds[kind] + '_' + name, b = (typeof SKILLDB !== 'undefined' && SKILLDB.buffs[id]) || null, nm = label || (b ? b[0] : name);
+    return `<span class="ba-skill-${kinds[kind].toLowerCase()}" title="${skAttr(b ? b[1] + ' (' + b[2] + ')\n' + b[3] : nm)}"><img class="buff-icon" src="${SKIMG}buff/${id}.webp" alt=""><span class="buff-label">${skAttr(nm)}</span></span>`; };
+  const text = s => s.replace(/[0-9.]+(?:%|s)/g, m => '<b>' + m + '</b>').replace(/<up>/g, "<span class='upgrade'>").replace(/<\/up>/g, '</span>')   // a number with a % or s is bold
+    .replace(/<kb:(\d+)>/g, (m, n) => '<b>' + (kbs[n - 1] ? skNum(skAtLevel(kbs[n - 1].s, level) * 2) : '') + '</b>');
+  const walk = src => src.split(/(<[bdcs]:\w+(?:='[^']*')?>|<\?\d+>)/).map(p => {
+    let m = p.match(/^<([bdcs]):(\w+)(?:='([^']*)')?>$/); if(m) return tag(m[1], m[2], m[3]);
+    m = p.match(/^<\?(\d+)>$/);
+    if(m){ const row = sk.p && sk.p[m[1] - 1]; if(!row) return p; const val = String(skAtLevel(row, level));
+      if(/<[bdcs]:\w+/.test(val)) return `<span class="${cls}">${walk(val)}</span>`;   // a number that is itself made of tags
+      const e = byId[m[1]];
+      if(!e) return `<span class="${cls}">${val}</span>`;
+      const icon = e.b === 0 ? `<img class="block-icon" src="${SKIMG}ui/Cover_NoBlock.png" alt="">` : e.b === 2 ? `<img class="block-icon" src="${SKIMG}ui/Cover_PartialBlock.png" alt="">` : '';   // damage that ignores cover
+      return `<span class="no-wrap ${cls} text-hits" title="${skAttr(skillHitsTip(e, level))}">${icon}<span>${val}</span></span>`; }
+    return text(p);
+  }).join('');
+  return walk(sk.d || '');
+}
+const SK_SVG = {   // the site's own Range / Ammo icons, and a stopwatch for the animation time
+  range: '<svg viewBox="0 0 120 120"><path class="s" d="m15.223 41.467-3.209 7.9824c28.644 7.4245 50.172 28.143 58.373 56.18l8.0254-3.3457c-4.4378-15.172-12.484-28.367-23.297-38.773-10.813-10.407-24.392-18.025-39.893-22.043z"/><path d="m63.361 11.746-15.711 15.842 31.861 1.5215-68.008 68.568 5.4941 5.2871 5.4941 5.2891 68.008-68.57 2.2852 31.344 15.711-15.842-3.0176-41.43z"/></svg>',
+  ammo: '<svg viewBox="0 0 120 120"><path d="m37.969 22.436a11.532 21.07 14.876 0 0-6.4062 2.7559 11.532 21.07 14.876 0 0-9.1504 17.82l-0.61328 3.3711h23.613l0.61524-3.3711a11.532 21.07 14.876 0 0-2.6562-17.82 11.532 21.07 14.876 0 0-5.4023-2.7559zm30.461 0a11.532 21.07 14.876 0 0-6.4062 2.7559 11.532 21.07 14.876 0 0-9.1504 17.82l-0.61524 3.3711h23.615l0.61328-3.3711a11.532 21.07 14.876 0 0-2.6562-17.82 11.532 21.07 14.876 0 0-5.4004-2.7559zm30.459 0a11.532 21.07 14.876 0 0-6.4062 2.7559 11.532 21.07 14.876 0 0-9.1504 17.82l-0.61523 3.3711h23.615l0.61524-3.3711a11.532 21.07 14.876 0 0-2.6562-17.82 11.532 21.07 14.876 0 0-5.4023-2.7559zm-77.863 28.184-8.5527 46.945h23.615l8.5527-46.945zm30.461 0-8.5547 46.945h23.615l8.5547-46.945zm30.459 0-8.5527 46.945h23.613l8.5547-46.945z"/></svg>',
+  time: '<svg viewBox="0 0 448 512"><path d="M176 0c-17.7 0-32 14.3-32 32s14.3 32 32 32h16V98.4C92.8 113.3 16 199.7 16 304c0 114.9 93.1 208 208 208s208-93.1 208-208c0-41.8-12.3-80.7-33.5-113.2l24.1-24.1c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L355.7 143c-28.1-23-62.2-38.8-99.7-44.6V64h16c17.7 0 32-14.3 32-32s-14.3-32-32-32H224 176zm72 192V320c0 13.3-10.7 24-24 24s-24-10.7-24-24V192c0-13.3 10.7-24 24-24s24 10.7 24 24z"/></svg>',
+  hex: '<svg viewBox="0 0 37.6 37.6"><path d="m18.8 0c-0.96 0-1.92 0.161-2.47 0.481l-13.1 7.98c-1.13 0.653-1.81 1.8-1.81 3.03v14.6c0 1.23 0.684 2.37 1.81 3.03l13.1 7.98c1.11 0.642 3.85 0.665 4.95 0l13.1-7.98c1.11-0.677 1.81-1.8 1.81-3.03v-14.6c0-1.23-0.699-2.35-1.81-3.03l-13.1-7.98c-0.554-0.321-1.51-0.481-2.47-0.481z"/></svg>'};
+function skillPillsHtml(sk, rec){   // the small pills under a skill: area, range, magazine, animation time
+  const out = [], pill = (icon, label, tip) => `<div class="sk-pill" title="${skAttr(tip)}">${icon}<span>${label}</span></div>`, area = (ic, label, tip) => pill(`<img src="${SKIMG}skill/${ic}.webp" alt="">`, label, tip);
+  let range = sk.r || 0;
+  (sk.o || []).forEach(r => {
+    if(r.Type === 'Circle'){ out.push(area('COMMON_SKILLICON_CIRCLE', skNum(r.Radius), `Radius: ${r.Radius / 100}m (${r.Radius})`)); if(r.Radius === range) range = 0; }
+    else if(r.Type === 'Donut'){ out.push(area('COMMON_SKILLICON_DONUT', `${skNum(r.ExcludeRadius)} - ${skNum(r.Radius)}` + (r.Degree < 360 ? ` / ${r.Degree}&deg;` : ''), `Radius: ${r.ExcludeRadius / 100}m - ${r.Radius / 100}m (${r.ExcludeRadius} - ${r.Radius})\nAngle: ${r.Degree}°`)); range = 0; }
+    else if(r.Type === 'Fan'){ out.push(area('COMMON_SKILLICON_FAN', `${skNum(r.Radius)} / ${r.Degree}&deg;`, `Radius: ${r.Radius / 100}m (${r.Radius})\nAngle: ${r.Degree}°`)); range = 0; }
+    else if(r.Type === 'Obb'){ out.push(area(r.Height > r.Width ? 'COMMON_SKILLICON_LINE' : 'COMMON_SKILLICON_RECZONE', r.Height > r.Width ? skNum(r.Height) : `${skNum(r.Width)} &times; ${skNum(r.Height)}`, `Length: ${r.Height / 100}m (${r.Height})\nWidth: ${r.Width / 100}m (${r.Width})`)); if(r.Height >= range) range = 0; }
+    else if(r.Type === 'Bounce') out.push(area('COMMON_SKILLICON_BOUNCEPROJECTILE', skNum(r.Radius), `Bounce Range: ${r.Radius / 100}m (${r.Radius})`)); });
+  if(range) out.push(pill(SK_SVG.range, skNum(range), `Range: ${range / 100}m (${range})`));
+  if(sk.t === 'Normal' && rec && rec.a && rec.a[0]) out.push(pill(SK_SVG.ammo, `${rec.a[0]} (${rec.a[1]})`, `Mag Count: ${rec.a[0]}\nNormal Attack Cost: ${rec.a[1]}`));
+  if(sk.u) out.push(pill(SK_SVG.time, skSecs(sk.u), `Skill Animation: ${skSecs(sk.u)} (${sk.u} frames)`));
+  return out;
+}
+function skillCardHtml(sk, level, rec, bullet, extra){   // one skill: icon in a hexagon of the attack type's colour, name, type (and EX cost), text, pills, and the related skills under it
+  const typ = (typeof SKILLDB !== 'undefined' && SKILLDB.type[sk.t]) || sk.t, normal = sk.t === 'Normal', lv = normal ? 1 : level;
+  const cost = sk.t === 'Ex' && sk.c ? `<span class="sl">/</span><b>COST:</b> <span class="cost ${sk.c[0] !== sk.c[4] ? 'ba-col-' + bullet.toLowerCase() : ''}">${skAtLevel(sk.c, lv)}</span>` : '';
+  const text = `<p class="sk-text">${skillTextHtml(sk, lv, bullet)}</p>`;
+  const pills = skillPillsHtml(sk, rec), rel = !extra && sk.x && sk.x.length ? sk.x : [];
+  return `<div class="sk"><div class="sk-head"><div class="sk-icon ${extra ? 'small ' : ''}sk-${bullet.toLowerCase()}">${SK_SVG.hex}<img src="${SKIMG}skill/${sk.i}.webp" alt=""></div>`
+    + `<div class="sk-title">${extra ? `<h5>${sk.n}</h5>` : `<h4>${sk.n}</h4>`}${normal ? '' : `<div class="sk-type"><i>${typ}</i>${cost}</div>`}${normal ? text : ''}</div></div>`
+    + (normal ? '' : text)
+    + (pills.length || rel.length ? `<div class="sk-pills">${pills.join('')}${rel.length ? `<button type="button" class="sk-pill sk-relbtn open" data-skrel>Related <b>&#9662;</b></button>` : ''}</div>` : '')
+    + (rel.length ? `<div class="sk-rel">${rel.map(x => '<div class="sk-sep"></div>' + skillCardHtml(x, level, rec, bullet, true)).join('')}</div>` : '') + '</div>';
+}
+function skillPanelHtml(rec, types, level){   // a group of skills in one panel, with a hairline between them (the site's layout). level: one number, or {Ex, Public, Passive, ExtraPassive}
+  const list = rec.s.filter(s => types.includes(s.t)); if(!list.length) return '';
+  return '<div class="sk-panel">' + list.map(s => skillCardHtml(s, typeof level === 'object' ? level[s.t] : level, rec, rec.b, false)).join('<div class="sk-sep"></div>') + '</div>';
+}
+// The level each kind of skill is read at: the levels set on the student's card. EX from EX Lv, Basic and Enhanced from Basic Lv, Sub from Sub Lv when the card has that box (0 = locked: shown at Lv 1), else from Basic Lv.
+const skillLevelsFor = (d, L) => ({Ex: L.ex, Public: L.basic, Passive: L.basic, ExtraPassive: d.regenBoost ? Math.max(1, L.sub) : L.basic});
 // The things on the field a student's EX can be aimed at (the Target / Hit box in the Rotation table): what she attacks, or what she heals.
 const aimableEnts = (t, who) => evOf(t).filter(e => e.type === 'entity' && ENTITY[e.ent] && (ENTITY[e.ent].action === 'attack' && aimsAtEnemy(who) || ENTITY[e.ent].action === 'heal' && healsRelic(who)));
 // Students standing in an area effect (Erosion Tower, pillar pulse): only Strikers are on the field. Each one inside loses that effect's Cost Recovery (350 each: it halves their
@@ -1076,7 +1179,7 @@ function render0(){
       + (d.regenBoost ? `<label title="Sub Skill: raises every ally's cost recovery. 0 = locked.">Sub Lv <input type="number" min="0" max="10" data-lv="sub" data-id="${id}" value="${L.sub}"></label>` : '') + `</div>`;
     const more = d.public && d.public.interval ? `<details><summary>more</summary><label class="opt">basic skill extra wait <input type="number" step="0.5" min="0" data-wait="${id}" value="${tset(t).wait[id]||0}" style="width:50px"> s</label></details>` : '';
     return `<div class="stu" draggable="true" data-id="${id}" title="${d.exName}: ${effects}"><div class="tools"><button data-rm="${id}" title="Remove from team">&#10005;</button></div>`
-      + `<img src="https://schaledb.com/images/student/icon/${id}.webp" onerror="this.style.visibility='hidden'" draggable="false"><div class="body"><b>${d.name}</b><small>${d.exName} &middot; cost ${d.cost}</small><div class="types">${typeBadges(d)}</div>${lv}${ueSel}${ext}${more}</div></div>`;
+      + `<img src="https://schaledb.com/images/student/icon/${id}.webp" onerror="this.style.visibility='hidden'" draggable="false"><div class="body"><b>${d.name}</b><small>${d.exName} &middot; cost ${d.cost}</small><div class="types">${typeBadges(d)}</div>${lv}${ueSel}${ext}${more}<button type="button" class="btn skbtn" data-skills="${id}" title="Read ${d.name}'s skills, as SchaleDB shows them">Skills</button></div></div>`;
   };
   const fillRow = (sq, max, rowSel, countSel, addSel, label) => {
     const ids = t.roster.filter(id=>SCHALE[id].squad===sq);
@@ -1100,6 +1203,7 @@ function render0(){
   $('#addspcbtn').disabled = t.roster.filter(id=>SCHALE[id].squad!=='Main').length >= 2;
   document.querySelectorAll('[data-lv]').forEach(i=>i.onchange=()=>{ const id=i.dataset.id; const S = tset(t); S.lv[id] = Object.assign({}, S.lv[id], {[i.dataset.lv]: +i.value}); save(); render(); });
   document.querySelectorAll('[data-ue]').forEach(i=>i.onchange=()=>{ tset(t).ue[i.dataset.ue] = +i.value; save(); render(); });
+  document.querySelectorAll('[data-skills]').forEach(b => b.onclick = () => openSkills(+b.dataset.skills));
   document.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{
     const id = +b.dataset.rm, n = t.casts.filter(c=>c.who===id).length;
     if(n && !confirm(SCHALE[id].name+' has '+n+' cast(s) in the rotation. Remove the student and those casts?')) return;
@@ -1392,6 +1496,30 @@ const addTo = (sq, sel, max, label) => { const t = team(), id = +$(sel).value; i
   t.roster.push(id); save(); render(); };
 $('#addstrbtn').onclick = ()=>addTo('Main', '#addstr', 4, 'striker');
 $('#addspcbtn').onclick = ()=>addTo('Support', '#addspc', 2, 'special');
+// ---- Skills window (Team tab): a student's skills as SchaleDB shows them. The texts are in skills.js, fetched the first time one is opened. ----
+let skillDbP = null, skState = null;
+const loadSkillDb = () => typeof SKILLDB !== 'undefined' ? Promise.resolve() : (skillDbP = skillDbP || new Promise((ok, bad) => {
+  const s = document.createElement('script'); s.src = 'skills.js?v=1'; s.onload = ok; s.onerror = () => { skillDbP = null; bad(new Error('skills.js did not load')); }; document.head.appendChild(s); }));
+function paintSkillWin(){
+  const s = skState, d = SCHALE[s.id], rec = SKILLDB.students[s.id], box = $('#skillbox'), L = levelOf(s.id);
+  const head = `<div class="skhead"><img src="${SKIMG}student/icon/${s.id}.webp" onerror="this.style.visibility='hidden'" alt=""><div><h3>${d.name}</h3><div class="types">${typeBadges(d)}</div></div><button type="button" class="skx" data-skx title="Close">&#10005;</button></div>`;
+  if(!rec){ box.innerHTML = head + '<p class="sk-note">There is no skill data for this student.</p>'; return; }
+  const lv = skillLevelsFor(d, L), at = `EX Lv ${L.ex} &middot; Basic Lv ${L.basic}` + (d.regenBoost ? ` &middot; Sub Lv ${L.sub}${L.sub < 1 ? ' (locked, shown at Lv 1)' : ''}` : '');
+  box.innerHTML = head + `<p class="sk-note">For reference: shown at this student's levels (${at}). Change them on the student's card. Wording and icons are SchaleDB's.</p>`
+    + skillPanelHtml(rec, ['Normal'], 1) + skillPanelHtml(rec, ['Ex'], lv) + skillPanelHtml(rec, ['Public', 'Passive', 'ExtraPassive'], lv);
+}
+const fitSkills = () => { $('#skillbox').style.maxHeight = Math.max(200, Math.floor(innerHeight / UI() - 24)) + 'px'; };   // never taller than the screen, whatever the UI size
+async function openSkills(id){
+  const win = $('#skillwin'); skState = {id};
+  win.style.display = 'flex'; fitSkills(); $('#skillbox').innerHTML = '<p class="sk-note" style="padding-top:12px">Loading skills&hellip;</p>'; $('#skillbox').scrollTop = 0;
+  try { await loadSkillDb(); } catch(e){ $('#skillbox').innerHTML = '<p class="sk-note">The skill texts (skills.js) could not be loaded. Check your connection and the file next to index.html.</p><button type="button" class="skx" data-skx>&#10005;</button>'; return; }
+  if(skState && skState.id === id) paintSkillWin();
+}
+const closeSkills = () => { $('#skillwin').style.display = 'none'; skState = null; };
+$('#skillwin').onclick = e => { if(e.target.id === 'skillwin' || e.target.closest('[data-skx]')) return closeSkills();
+  const rb = e.target.closest('[data-skrel]'); if(rb){ const rel = rb.closest('.sk').querySelector('.sk-rel'); if(rel){ rel.hidden = !rel.hidden; rb.classList.toggle('open', !rel.hidden); } } };
+document.addEventListener('keydown', e => { if(e.key === 'Escape' && skState) closeSkills(); });
+window.addEventListener('resize', () => { if(skState) fitSkills(); });
 $('#regen').onchange = ()=>{team().regen=+$('#regen').value;save();render();}; $('#regenauto').onclick = ()=>{delete team().regen;save();render();};
 $('#reginfo').onclick = e=>{ e.stopPropagation(); $('#regentext').hidden = !$('#regentext').hidden; };
 document.addEventListener('click', e=>{ if(!e.target.closest('#regentext')) $('#regentext').hidden = true; }); $('#limit').onchange = ()=>{ const v = parse($('#limit').value); if(v>=30 && v<=600){ team().limit = v; save(); } render(); }; $('#scost').onchange = ()=>{team().startCost=+$('#scost').value;save();render();};
