@@ -655,6 +655,15 @@ function regenAdv(t, cost, a, b, rate, CAP){
 // Cost Recovery the casts give the team for a while: the EX of Azusa Racing / Seia / Kisaki Swimsuit (own Cost Recovery up for 5-25 s), and passives that start after an EX
 // (Hifumi, Reijo: 5 s; Suzumi Magical: 35 s; Yukari Swimsuit: every 2nd EX, 10 s; Noa Pajamas: after the 2nd EX of 3, 30 s, at her Basic level). Not modelled: Miyako Swimsuit (every 50 dodges), Kurumi (conditions). A +X on one student adds X/10000 to the team's cost per second.
 const TIMED_REGEN = {10003:{}, 10104:{}, 10129:{}, 10121:{every:2}, 10109:{every:3, at:2, lvl:'basic'}, 10045:{ms:50000}, 10140:{fx:1, arr:1}};   // Hoshino Swimsuit: as long as her 50 s EX lasts; Kurumi: while her shield is up (10 s, assumed unbroken)
+// Kurumi's EX (Deploy Tactical Shield) puts her in the Tactical Defensive stance for as long as its shield lasts: 10 s, put on 19 frames into the cast (SchaleDB: the EX's Shield effect).
+// Leaving the stance (the shield running out; the timeline assumes it is never broken) stuns one enemy (her Iron Defense: 2 / 2 / 2.6 / 2.6 / 3.1 s at EX Lv 1-5, the way SchaleDB reads it under the EX)
+// and sets off her Basic Skill (Offensive Shift). The timeline draws the stance and the stun after the cast, so you can see when they end.
+const STANCE = {10140: {name:'Iron Defense', apply:19, ms:10000, stun:[2, 2, 2.6, 2.6, 3.1]}};
+function stanceOf(t, c){
+  const s = STANCE[c.who]; if(!s) return null;
+  const from = +(c.t - s.apply/FPS).toFixed(3), to = +Math.max(0, from - s.ms/1000).toFixed(3), stun = atLevel(s.stun, exLv(t, c.who));
+  return {name:s.name, from, to, stun, stunTo:+Math.max(0, to - stun).toFixed(3), ended: from - s.ms/1000 > 0};   // ended: the stance runs out before the fight does, so the stun happens
+}
 function castWindows(t, casts){
   const boost = regenInfo(t).boost, w = [], ord = {};
   { const units = t.roster.slice(0, 6), kills = new Map(entKills(t, casts).map(k => [k.ev.id, k]));
@@ -1036,6 +1045,14 @@ function render0(){
       text: bf.length ? bf.map(b=>b.label+pctText(b)).join(' + ') : exN,
       title: `EX: ${exN}\n${skillText(fmx && fmx.desc ? fmx.desc : d.desc, fmx && fmx.desc ? fmx.params : d.params, levelOf(c.who).ex)}\n\nCast @ ${fmt(c.t)}\n${lines.join('\n')}${bf.length?'\n':''}Cast animation ends ${fmt(animEnd)}${costLine}${waste.length?'\nWASTE: recast with '+waste[0].waste+'s left on the previous buff':''}`});
   });
+  list.forEach(({c, i}) => {   // Kurumi: after the cast bar, a bar for the stance (as long as her shield lasts) and a short one for the stun when she leaves it
+    const sn = stanceOf(t, c), L = sn && laneOf(c.who), it = L && L.ex.find(x => x.i === i); if(!sn || !it) return;
+    const d = SCHALE[c.who], exit = d.public ? skillText(d.public.desc, d.public.params, levelOf(c.who).basic) : '';
+    Object.assign(it, {effect:true, landing:it.animEnd, end:sn.to, color:'#c99a2e', stext:it.text, text:sn.name + ' (stance)',
+      title: it.title + `\n\n${sn.name}: Tactical Defensive stance ${fmt(sn.from)} → ${fmt(sn.to)} (${+(sn.from - sn.to).toFixed(1)}s), for as long as her shield lasts. Assumes the shield is not broken.` + (sn.ended ? `\nWhen it ends: one enemy is Stunned for ${sn.stun}s (${fmt(sn.to)} → ${fmt(sn.stunTo)}).${exit ? '\n' + exit : ''}` : '')});
+    if(sn.ended) L.ex.push({start:sn.to, landing:sn.to, end:sn.stunTo, effect:true, est:false, color:'#8f6fe0', text:`Stun ${sn.stun}s`,
+      title: `${d.name}: ${sn.name}\nWhen she leaves the stance at ${fmt(sn.to)}, one enemy is Stunned for ${sn.stun}s (until ${fmt(sn.stunTo)}).${exit ? '\n' + exit : ''}`});
+  });
   if(showBasic()) t.roster.forEach(id=>{
     const L = laneOf(id), d = SCHALE[id], p = d.public; if(!p) return;
     const seen = (t.basics||[]).filter(x=>x.who===id).map(x=>({t:x.t, cancelled:false}));
@@ -1121,7 +1138,7 @@ function render0(){
     const di = it.i!=null ? `data-i="${it.i}"` : '';
     let out = '';
     if(hasStart) out += `<div class="bar startup ${it.effect?'':'solo'} ${it.atk ? 'atk' : ''} ${it.lock && !it.effect ? 'lk' : ''} ${it.cls||''}" ${di} data-tip="${it.title}" style="${it.atk ? '--atk:' + it.atk + ';' : ''}left:${X(it.start)}px;width:${sw}px;top:${top}px;height:${ROW}px">`
-      + (!it.effect && sw > 60 ? `<span class="btext" style="margin-left:8px;left:${LEFT+10}px;max-width:${sw-14}px">${it.text}</span>` : '') + `</div>`;
+      + ((it.effect ? it.stext : it.text) && sw > 60 ? `<span class="btext" style="margin-left:8px;left:${LEFT+10}px;max-width:${sw-14}px">${it.effect ? it.stext : it.text}</span>` : '') + `</div>`;   // stext: the cast's own name on its startup bar when an effect bar follows (Kurumi)
     if(it.effect) out += `<div class="bar main ${hasStart?'':'alone'} ${it.lock ? 'lk' : ''} ${it.est?'est':''} ${it.waste?'waste':''}" ${di} data-tip="${it.title}" style="left:${X(it.landing)}px;width:${mw}px;top:${top}px;height:${ROW}px;background:${it.color}">`
       + (mw > 40 ? `<span class="btext" style="margin-left:8px;left:${LEFT+10}px;max-width:${mw-14}px">${it.text}</span>` : '') + `</div>`;
     return out;

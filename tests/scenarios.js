@@ -152,6 +152,22 @@ t = team(['Ui', 'Mika', 'Aru']); { const u = cast(t, 'Ui', 170); u.target = id('
 eq('Kurumi has one EX, so no form box', D[id('Kurumi')].forms, []);
 eq('no student offers an EX form identical to the normal one (no cost of its own, same length, no buffs)', Object.values(D).filter(d => (d.forms || []).some(f => !f.costs && !(f.buffs || []).length && f.frames === d.frames)).map(d => d.name), []);
 
+// Kurumi's Iron Defense: after her EX the timeline draws the stance (as long as her shield lasts) and the stun when she leaves it (asked for 2026-11-26, for timing the stun on Wakamo)
+{ const near = (x, y) => Math.abs(x - y) < 1e-6, k = id('Kurumi'); t = team(['Kurumi', 'Mika', 'Aru']);
+  const sn = E.stanceOf(t, { who: k, t: 170 });
+  const ms = (x, y) => Math.abs(x - y) < 0.0011;   // times are kept to the millisecond
+  eq('stance: starts 19 frames into the cast, lasts the shield\'s 10 s', [ms(sn.from, 170 - 19 / 30), ms(sn.to, 170 - 19 / 30 - 10)], [true, true]);
+  eq('stun at EX Lv 5 is 3.1 s and runs from the end of the stance', [sn.stun, ms(sn.stunTo, sn.to - 3.1), sn.ended], [3.1, true, true]);
+  t.set.lv[k] = { ex: 1 }; eq('stun at EX Lv 1 is 2 s', E.stanceOf(t, { who: k, t: 170 }).stun, 2);
+  t.set.lv[k] = { ex: 3 }; eq('stun at EX Lv 3 is 2.6 s', E.stanceOf(t, { who: k, t: 170 }).stun, 2.6); delete t.set.lv[k];
+  eq('nobody else has a stance', E.stanceOf(t, { who: id('Mika'), t: 170 }), null);
+  eq('a cast so late that the shield outlasts the fight: no stun, the bar stops at the end', (s => [s.to, s.ended])(E.stanceOf(t, { who: k, t: 5 })), [0, false]);
+  // the numbers come from SchaleDB: the EX's Shield effect (10 s, 19 frames in) and Iron Defense's stun durations
+  const sdb = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '..', 'research', 'students.json'), 'utf8'))[k].Skills.Ex, shield = sdb.Effects.find(e => e.Type === 'Shield'), iron = sdb.ExtraSkills.find(x => x.Name === 'Iron Defense');
+  eq('stance length and start match the EX\'s Shield effect in the data', [E.STANCE[k].ms, E.STANCE[k].apply], [shield.Duration, shield.ApplyFrame]);
+  eq('stun durations match Iron Defense\'s text in the data (EX Lv 1-5)', E.STANCE[k].stun, iron.Parameters[1].slice(0, 5).map(x => parseFloat(x)));
+  eq('and the stun is what Iron Defense does on exit', /exiting .* stance, inflicts <c:Stunned>/.test(iron.Desc), true); }
+
 // Things on the field (Hod, Yesod): placed by hand, aimed at from the Rotation table, with their cost effects
 { const near = (x, y) => Math.abs(x - y) < 1e-6, hod = E.BOSSES.find(b => b.path === 'hod'), yes = E.BOSSES.find(b => b.path === 'yesod');
   const cost = (t, T) => { E.winCache.ok = false; return E.costAt(t, -1, T, E.castsExcept(t, -1), undefined, E.allWindows(t, t.casts)); };   // (the page clears this cache at the start of every render)
