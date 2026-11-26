@@ -71,6 +71,9 @@ for i in WANT:
                 fb.append({'stat': e['Stat'], 'label': LABEL.get(e['Stat'], e['Stat']), 'target': e['Target'][0] if e.get('Target') else '', 'ms': e['Duration'],
                            'apply': e.get('ApplyFrame', 0), 'values': e['Value'][0], 'slot': e.get('OverrideSlot')})
         forms.append({'name': en(xs['Name']), 'desc': skill_text(xs['Desc'], x) if xs.get('Desc') else None, 'params': xs.get('Parameters'), 'costs': xs.get('Cost'), 'frames': xs.get('Duration') or ex.get('Duration', 90), 'buffs': fb})
+    # An extra skill with no cost of its own, the same length as the EX and no buffs changes nothing the planner models, so it is not an EX the player can choose:
+    # Kurumi's "Iron Defense" is the stance her own EX puts her in (it showed up as a second, identical option in the Rotation table).
+    forms = [f for f in forms if f['costs'] or f['buffs'] or f['frames'] != ex.get('Duration', 90)]
     # Cost Recovery given to the student itself by a passive (not by the EX): timed (after an EX use) or permanent. values = one array per variant, indexed by skill level.
     # What the EX is aimed at, for the Target column: 'enemy' when it deals damage or puts an effect on an enemy, else nothing to aim (allies are told apart by the buffs / text in index.html)
     efx = ex.get('Effects', [])

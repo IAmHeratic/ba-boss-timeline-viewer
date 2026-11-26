@@ -148,6 +148,10 @@ t = team(['Ui', 'Mika', 'Aru']); { const u = cast(t, 'Ui', 170); u.target = id('
   { const allyHealer = +Object.keys(E.SCHALE).find(k => E.SCHALE[k].exHeal && E.targetsAlly(+k));
     eq('also a healer that picks an ally as target gets the Heater in her list', E.aimableEnts(t, allyHealer).map(e => e.ent), ['Heater']); } }
 
+// Extra EX skills must be real alternatives: Kurumi's "Iron Defense" (the stance her own EX puts her in) showed up as a second, identical option in the Rotation table (reported 2026-11-25)
+eq('Kurumi has one EX, so no form box', D[id('Kurumi')].forms, []);
+eq('no student offers an EX form identical to the normal one (no cost of its own, same length, no buffs)', Object.values(D).filter(d => (d.forms || []).some(f => !f.costs && !(f.buffs || []).length && f.frames === d.frames)).map(d => d.name), []);
+
 // Things on the field (Hod, Yesod): placed by hand, aimed at from the Rotation table, with their cost effects
 { const near = (x, y) => Math.abs(x - y) < 1e-6, hod = E.BOSSES.find(b => b.path === 'hod'), yes = E.BOSSES.find(b => b.path === 'yesod');
   const cost = (t, T) => { E.winCache.ok = false; return E.costAt(t, -1, T, E.castsExcept(t, -1), undefined, E.allWindows(t, t.casts)); };   // (the page clears this cache at the start of every render)
