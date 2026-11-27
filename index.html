@@ -860,10 +860,10 @@ function ownSpend(t, c, list, raw){   // raw: the card's own price, without the 
 const CRED = {10035:{kind:'half', uses:2, to:'target', frames:77}, 20022:{kind:'half', uses:1, to:'target', frames:60}, 10110:{kind:'half', uses:lv => lv >= 5 ? 2 : 1, to:'target', frames:97},
   20055:{kind:'half', uses:3, to:'target', frames:64}, 10145:{kind:'minus', n:1, uses:1, to:'strikers', frames:57},
   20027:{kind:'minus', n:1, uses:1, to:'all', start:true}, 20053:{kind:'minus', n:1, uses:1, to:'all', start:true}};
-function spendMap(t, list){   // price of every cast in the list, in the order they happen (a reduction is used up by the next EX of its target)
+function spendMap(t, list, trace){   // price of every cast in the list, in the order they happen (a reduction is used up by the next EX of its target). trace: {given: [], used: []} to fill in who gave what and who used it
   const sorted = [...list].sort((a, b) => b.t - a.t || list.indexOf(a) - list.indexOf(b)), pend = {}, out = new Map();
   // casting the same giver's EX again on an ally who still has that reduction waiting does not add a second one: it renews the one waiting (back to full uses)
-  const give = (g, spec, who) => { const uses = typeof spec.uses === 'function' ? spec.uses(exLv(t, g.who)) : spec.uses; pend[who] = (pend[who] || []).filter(r => r.src !== g.who); pend[who].push({kind:spec.kind, n:spec.n, uses, src:g.who}); };
+  const give = (g, spec, who) => { const uses = typeof spec.uses === 'function' ? spec.uses(exLv(t, g.who)) : spec.uses; pend[who] = (pend[who] || []).filter(r => r.src !== g.who); const gc = g.t !== undefined ? g : null; pend[who].push({kind:spec.kind, n:spec.n, uses, src:g.who, gc}); if(trace && gc) trace.given.push({gc, who, uses}); };
   t.roster.forEach(id => { const sp = CRED[id]; if(sp && sp.start) t.roster.forEach(x => { if(x !== id) give({who:id}, sp, x); }); });
   const grants = sorted.filter(g => CRED[g.who] && !CRED[g.who].start && formIdx(t, g, list) == null).map(g => ({at:g.t - CRED[g.who].frames/FPS, g}));
   entKills(t, list).forEach(k => { const d = ENTITY[k.ev.ent]; if(d.kill && d.kill.half) grants.push({at:k.at, mk:{to:k.c.who, kind:'half'}}); });   // whoever destroys a lantern
@@ -878,11 +878,32 @@ function spendMap(t, list){   // price of every cast in the list, in the order t
       else if(sp.to === 'strikers') t.roster.forEach(x => { if(x !== g.who && SCHALE[x].squad === 'Main') give(g, sp, x); });
     }
     let sp = ownSpend(t, c, list); const q = pend[c.who] || [];
-    q.forEach(r => { sp = r.kind === 'half' ? sp - Math.floor(sp/2) : Math.max(0, sp - r.n); r.uses--; });
+    q.forEach(r => { const before = sp; sp = r.kind === 'half' ? sp - Math.floor(sp/2) : Math.max(0, sp - r.n); r.uses--; if(trace && r.gc) trace.used.push({gc: r.gc, c, before, after: sp}); });
     pend[c.who] = q.filter(r => r.uses > 0);
     out.set(c, c.cost != null ? c.cost : sp);   // a price typed by hand is the final price (the reduction is still used up)
   });
   return out;
+}
+// What each EX that cuts the cost of others did: {targets, uses, used: [{c, before, after}]} for every giving cast (Seia's "the next two EX of one ally cost half" ...).
+function costCuts(t, list){
+  const trace = {given: [], used: []}, out = new Map();
+  spendMap(t, list, trace);
+  trace.given.forEach(x => { const e = out.get(x.gc) || {targets: [], uses: 0, used: []}; e.targets.push(x.who); e.uses += x.uses; out.set(x.gc, e); });
+  out.forEach((e, gc) => { e.used = trace.used.filter(u => u.gc === gc); });
+  return out;
+}
+// The words for a cost cut on the timeline: a short label for the bar and lines for the popup. info: costCuts' entry for the cast (none: no target picked).
+function cutLabel(t, c, info){
+  const sp = CRED[c.who], uses = info ? info.uses : (typeof sp.uses === 'function' ? sp.uses(exLv(t, c.who)) : sp.uses);
+  const half = sp.kind === 'half', every = sp.to === 'strikers', per = every ? Math.max(1, uses / Math.max(1, info ? info.targets.length : 1)) : uses;
+  const who = every ? 'the other Strikers' : c.target ? sname(c.target) : null, at = +(c.t - (sp.frames || 0)/FPS).toFixed(3);
+  if(!who) return {text: 'pick a target for the EX cost cut', lines: ['EX cost cut: pick a target in the table: it only counts once a target is picked.']};
+  const amount = half ? '50% less' : `${sp.n} less`;
+  const text = `${every ? who + "'" : who + "'s"} next ${per > 1 ? per + ' EX' : 'EX'}: cost ${half ? '-50%' : '-' + sp.n}`;
+  const used = info ? info.used : [];
+  const lines = [`\u2022 EX cost: ${every ? who + ' pay' : who + "'s next " + per + ' EX skill' + (per > 1 ? 's' : '') + ' cost'}${every ? ' ' + amount + ' on their next EX' : ' ' + amount}${half ? ' (the cut is rounded down)' : ''}, from ${fmt(at)}`,
+    `    used by: ${used.length ? used.map(u => `${sname(u.c.who)} @ ${fmt(u.c.t)} (${u.before} \u2192 ${u.after})`).join(', ') : 'nobody yet'}${used.length && used.length < (info ? info.uses : 0) ? `; ${info.uses - used.length} not used` : ''}`];
+  return {text, lines};
 }
 const spendOf = (t, c) => spendMap(t, t.casts.includes(c) ? t.casts : [...t.casts, c]).get(c);
 // price of cast c if it were at clock time T and the other casts were `list`
@@ -1202,6 +1223,13 @@ function render0(){
     if(sn.ended) L.ex.push({start:sn.to, landing:sn.to, end:sn.stunTo, effect:true, est:false, color:CCCOLOR, text:`Stun ${sn.stun}s`,
       title: `${d.name}: ${sn.name}\nWhen she leaves the stance at ${fmt(sn.to)}, one enemy is Stunned for ${sn.stun}s (until ${fmt(sn.stunTo)}).${exit ? '\n' + exit : ''}`});
   });
+  { const cuts = costCuts(t, t.casts);   // an EX that cuts the cost of others (Seia, Ui, Fuuka New Year ...): the cut leads on its bar and in its popup, before the buffs
+    list.forEach(({c, i}) => {
+      const sp = CRED[c.who]; if(!sp || sp.start || formIdx(t, c) != null) return;
+      const it = (laneOf(c.who) || {ex: []}).ex.find(x => x.i === i); if(!it) return;
+      const cl = cutLabel(t, c, cuts.get(c));
+      it.text = it.effect ? `${cl.text} + ${it.text}` : `${it.text}: ${cl.text}`;
+      it.title = it.title.replace(/(\nCast @ [^\n]*)/, (m) => m + '\n' + cl.lines.join('\n')); }); }
   { const marks = list.map(({c}) => ({c, mk: markOf(t, c)})).filter(x => x.mk);   // Neru (School): the mark her normal EX puts on herself and one enemy, as its own bar on her lane and as lines in the details of her casts
     list.forEach(({c, i}) => {
       const m = MARKS[c.who], L = m && laneOf(c.who); if(!L) return;

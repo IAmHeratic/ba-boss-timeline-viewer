@@ -451,4 +451,19 @@ eq('no student offers an EX form identical to the normal one (no cost of its own
     const tx = team(['Seia', 'Mika', 'Kotama (Camp)', 'Aru (Dress)', 'Kisaki', 'Hoshino (Swimsuit)']); eq('no Rio in the team: no (Copy) options', E.whoOptions(tx, { who: id('Mika') }).some(x => x.copy), false); }
 }
 
+// What an EX that cuts the cost of others says on the timeline (Seia's "the next two EX of one ally cost half"): the bar and popup lead with it and list who used it
+{ const tc = team(['Seia', 'Mika', 'Kotama (Camp)', 'Aru (Dress)', 'Rio', 'Kisaki']), sc = cast(tc, 'Seia', 215); sc.target = id('Mika');
+  const m1 = cast(tc, 'Mika', 200), m2 = cast(tc, 'Mika', 190), m3 = cast(tc, 'Mika', 180);
+  const e = E.costCuts(tc, tc.casts).get(sc), lv = E.exLv(tc, id('Seia')), cl = E.cutLabel(tc, sc, e);
+  eq('Seia at EX Lv 5 cuts the next two EX of her target: two casts used it, 6 -> 3 each, the third is full price', [lv, e.uses, e.used.map(u => [u.c === m1 || u.c === m2, u.before, u.after]), E.spendOf(tc, m3)], [5, 2, [[true, 6, 3], [true, 6, 3]], 6]);
+  eq('the bar label leads with the cut', cl.text, "Mika's next 2 EX: cost -50%");
+  eq('the popup says what it does and who used it', [cl.lines[0].includes("Mika's next 2 EX skills cost 50% less (the cut is rounded down)"), cl.lines[1].includes('used by: Mika @ 3:20.0 (6 \u2192 3), Mika @ 3:10.0 (6 \u2192 3)')], [true, true]);
+  m2.who = id('Kotama (Camp)'); const e2 = E.costCuts(tc, tc.casts).get(sc);
+  eq('a cast of someone else does not use it: Mika\'s second EX is the second use', [e2.used.length, E.cutLabel(tc, sc, e2).lines[1].includes('used by: Mika @ 3:20.0 (6 \u2192 3), Mika @ 3:00.0 (6 \u2192 3)')], [2, true]);
+  m1.who = id('Aru (Dress)'); m3.who = id('Aru (Dress)'); m2.who = id('Aru (Dress)'); const e3 = E.costCuts(tc, tc.casts).get(sc);
+  eq('nobody cast Mika\'s EX: used by nobody yet', [e3.used.length, E.cutLabel(tc, sc, e3).lines[1].trim()], [0, 'used by: nobody yet']);
+  delete sc.target; eq('no target picked: the label says so', [E.costCuts(tc, tc.casts).get(sc), E.cutLabel(tc, sc, undefined).text], [undefined, 'pick a target for the EX cost cut']);
+  { const tk = team(['Kisaki (Swimsuit)', 'Seia', 'Mika', 'Aru', 'Hina', 'Rio']), kc = cast(tk, 'Kisaki (Swimsuit)', 200); const ck = E.costCuts(tk, tk.casts).get(kc);
+    eq('Kisaki (Swimsuit): 1 less on the next EX of each other Striker', E.cutLabel(tk, kc, ck).text, "the other Strikers' next EX: cost -1"); } }
+
 console.log(bad ? `\n${bad} scenario(s) failed` : '\nALL SCENARIOS PASS'); process.exit(bad ? 1 : 0);
