@@ -236,13 +236,21 @@ td input[type=text]{width:92px}
 .dlg{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 20px;min-width:340px;max-width:92vw;max-height:86vh;overflow:auto;box-shadow:0 10px 40px #000a}
 .dlg a{color:var(--accent,#6aa6ff);text-decoration:underline;cursor:pointer}.dlg h3{margin:0 0 12px}.dlg label{display:flex;gap:8px;align-items:center;padding:4px 0}.dlg .acts{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
 #rot td,#evt td{padding:3px 6px}
-#rot tr[data-row]{cursor:pointer}
+#rot tr[data-row],#rot tr[data-cr]{cursor:pointer}
+#rot tr.hascards td{padding-bottom:1px}
+#rot tr.cardsrow td{padding:2px 8px 8px 30px;background:#212d40;border-bottom:1px solid var(--line)}
+#rot tr.cardsrow small.cl{color:var(--dim);margin-right:8px}#rot tr.cardsrow small.cn{color:var(--dim);margin-left:10px}#rot tr.cardsrow small.cn.warn{color:var(--warn)}
 #rot tr.hl td{background:#2f5a9a}
 #rot tr.hl td:first-child{box-shadow:inset 4px 0 0 #ffd54a}
 .addbar{margin-bottom:8px;gap:6px;align-items:center}
 .addq{display:inline-flex;align-items:center;gap:6px;padding:4px 10px 4px 5px}
 .addq img{width:26px;height:26px;border-radius:5px;object-fit:cover}
 .addq small{color:var(--dim)}
+.cs{display:inline-flex;align-items:center;gap:3px;vertical-align:middle;white-space:nowrap}.cs .sep{color:var(--dim);padding:0 1px}
+.cs .hc{position:relative;display:inline-block;width:28px;height:28px;border-radius:6px;overflow:hidden;background:#0f1520;border:1px solid var(--line);flex:none}
+.cs .hc img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}.cs .hc em{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-style:normal;color:var(--dim)}
+.cs .hc.new{outline:2px solid var(--accent);outline-offset:1px}.cs .hc.cp{border:2px solid #bfe8ff;box-shadow:0 0 9px 2px #7cc8ff,inset 0 0 6px #bfe8ff}
+.cs .hc.q{width:20px;height:20px;border-radius:5px;filter:grayscale(1);opacity:.6}.cs.miss .hc{border-color:var(--warn)}.cs .warn,small.warn{color:var(--warn);font-weight:700;cursor:help}small.warn{font-weight:400}
 #chainnew{width:22px;height:22px;margin:0 6px 0 4px;vertical-align:middle;cursor:pointer}
 .addbar label{display:inline-flex;align-items:center;cursor:pointer}
 .info{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;border:1px solid var(--line);color:var(--accent,#6aa6ff);cursor:pointer;user-select:none;font-size:15px}
@@ -313,7 +321,8 @@ header .btn,header select{padding:4px 12px}
   <aside id="side"><div id="sidetabs"></div>
   <div class="card" id="rotcard"><h2>Rotation<button class="btn" id="rotfull" title="Fill the screen with the rotation (Esc to leave)">Full screen</button></h2>
     <div class="rotbar" id="rotbar"><div class="row addbar" id="addbar"></div>
-    <div class="row" style="margin-bottom:8px"><label>Cost regen /s <input type="number" id="regen" step="0.001" min="0" style="width:78px"></label><button class="btn" id="regenauto" title="Set the cost regen back to the value calculated from the team">Reset</button><span class="info" id="reginfo" tabindex="0" title="How the cost regen is calculated">&#9432;</span><div class="pop" id="regentext" hidden></div><label>Start cost <input type="number" id="scost" step="0.5" style="width:60px"></label><label>Time limit <input type="text" id="limit" style="width:62px" title="In-battle clock. Binah is 3:00; some other raid bosses start at 4:00."></label><button class="btn" id="colbtn" style="margin-left:auto" title="Choose which columns of the table show. Drag a column heading to move it.">Columns</button><div id="colpop"></div></div></div>
+    <div class="row" style="margin-bottom:8px"><label>Cost regen /s <input type="number" id="regen" step="0.001" min="0" style="width:78px"></label><button class="btn" id="regenauto" title="Set the cost regen back to the value calculated from the team">Reset</button><span class="info" id="reginfo" tabindex="0" title="How the cost regen is calculated">&#9432;</span><div class="pop" id="regentext" hidden></div><label>Start cost <input type="number" id="scost" step="0.5" style="width:60px"></label><label>Time limit <input type="text" id="limit" style="width:62px" title="In-battle clock. Binah is 3:00; some other raid bosses start at 4:00."></label><button class="btn" id="colbtn" style="margin-left:auto" title="Choose which columns of the table show. Drag a column heading to move it.">Columns</button><div id="colpop"></div></div>
+    <div class="row" id="cardsbar" style="margin-bottom:8px"></div></div>
     <div class="rotbox" id="rotbox"><table id="rot"></table></div>
   </div>
   <div class="card" id="teamcard"><h2>Team</h2>
@@ -411,6 +420,7 @@ const typeBadges = d => [['ATK', TATK[d.bullet] || [d.bullet || '?', '#77808f']]
 const BOSS_DEV = {binah:'Binah',chesed:'Chesed',shirokuro:'Shirokuro',hieronymus:'Hieronymus',kaiten:'KaitenFxMk0',perorodzilla:'Perorozilla',hod:'HOD',goz:'Goz',gregorius:'EN0005',hovercraft:'RaidHoverCraft',kurokage:'EN0006',geburah:'EN0010',yesod:'EN0013',drumbarka:'EN0022',nightmare:'EN0023'};
 // The cast marked in the Rotation table is outlined on the timeline, and (if the setting is on) the timeline scrolls to centre it.
 const FOLLOW = 'ba-ui-follow', followOn = () => localStorage.getItem(FOLLOW) !== 'off';
+const CARDSKEY = 'ba-ui-cards', cardsOn = () => localStorage.getItem(CARDSKEY) !== 'off';   // the cards-in-hand rows of the Rotation table
 function markSel(scroll){
   const t = team(); document.querySelectorAll('#tl .bar.sel').forEach(b => b.classList.remove('sel'));
   if(hlRow === null || !t) return;
@@ -519,6 +529,97 @@ function opAddAct(t, who, at){
 }
 const opMoveAct = (t, k, at) => { const a = (t.acts || [])[k]; if(a) a.t = +Math.max(0, Math.min(TOTAL, at)).toFixed(2); return a; };
 const opRemoveAct = (t, k) => { if(t.acts && t.acts[k]) t.acts.splice(k, 1); };
+// EX cards in hand. Checked against the Hod Yellow Torment recording (29 presses, 25 draws, every one matched): the hand is three slots; the card you press leaves its slot, that same slot is refilled
+// from the FRONT of a queue, and the pressed card goes to the BACK. The queue starts as the 4th and 5th starting skill, then the student who is not in the first five (Specials and Strikers share it).
+// Rio is the exception: pressing her EX turns her own card, in place, into a copy of the target's card (it draws nothing); using that copy draws like any card and Rio's card goes to the back then.
+// A copy and the real card look the same, so a cast whose Note says "copy" is the copy; without the note the real card is used when it is in hand, otherwise the copy.
+const COPYERS = new Set([20041]);   // Rio
+// A cast is Rio's copy of a card when its Student box says "<student> (Copy)" (c.copy = true). It stays the copied student's cast (same lane, same EX, same animation: while she is busy the copy cannot go off either) and costs the
+// original's base cost minus 1. Older rotations only said it in the Note ("copy"): that still counts, until the Student box is set (c.copy false = the real card).
+const isCopy = c => c.copy !== undefined ? !!c.copy : /\bcopy\b/i.test(c.tag || '');
+// Rio can only copy a Striker (she aims at an ally on the field; Specials cannot be targeted).
+const copyable = id => SCHALE[id].squad === 'Main';
+// The copy Rio has in hand when cast c comes (the student it is a copy of): her latest copying cast before it, until a copy of that student has been used. null when she holds none.
+function pendingCopy(t, c){
+  const list = t.casts; let p = null;
+  list.filter(x => x !== c && (x.t > c.t || (x.t === c.t && list.indexOf(x) < list.indexOf(c)))).sort((a, b) => b.t - a.t || list.indexOf(a) - list.indexOf(b)).forEach(x => {
+    if(COPYERS.has(x.who) && !isCopy(x)) p = x.target || null; else if(isCopy(x) && x.who === p) p = null;
+  });
+  return p;
+}
+// The Student box of a row: the team, and the one copy Rio holds at that point ("<student> (Copy)", value "copy:<id>"). A copy already chosen for the row stays in the list.
+function whoOptions(t, c){
+  const out = t.roster.map(id => ({value: String(id), label: sname(id), selected: id == c.who && !isCopy(c), copy: false})), pend = pendingCopy(t, c), ids = [];
+  if(pend && t.roster.includes(pend) && copyable(pend)) ids.push(pend);
+  if(isCopy(c) && !ids.includes(c.who)) ids.push(c.who);
+  ids.forEach(id => out.push({value: 'copy:' + id, label: sname(id) + ' (Copy)', selected: id == c.who && isCopy(c), copy: true}));
+  return out;
+}
+// SchaleDB: "immediately redraws the EX Skill": the card comes straight back into the same slot instead of going to the back of the queue. Seen in the recordings, per student and per EX form
+// (form = the number formIdx gives: null is the normal EX, 0.. the alternate EX skills):
+//   Neru (School): her first EX (the one that marks the enemy) comes back at once as "This'll Hurt, Y'know" (Binah); that follow-up then goes to the back like any card.
+//   Aris (Armed): Sword of Light (form 1) comes back at once; Awakening: Supernova (form 0) goes to the back (Shiro Kuro).
+//   Hina (Dress): the stance cast and the First and Second Note come back at once (the card shows x3, x2, x1 notes left); The Final Song (form 2) goes to the back (Gregorius).
+const INPLACE = {10111: [null], 10134: [1], 10086: [null, 0, 1]};
+// Redraw students nobody has recorded yet (their redraw depends on a gauge or a stance the tool does not follow): their casts get a warning line under the cards and the cards after them may be wrong.
+// Toki, Hanako (Swimsuit), Hiyori (Swimsuit), Mika (Swimsuit), Shun (Swimsuit), Ibuki (Swimsuit). A test checks COPYERS + INPLACE + REDRAWERS against every skill text that says "redraw".
+const REDRAWERS = new Set([10062, 10074, 10102, 10122, 10143, 20060]);
+// The hand and queue at the start of the battle, from the five starting skills set in the Team tab (the sixth student follows them); null until they are all set.
+function startCards(t){
+  const ids = [...new Set((t.startOrder || []).filter(id => id && t.roster.includes(id)))], need = Math.min(5, t.roster.length);
+  if(need < 1 || ids.length < need) return null;
+  const order = ids.concat(t.roster.filter(id => !ids.includes(id)));
+  return {hand: order.slice(0, 3).map(id => ({id, copy: 0})), queue: order.slice(3)};
+}
+// Play cast c on st = {hand: [{id, copy}], queue: [ids]} (changed in place). copy: 0 for a real card, the copied student's id (-1 = none picked) for Rio's copy. Returns what happened.
+function cardStep(st, c, asCopy, form){   // form: which EX the cast is (formIdx), for the students whose first casts come straight back
+  const hand = st.hand, q = st.queue, me = c.who;
+  hand.forEach(s => delete s.again);
+  const real = hand.findIndex(s => s.id === me && !s.copy);
+  let cp = hand.findIndex(s => s.copy === me); if(cp < 0 && asCopy) cp = hand.findIndex(s => s.copy === -1);
+  let k, mode;
+  if(asCopy){ if(cp < 0) return {mode: 'missing', slot: -1, want: 'copy'}; k = cp; mode = 'copy'; }   // a copy cast needs Rio's copy of that card in hand
+  else if(real >= 0){ k = real; mode = 'real'; }
+  else { const i = q.indexOf(me); if(i >= 0){ q.splice(i, 1); q.push(me); } return {mode: 'missing', slot: -1, want: 'real', copyInHand: cp >= 0}; }   // not in hand here: the plan cannot be played; the hand stays as it is
+  if(mode === 'real' && COPYERS.has(me)){ hand[k] = {id: me, copy: c.target || -1}; return {mode, slot: k, made: true, target: c.target || 0}; }
+  if(mode === 'real' && INPLACE[me] && INPLACE[me].includes(form === undefined ? null : form)){ hand[k] = {id: me, copy: 0, again: true}; return {mode, slot: k, made: false, again: true}; }   // redrawn at once: same slot, the queue does not move
+  const back = hand[k].id; q.push(back); hand[k] = {id: q.shift(), copy: 0};   // (pushing first only matters when nothing is waiting: the card then comes straight back)
+  return {mode, slot: k, made: false, back};   // back: whose card went to the back of the queue (Rio's, when a copy was used)
+}
+// The hand and queue after every cast, in the order of the table. null when the starting skills are not all set.
+function cardStrips(t){
+  const s0 = startCards(t); if(!s0) return null;
+  const st = {hand: s0.hand.map(s => ({...s})), queue: s0.queue.slice()}, casts = new Map();
+  [...t.casts.keys()].sort((a, b) => t.casts[b].t - t.casts[a].t).forEach(i => { const c = t.casts[i], r = cardStep(st, c, isCopy(c), INPLACE[c.who] ? formIdx(t, c) : undefined);
+    casts.set(c, {...r, who: c.who, hand: st.hand.map(s => ({...s})), queue: st.queue.slice(), redraws: REDRAWERS.has(c.who)}); });
+  return {start: s0, casts};
+}
+// The strip drawn in the Rotation table: the three cards in hand (bright), a divider, then the cards waiting in the queue, front first.
+const cardName = s => s.copy ? (s.copy > 0 ? `${SCHALE[s.id].name}'s copy of ${SCHALE[s.copy].name}` : `${SCHALE[s.id].name}'s copy (no target picked)`) : SCHALE[s.id].name;
+function cardIco(s, cls){
+  const face = s.copy > 0 ? s.copy : s.id;
+  return `<span class="hc ${cls}${s.copy ? ' cp' : ''}" title="${cardName(s)}${s.again ? ' - redrawn at once: it comes straight back into the same slot' : ''}"><em>${sname(face).replace(/^\S+\.\s+/, '').slice(0, 2)}</em><img src="https://schaledb.com/images/student/icon/${face}.webp" onerror="this.style.visibility='hidden'" draggable="false" alt=""></span>`;   // a copy of Rio's has the copied student's face and a glowing frame; the tooltip says whose copy it is
+}
+function cardsHtml(st, r){   // r: what the cast did (null for the opening hand)
+  return `<span class="cs${r && r.mode === 'missing' ? ' miss' : ''}">${st.hand.map((s, k) => cardIco(s, r && k === r.slot ? 'new' : '')).join('')}<span class="sep">&rsaquo;</span>${st.queue.map(id => cardIco({id, copy: 0}, 'q')).join('')}</span>`;
+}
+// A short line beside the strip for the casts that do something other than "the next card drops into the slot"; [warn?, text], null for an ordinary press.
+function cardsNote(r){
+  const nm = id => SCHALE[id].name, who = nm(r.who);
+  if(r.mode === 'missing') return [true, r.want === 'copy' ? `No copy of ${who}'s card is in the hand here (Rio has not copied it, or the copy is used up), so this cast cannot be played as planned. The hand is shown as it was before it.`
+    : r.copyInHand ? `${who}'s own card is not in the hand here, only Rio's copy of it: pick "${who} (Copy)" in the Student box if that is the cast you mean.`
+    : `${who}'s card is not in the hand here (it is still waiting in the queue), so this cast cannot be played as planned. The hand is shown as it was before it.`];
+  if(r.redraws) return [true, `${who}'s EX can redraw the card at once, depending on a gauge or stance the tool does not follow (not checked in a recording yet): the cards after this one may be wrong.`];
+  if(r.made) return [false, `${who}'s card turns into a copy of ${r.target > 0 ? nm(r.target) + "'s EX" : 'the target\'s EX (pick a target)'}; nothing is drawn.`];
+  if(r.again) return [false, `${who}'s card is redrawn at once: it comes straight back into the same slot.`];
+  if(r.mode === 'copy') return [false, `The copy is used up: ${nm(r.back)}'s card goes to the back of the queue.`];
+  return null;
+}
+// The row under a cast in the Rotation table.
+function cardsRowHtml(r, span, hl, i){
+  const note = cardsNote(r);
+  return `<tr class="cardsrow${hl ? ' hl' : ''}" data-cr="${i}"><td colspan="${span}"><small class="cl">Cards after:</small>${cardsHtml(r, r)}${note ? `<small class="cn${note[0] ? ' warn' : ''}">${note[1]}</small>` : ''}</td></tr>`;
+}
 // Cost over time: regen (per team), spends per cast, capped at 10. Cost Overload (Nagisa Swimsuit's buff) lets the target
 // spend up to 5 more than it has, which leaves the total negative (seen in the video: 1 -> -5 for a 6-cost Mika cast).
 // Boss data (SchaleDB) and the boss events the player placed on the timeline.
@@ -685,6 +786,16 @@ function stanceOf(t, c){
   const from = +(c.t - s.apply/FPS).toFixed(3), to = +Math.max(0, from - s.ms/1000).toFixed(3), stun = atLevel(s.stun, exLv(t, c.who));
   return {name:s.name, from, to, stun, stunTo:+Math.max(0, to - stun).toFixed(3), ended: from - s.ms/1000 > 0};   // ended: the stance runs out before the fight does, so the stun happens
 }
+// States the data gives no timing for. Neru (School)'s first EX puts her in a "Duel state" with an enemy for 70 s (the game's own text; SchaleDB lists the effect as a "Special" with no duration or apply frame).
+// Measured in the two Wakamo recordings (2026-11-26): the cost is spent at the cast (clock 231.7 and 217.1); her new EX card, the follow-up "This'll Hurt, Y'know" (cost 4), appears 4.4 s later, when the cast animation ends
+// (133 frames). The card went back to "You Want to Fight?" 71.6 s after the cast in the double-Seia recording (Neru's own card, clock 231.7 -> 160.1) and 70.5 s after it in the Maki recording (Rio's copy of her card, 217.15 -> 146.6).
+// With the 70 s of the text the middle of the two puts the start 1.1 s (33 frames) into the cast, so the end is taken at 71.1 s. Two recordings 1.1 s apart: the times are an estimate. Only her normal EX (form null) starts a mark; casts inside the window are the follow-up (form 0).
+const MARKS = {10111: {name: 'You Want to Fight?', ms: 70000, apply: 33, forms: [null], follow: "This'll Hurt, Y'know"}};
+function markOf(t, c){
+  const m = MARKS[c.who]; if(!m || isCopy(c) || !m.forms.includes(formIdx(t, c))) return null;   // (a copy of her EX does not put Neru in the Duel state)
+  const from = +(c.t - m.apply/FPS).toFixed(3), to = +Math.max(0, from - m.ms/1000).toFixed(3);
+  return {name: m.name, follow: m.follow, from, to, secs: m.ms/1000, ended: from - m.ms/1000 > 0, back: +(c.t - m.apply/FPS - m.ms/1000).toFixed(3)};   // ended: the 70 s run out before the fight does; back: when the card is the normal EX again
+}
 function castWindows(t, casts){
   const boost = regenInfo(t).boost, w = [], ord = {};
   { const units = t.roster.slice(0, 6), kills = new Map(entKills(t, casts).map(k => [k.ev.id, k]));
@@ -719,16 +830,29 @@ const atLevel = (arr, lv) => arr[Math.min(lv, arr.length) - 1];
 // Aris (Armed)'s main EX only picks which of her two other EX skills goes off: it is never cast itself, so one of those two is always in use.
 const SWITCHERS = new Set([10134]);   // Aris (Armed): checked by hand. (Mika Swimsuit's description reads the same, but her main EX is a real cast with its own cost.)
 const switcher = id => SWITCHERS.has(+id) && !!(SCHALE[id] && SCHALE[id].forms && SCHALE[id].forms.length);
+// Which EX a student with a timed mark casts: her normal EX starts the mark; every cast inside it is the follow-up (the card cannot be anything else while she is marked), the first one after it ends is the normal EX again.
+// A form picked by hand in the table always wins (a normal EX picked by hand starts a mark of its own).
+function markForm(t, c, list){
+  const m = MARKS[c.who], span = m.apply/FPS + m.ms/1000, cp = isCopy(c); let to = null;
+  for(const x of list.filter(y => y.who === c.who && !isCopy(y)).sort((a, b) => b.t - a.t || list.indexOf(a) - list.indexOf(b))){   // the marks come from her own casts, not from copies
+    const f = x.form !== undefined ? x.form : (to !== null && x.t > to + 1e-9 ? 0 : null);
+    if(f === null) to = x.t - span;
+    if(x === c) return f;
+  }
+  return cp ? (to !== null && c.t > to + 1e-9 ? 0 : null) : null;   // a copy follows her card: the follow-up while she is marked, her normal EX once the mark ends
+}
 function formIdx(t, c, list = t.casts){
   if(c.form !== undefined && !(c.form === null && switcher(c.who))) return c.form;
+  if(MARKS[c.who]) return markForm(t, c, list);
   const q = SEQ[c.who]; if(!q) return switcher(c.who) ? 0 : null;
-  let n = 0; list.forEach(x => { if(x !== c && x.who === c.who && (x.t > c.t || (x.t === c.t && list.indexOf(x) < list.indexOf(c)))) n++; });
+  const at = c.t;   // (a copy follows the card it copies; copies do not move the card's own sequence on)
+  let n = 0; list.forEach(x => { if(x !== c && x.who === c.who && !isCopy(x) && (x.t > at || (x.t === at && !isCopy(c) && list.indexOf(x) < list.indexOf(c)))) n++; });
   const head = q.head || []; return n < head.length ? head[n] : q.cycle[(n - head.length) % q.cycle.length];
 }
-function ownSpend(t, c, list){   // the skill's own price: its form, at the student's EX level
+function ownSpend(t, c, list, raw){   // raw: the card's own price, without the copy's -1;   the skill's own price: its form, at the student's EX level (Rio's copy: the original's base cost minus 1, at least 0; reductions then work on that)
   const d = SCHALE[c.who], f = formIdx(t, c, list), lv = exLv(t, c.who);
-  if(f != null && d.forms && d.forms[f] && d.forms[f].costs) return atLevel(d.forms[f].costs, lv);
-  return d.costs ? atLevel(d.costs, lv) : d.cost;
+  const sp = f != null && d.forms && d.forms[f] && d.forms[f].costs ? atLevel(d.forms[f].costs, lv) : d.costs ? atLevel(d.costs, lv) : d.cost;
+  return isCopy(c) && !raw ? Math.max(0, sp - 1) : sp;
 }
 // Cost reductions an EX skill grants ("the next N EX skills of an ally cost half / 1 less"). Numbers from SchaleDB (CostChange effects: Uses, Coefficient -5000 = half with the reduction
 // rounded down, BaseAmount -n). 'target' = the cast's Target, 'strikers' = the other Strikers, 'start' = once at the start of the battle for all allies but itself.
@@ -980,7 +1104,11 @@ function opToggleChain(t, i){
   else if(n > 0){ c.after = cid(t.casts[order[n-1]]); delete c.cb; }
   t.estimated = false;
 }
-function opSetWho(t, i, who){ const c = t.casts[i]; c.who = +who; delete c.cost; delete c.form; }   // an EX-cost override belongs to the student it was set for
+function opSetWho(t, i, who){   // who: a student id, or "copy:<id>" for Rio's copy of that student's EX
+  const c = t.casts[i], m = /^copy:(\d+)$/.exec(String(who)), was = isCopy(c);
+  c.who = m ? +m[1] : +who; if(m) c.copy = true; else if(was) c.copy = false; else delete c.copy;   // (false: the real card, even if the Note still says copy)
+  delete c.cost; delete c.form;   // an EX-cost override belongs to the student it was set for
+}
 function opRemove(t, i){ t.casts.splice(i, 1); }
 function opLock(t, i){ const c = t.casts[i]; if(c.lock) delete c.lock; else c.lock = true; }
 // Arrow keys in a cost box: the next whole cost up or down (0.1 with Shift). 8.99 on the table is a 9: the next step is 10 (or 8), not 9.99.
@@ -1063,8 +1191,8 @@ function render0(){
     const waste = bf.filter(b=>b.waste);
     const costLine = ce ? `\nCost ${ce.before.toFixed(1)} → ${ce.after.toFixed(1)} (spend ${ce.spend})${ce.ok ? (ce.overload?' [Cost Overload]':'') : ' NOT ENOUGH COST'}` : '';
     L.ex.push({i, lock:!!c.lock, start:c.t, landing, animEnd, end, effect:bf.length>0, est:!!t.estimated, waste:waste.length>0, color: bf.length ? palette(bf[0].stat) : '#7f8fb0', atk: bf.length ? null : ATKCOL[d.bullet] || null,
-      text: bf.length ? bf.map(b=>b.label+pctText(b)).join(' + ') : exN,
-      title: `EX: ${exN}\n${skillText(fmx && fmx.desc ? fmx.desc : d.desc, fmx && fmx.desc ? fmx.params : d.params, levelOf(c.who).ex)}\n\nCast @ ${fmt(c.t)}\n${lines.join('\n')}${bf.length?'\n':''}Cast animation ends ${fmt(animEnd)}${costLine}${waste.length?'\nWASTE: recast with '+waste[0].waste+'s left on the previous buff':''}`});
+      text: (bf.length ? bf.map(b=>b.label+pctText(b)).join(' + ') : exN) + (isCopy(c) ? ' (Copy)' : ''),
+      title: `EX: ${exN}${isCopy(c) ? ` (a copy of this card, made by ${SCHALE[t.roster.find(id => COPYERS.has(id)) || c.who].name}: it plays ${d.name}'s animation and costs 1 less than the original)` : ''}\n${skillText(fmx && fmx.desc ? fmx.desc : d.desc, fmx && fmx.desc ? fmx.params : d.params, levelOf(c.who).ex)}\n\nCast @ ${fmt(c.t)}\n${lines.join('\n')}${bf.length?'\n':''}Cast animation ends ${fmt(animEnd)}${costLine}${waste.length?'\nWASTE: recast with '+waste[0].waste+'s left on the previous buff':''}`});
   });
   list.forEach(({c, i}) => {   // Kurumi: after the cast bar, a bar for the stance (as long as her shield lasts) and a short one for the stun when she leaves it
     const sn = stanceOf(t, c), L = sn && laneOf(c.who), it = L && L.ex.find(x => x.i === i); if(!sn || !it) return;
@@ -1074,6 +1202,27 @@ function render0(){
     if(sn.ended) L.ex.push({start:sn.to, landing:sn.to, end:sn.stunTo, effect:true, est:false, color:CCCOLOR, text:`Stun ${sn.stun}s`,
       title: `${d.name}: ${sn.name}\nWhen she leaves the stance at ${fmt(sn.to)}, one enemy is Stunned for ${sn.stun}s (until ${fmt(sn.stunTo)}).${exit ? '\n' + exit : ''}`});
   });
+  { const marks = list.map(({c}) => ({c, mk: markOf(t, c)})).filter(x => x.mk);   // Neru (School): the mark her normal EX puts on herself and one enemy, as its own bar on her lane and as lines in the details of her casts
+    list.forEach(({c, i}) => {
+      const m = MARKS[c.who], L = m && laneOf(c.who); if(!L) return;
+      const mk = markOf(t, c), it = L.ex.find(x => x.i === i), span = z => `${fmt2(z.from)} → ${fmt2(z.to)} (${z.ended ? z.secs + ' s' : 'to the end of the fight'})`;
+      if(!mk){   // a follow-up: say which mark it is inside; one with no mark before it (picked by hand) is flagged
+        const w = marks.find(z => z.c.who === c.who && z.mk.from >= c.t && c.t > z.mk.to);
+        if(it) it.title += w ? `
+
+Inside the mark ${span(w.mk)}: while she is marked her EX card is the follow-up "${m.follow}".` : `
+
+No mark is on here: her normal EX was not cast in the ${m.ms/1000} s before this. Without a mark the card would be "${SCHALE[c.who].exName}": pick that form, or cast the normal EX first.`;
+        return; }
+      const d = SCHALE[c.who], note = `Marked (${mk.name}), self and one enemy: ${span(mk)}
+Her new EX card, "${mk.follow}" (cost 4), shows up when the cast animation ends, ${+(d.frames/FPS).toFixed(1)} s after the cast. From then until the mark ends every EX card she draws is "${mk.follow}"; after that it is "${SCHALE[c.who].exName}" again (cost 1). Rio's copy of her card changes with it.
+The mark lasts ${mk.secs} s (the game's text) and starts ${+(c.t - mk.from).toFixed(1)} s into the cast; in the two Wakamo recordings her card went back to normal 71.6 s and 70.5 s after the cast (the tool uses ${+(c.t - mk.back).toFixed(1)} s). SchaleDB's data has no timing for it, so treat these times as an estimate.`;
+      if(it) it.title += `
+
+${note}`;
+      L.ex.push({start: mk.from, landing: mk.from, end: mk.to, effect: true, est: true, color: '#e8896a', text: `Marked ${mk.secs}s`, title: `${d.name}: ${mk.name}
+${note}`});
+    }); }
   if(showBasic() || (t.acts || []).length) t.roster.forEach(id=>{   // the activations you added by hand are always drawn; "predicted" only decides whether the rules add the rest
     const L = laneOf(id), d = SCHALE[id], p = d.public; if(!p) return;
     const seen = (t.basics||[]).filter(x=>x.who===id).map(x=>({t:x.t, cancelled:false}));
@@ -1159,9 +1308,9 @@ function render0(){
     const sw = Math.max(4, (it.start - sEnd)*px), mw = Math.max(4, (it.landing - it.end)*px);
     const di = it.i!=null ? `data-i="${it.i}"` : it.act!=null ? `data-act="${it.act}"` : '';   // data-act: a skill activation added by hand (draggable)
     let out = '';
-    if(hasStart) out += `<div class="bar startup ${it.effect?'':'solo'} ${it.atk ? 'atk' : ''} ${it.lock && !it.effect ? 'lk' : ''} ${it.cls||''}" ${di} data-tip="${it.title}" style="${it.atk ? '--atk:' + it.atk + ';' : ''}left:${X(it.start)}px;width:${sw}px;top:${top}px;height:${ROW}px">`
+    if(hasStart) out += `<div class="bar startup ${it.effect?'':'solo'} ${it.atk ? 'atk' : ''} ${it.lock && !it.effect ? 'lk' : ''} ${it.cls||''}" ${di} data-tip="${String(it.title).replace(/"/g, '&quot;')}" style="${it.atk ? '--atk:' + it.atk + ';' : ''}left:${X(it.start)}px;width:${sw}px;top:${top}px;height:${ROW}px">`
       + ((it.effect ? it.stext : it.text) && sw > 60 ? `<span class="btext" style="margin-left:8px;left:${LEFT+10}px;max-width:${sw-14}px">${it.effect ? it.stext : it.text}</span>` : '') + `</div>`;   // stext: the cast's own name on its startup bar when an effect bar follows (Kurumi)
-    if(it.effect) out += `<div class="bar main ${hasStart?'':'alone'} ${it.lock ? 'lk' : ''} ${it.est?'est':''} ${it.waste?'waste':''}" ${di} data-tip="${it.title}" style="left:${X(it.landing)}px;width:${mw}px;top:${top}px;height:${ROW}px;background:${it.color}">`
+    if(it.effect) out += `<div class="bar main ${hasStart?'':'alone'} ${it.lock ? 'lk' : ''} ${it.est?'est':''} ${it.waste?'waste':''}" ${di} data-tip="${String(it.title).replace(/"/g, '&quot;')}" style="left:${X(it.landing)}px;width:${mw}px;top:${top}px;height:${ROW}px;background:${it.color}">`
       + (mw > 40 ? `<span class="btext" style="margin-left:8px;left:${LEFT+10}px;max-width:${mw-14}px">${it.text}</span>` : '') + `</div>`;
     return out;
   };
@@ -1286,6 +1435,7 @@ function render0(){
   const colDefs = ROTCOLS.map(cd => `<th data-col="${cd.id}" class="colh" draggable="true" title="${cd.tip ? cd.tip + ' ' : ''}Drag to move this column.">${cd.label}</th>`), colShown = rotCols().filter(id => !colPrefs().hide.includes(id));
   let rt = '<tr>' + colShown.map(id => colDefs[ROTCOLS.findIndex(cd => cd.id === id)]).join('') + '<th style="white-space:nowrap"><button class="btn" id="lockall" style="padding:2px 8px;font-size:12px"></button></th></tr>';
   const order = [...t.casts.keys()].sort((a,b)=>t.casts[b].t-t.casts[a].t);
+  const cardsData = cardsOn() ? cardStrips(t) : null;   // null when the cards are hidden or the starting skills are not set
   order.forEach((i,n)=>{
     const c = t.casts[i], ce = costOf[i];
     const busy = ownBusy(t, c, c.t);   // her own earlier EX is still playing
@@ -1295,18 +1445,19 @@ function render0(){
       num: `<td>${n+1}</td>`,
       cost: `<td class="${cls}"><input type="number" step="1" min="-5" max="${capOf(t)}" data-cb="${i}" value="${ce ? (c.cb != null && Math.abs(ce.before - c.cb) <= 0.02 ? c.cb : +ce.before.toFixed(1)) : ''}" style="width:70px" title="${tip}"></td>`,
       chain: `<td style="text-align:center"><button class="btn ${c.after?'chain-on':''}" data-ch="${i}" ${n===0?'disabled':''} title="${c.after?'Tied to the cast above: it follows that cast and goes off the moment the team has the cost for it. Click to untie.':'Cast right after the cast above, the moment the team has the cost for it. Click again to untie.'}">&#9193;</button></td>`,
-      student: `<td><select data-w="${i}">${t.roster.map(id=>`<option value="${id}" ${id==c.who?'selected':''}>${sname(id)}</option>`).join('')}</select></td>`,
+      student: `<td><select data-w="${i}">${whoOptions(t, c).map(x => `<option value="${x.value}" ${x.selected ? 'selected' : ''}>${x.label}</option>`).join('')}</select></td>`,
       target: `<td>${(() => { const ents = aimableEnts(t, c.who), nm = e => String(e.label || e.ent).replace(/</g, '&lt;') + (ENTITY[e.ent].single ? '' : ' @ ' + fmt(e.t));   // single: there is only ever one of it, so no time is needed to tell them apart
         if(targetsAlly(c.who)){ const picked = c.target || c.hit;   // one list: your allies, and (for a heal) the relics on the field
-          return `<select data-tg="${i}" class="${picked ? '' : 'notg'}" title="${picked ? '' : 'Pick who this EX targets: its buff or cost reduction only counts once a target is picked.'}"><option value="">(pick target)</option>${t.roster.filter(id=>id!==c.who && (allyTargetable(id) || c.target==id)).map(id=>`<option value="${id}" ${c.target==id && !c.hit ? 'selected' : ''}>${sname(id)}</option>`).join('')}${ents.length ? '<optgroup label="On the field">' + ents.map(e => `<option value="e:${e.id}" ${c.hit === e.id ? 'selected' : ''}>${nm(e)}</option>`).join('') + '</optgroup>' : ''}</select>`; }
+          return `<select data-tg="${i}" class="${picked ? '' : 'notg'}" title="${picked ? '' : 'Pick who this EX targets: its buff or cost reduction only counts once a target is picked.'}"><option value="">(pick target)</option>${t.roster.filter(id=>id!==c.who && ((COPYERS.has(c.who) ? copyable(id) : allyTargetable(id)) || c.target==id)).map(id=>`<option value="${id}" ${c.target==id && !c.hit ? 'selected' : ''}>${sname(id)}</option>`).join('')}${ents.length ? '<optgroup label="On the field">' + ents.map(e => `<option value="e:${e.id}" ${c.hit === e.id ? 'selected' : ''}>${nm(e)}</option>`).join('') + '</optgroup>' : ''}</select>`; }
         return ents.length ? `<select data-hit="${i}" class="hit" title="Which thing on the field this EX is aimed at. The last attack aimed at one destroys it."><option value="">(boss)</option>${ents.map(e => `<option value="${e.id}" ${c.hit === e.id ? 'selected' : ''}>${nm(e)}</option>`).join('')}</select>` : ''; })()}</td>`,
       ex: `<td>${SCHALE[c.who].forms && SCHALE[c.who].forms.length ? `<select data-form="${i}" style="max-width:118px" title="This student has more than one EX skill. The box shows the one this cast really uses (they usually follow a set order, e.g. Ibuki Swimsuit: first use, then the second EX); pick another to set it yourself.">${(() => { const fi = formIdx(t, c), ds = SCHALE[c.who], nm = f => f === null ? 'Normal' : ds.forms[f].name; const cur = c.form === undefined ? fi : c.form;   // what it will really cast (the usual order unless you picked one)
-          return (switcher(c.who) ? '' : `<option value="main" ${cur === null ? 'selected' : ''}>Normal</option>`) + ds.forms.map((f, k) => `<option value="${k}" ${cur === k ? 'selected' : ''}>${f.name}</option>`).join(''); })()}</select><br>` : ''}<input type="number" step="1" min="0" style="width:58px" class="${c.cost!=null?'ovr':''}" data-cost="${i}" value="${c.cost ?? ''}" placeholder="${spendOf(t, c)}" title="Cost this EX spends: ${spendOf(t, c)}${c.cost!=null ? ' (set by hand)' : ''}. Blank = the skill's own cost at its EX level. Type a number to override, e.g. for Kokona's stamp reduction."></td>`,
+          return (switcher(c.who) ? '' : `<option value="main" ${cur === null ? 'selected' : ''}>Normal</option>`) + ds.forms.map((f, k) => `<option value="${k}" ${cur === k ? 'selected' : ''}>${f.name}</option>`).join(''); })()}</select><br>` : ''}<input type="number" step="1" min="0" style="width:58px" class="${c.cost!=null?'ovr':''}" data-cost="${i}" value="${c.cost ?? ''}" placeholder="${spendOf(t, c)}" title="Cost this EX spends: ${spendOf(t, c)}${c.cost!=null ? ' (set by hand)' : ''}.${isCopy(c) ? ` Rio's copy: the card costs ${ownSpend(t, c, t.casts, true)}, the copy 1 less = ${ownSpend(t, c, t.casts)}${spendOf(t, c) !== ownSpend(t, c, t.casts) && c.cost == null ? ', then the cost cuts on that card (a Seia halving rounds down) make it ' + spendOf(t, c) : ''}.` : ''} Blank = the skill's own cost at its EX level. Type a number to override, e.g. for Kokona's stamp reduction."></td>`,
       note: `<td><input type="text" style="width:140px" value="${c.tag||''}" data-g="${i}"></td>`,
       ref: `<td style="text-align:center"><button class="btn refbtn ${(c.imgs || []).length ? 'has' : ''}" data-ref="${i}" title="${(c.imgs || []).length ? 'Show the reference image' + ((c.imgs || []).length > 1 ? 's' : '') + ' for this row' : 'No reference image yet: click to add one (or paste a screenshot with Ctrl+V on a selected row)'}">&#128247;${(c.imgs || []).length > 1 ? '<sub>' + c.imgs.length + '</sub>' : ''}</button></td>`,
       time: `<td style="white-space:nowrap"><input type="text" class="${timed(c) ? 'ovr' : ''}${busy !== null ? ' busy' : ''}" value="${fmt2(c.t)}" data-t="${i}" title="${busy !== null ? 'Not castable here: her own EX animation, or a phase transition, is still going on. In the game this card is greyed out until ' + fmt2(busy) + '. ' : ''}${timed(c) ? 'A time you set (orange). Clear the box to let the cost place this cast again.' : 'Where the cost (or the chain) puts this cast. Type a time, for example 2:30.866, to pin it.'}"></td>`,
       act: `<td style="white-space:nowrap"><button class="btn lockb ${c.lock ? 'on' : ''}" data-lock="${i}" title="${c.lock ? 'Locked: nothing on this row can change and the bar cannot be dragged. Click to unlock.' : 'Lock this row: freeze its time, cost, student and the rest, and keep the planner from moving it.'}">${c.lock ? '&#128274;' : '&#128275;'}</button> <button class="btn" data-x="${i}">✕</button></td>`};
-    rt += `<tr data-row="${i}" class="${hlRow === cid(c) ? 'hl' : ''}${c.lock ? ' locked' : ''}">${colShown.map(id => cell[id]).join('')}${cell.act}</tr>`;
+    rt += `<tr data-row="${i}" class="${hlRow === cid(c) ? 'hl' : ''}${c.lock ? ' locked' : ''}${cardsData ? ' hascards' : ''}">${colShown.map(id => cell[id]).join('')}${cell.act}</tr>`;
+    if(cardsData) rt += cardsRowHtml(cardsData.casts.get(c), colShown.length + 1, hlRow === cid(c), i);   // the cards in hand after this cast, in a row of their own under it
   });
   const keepScroll = $('#rotbox').scrollTop;
   $('#rot').innerHTML = rt;
@@ -1324,9 +1475,9 @@ function render0(){
   document.querySelectorAll('[data-lock]').forEach(b => b.onclick = () => { opLock(t, +b.dataset.lock); save(); render(); });
   // Click a row (not one of its boxes or buttons) to mark the cast you just did; click it again to clear. Kept while you edit, not saved.
   $('#rot').onclick = e => {
-    const tr = e.target.closest('tr[data-row]'); if(!tr || e.target.closest('input,select,button,label,textarea')) return;
-    const c = t.casts[+tr.dataset.row]; hlRow = hlRow === cid(c) ? null : cid(c);
-    document.querySelectorAll('#rot tr[data-row]').forEach(r => r.classList.toggle('hl', hlRow !== null && cid(t.casts[+r.dataset.row]) === hlRow));
+    const tr = e.target.closest('tr[data-row], tr[data-cr]'); if(!tr || e.target.closest('input,select,button,label,textarea')) return;   // (the cards row under a cast counts as part of it)
+    const c = t.casts[+(tr.dataset.row ?? tr.dataset.cr)]; hlRow = hlRow === cid(c) ? null : cid(c);
+    document.querySelectorAll('#rot tr[data-row], #rot tr[data-cr]').forEach(r => r.classList.toggle('hl', hlRow !== null && cid(t.casts[+(r.dataset.row ?? r.dataset.cr)]) === hlRow));
     markSel(true);
   };
   document.querySelectorAll('[data-ref]').forEach(b => b.onclick = () => { const c = t.casts[+b.dataset.ref]; if((c.imgs || []).length) openRef(cid(c), 0); else pickImages(c); });
@@ -1350,6 +1501,12 @@ function render0(){
   $('#addbar').innerHTML = '<b style="color:var(--dim)">Add cast:</b>' + t.roster.map(id=>`<button class="btn addq" data-aq="${id}" title="Add ${SCHALE[id].name}'s EX at the first moment the team can pay for it"><img src="https://schaledb.com/images/student/icon/${id}.webp" onerror="this.style.visibility='hidden'" draggable="false">${sname(id)} <small>${baseCost(t, id)}</small></button>`).join('')
     + `<label title="When ticked, each new cast is tied to the cast above it (the &#9193; button): it goes off as soon as the team has the cost, instead of waiting for you to set a time. Use it for back-to-back EX skills."><input type="checkbox" id="chainnew" ${state.chainNew?'checked':''}> Chain: cast as soon as affordable &#9193;</label>`;
   $('#chainnew').onchange = e=>{ state.chainNew = e.target.checked; save(); };
+  // Cards in hand: a row under every cast shows the three cards after it and the ones waiting. The tick hides those rows and the opening hand beside it (a choice of this browser, like the Columns menu).
+  { const on = cardsOn(), red = t.roster.filter(id => REDRAWERS.has(id));
+    $('#cardsbar').innerHTML = `<label title="Show the EX cards in your hand under every cast, so you can see what comes next while you build a rotation. Untick it to hide them while you play one."><input type="checkbox" id="cardson" ${on ? 'checked' : ''}> Show cards in hand under each cast</label>`
+      + (on ? (cardsData ? `<small style="color:var(--dim)">Opening hand</small>${cardsHtml(cardsData.start, null)}` : `<small style="color:var(--dim)">Set the five starting skills in the Team tab to see them.</small>`) : '')
+      + (on && red.length ? `<small class="warn" title="Their EX can redraw the card straight back into the same slot, depending on a gauge or stance the tool does not follow, and it has not been checked in a recording yet. A cast by one of them is marked, and the cards after it may be wrong.">Cards may be wrong after: ${red.map(sname).join(', ')}</small>` : '');
+    $('#cardson').onchange = e => { localStorage.setItem(CARDSKEY, e.target.checked ? 'on' : 'off'); render(); }; }
   document.querySelectorAll('[data-aq]').forEach(b=>b.onclick=()=>addCast(+b.dataset.aq));
   fitRot();
   const ch2 = (sel,fn)=>document.querySelectorAll(sel).forEach(e=>e.onchange=()=>{fn(e);save();render();});

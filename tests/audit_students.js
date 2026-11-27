@@ -16,6 +16,13 @@ const have = Object.keys(D);
 want.filter(k => !D[k]).forEach(k => F(k, 'released with an EX skill but missing from data.js'));
 have.filter(k => !src[k]).forEach(k => F(k, 'in data.js but not in the source'));
 out.info.push(`students in source with EX: ${want.length}, in data.js: ${have.length}`);
+// A2. EX cards in hand: a student whose skill text redraws the EX card must be known to the card strips (COPYERS = Rio, REDRAWERS = the ones not modelled), or the strips go wrong without a mark
+{ const redrawsAny = o => o && typeof o === 'object' ? Object.values(o).some(redrawsAny) : typeof o === 'string' && /redraw/i.test(o);   // every string in the skills, the alternate EX skills (Skills.Ex.ExtraSkills: Mika (Swimsuit), Aris (Armed)) included
+  const redraw = want.filter(k => redrawsAny(src[k].Skills)).map(Number);
+  const known = new Set([...E.COPYERS, ...Object.keys(E.INPLACE).map(Number), ...E.REDRAWERS]);
+  redraw.filter(k => !known.has(k)).forEach(k => F(k, 'its skill text redraws the EX card but the card strips do not know it (add it to INPLACE if it was recorded, else to REDRAWERS, in index.html)'));
+  [...known].filter(k => !redraw.includes(k)).forEach(k => W(k, 'listed in COPYERS / INPLACE / REDRAWERS but no skill text mentions redrawing'));
+  out.info.push(`EX card strips: ${E.COPYERS.size} copy student (Rio), ${Object.keys(E.INPLACE).length} redraw students checked in recordings (Neru School, Aris Armed, Hina Dress), ${E.REDRAWERS.size} not checked yet and marked with a warning`); }
 
 // B. per-student sanity
 const TARGETS = new Set(['Self', 'AllyMain', 'Ally', 'AllySupport', 'Enemy', 'AllyAll', '', undefined]);

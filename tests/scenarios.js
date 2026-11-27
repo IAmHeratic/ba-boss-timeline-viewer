@@ -323,5 +323,132 @@ eq('no student offers an EX form identical to the normal one (no cost of its own
     eq('Serina can heal a relic, Aru cannot', [E.healsRelic(id('Serina')), E.healsRelic(id('Aru'))], [true, false]); }
   eq('other things are unaffected', E.entLife({ent: 'Erosion Tower', t: 200, dur: 30}), 30); }
 
+// EX cards in hand: replays the presses of the Hod Yellow Torment recording (Documents/Blue Archive PC/Video References, 2026-11-26): 29 presses and the card each one drew, read from the video.
+// [who, copy?, target, slot refilled, card drawn]. A copy of Mika is told apart from the real card by the Note "COPY", like in the player's own rotations.
+{ const names = ['Seia', 'Mika', 'Kotama (Camp)', 'Aru (Dress)', 'Rio', 'Kisaki'];
+  t = team(names); t.startOrder = ['Seia', 'Rio', 'Kotama (Camp)', 'Aru (Dress)', 'Mika'].map(id);
+  const P = [['Seia', 0, 0, 1, 'Aru (Dress)'], ['Rio', 0, 'Mika', 2, 'copy:Mika'], ['Kotama (Camp)', 0, 0, 3, 'Mika'], ['Mika', 1, 0, 2, 'Kisaki'], ['Aru (Dress)', 0, 0, 1, 'Seia'],
+    ['Seia', 0, 0, 1, 'Kotama (Camp)'], ['Kotama (Camp)', 0, 0, 1, 'Rio'], ['Mika', 0, 0, 3, 'Aru (Dress)'], ['Aru (Dress)', 0, 0, 3, 'Seia'], ['Seia', 0, 0, 3, 'Kotama (Camp)'],
+    ['Rio', 0, 'Mika', 1, 'copy:Mika'], ['Mika', 1, 0, 1, 'Mika'], ['Mika', 0, 0, 1, 'Aru (Dress)'], ['Aru (Dress)', 0, 0, 1, 'Seia'], ['Seia', 0, 0, 1, 'Rio'],
+    ['Rio', 0, 'Mika', 1, 'copy:Mika'], ['Kotama (Camp)', 0, 0, 3, 'Mika'], ['Mika', 0, 0, 3, 'Aru (Dress)'], ['Kisaki', 0, 0, 2, 'Seia'], ['Mika', 1, 0, 1, 'Kotama (Camp)'],
+    ['Seia', 0, 0, 2, 'Mika'], ['Mika', 0, 0, 2, 'Kisaki'], ['Aru (Dress)', 0, 0, 3, 'Rio'], ['Rio', 0, 'Mika', 3, 'copy:Mika'], ['Kisaki', 0, 0, 2, 'Seia'],
+    ['Seia', 0, 0, 2, 'Mika'], ['Kotama (Camp)', 0, 0, 1, 'Aru (Dress)'], ['Mika', 1, 0, 3, 'Kisaki'], ['Mika', 0, 0, 2, 'Seia']];
+  P.forEach(([who, copy, target], n) => { const c = cast(t, who, 230 - n * 5); if (target) c.target = id(target); if (copy) c.tag = 'COPY'; });
+  const cs = E.cardStrips(t), what = s => s.copy > 0 ? 'copy:' + D[s.copy].name : D[s.id].name;
+  const got = t.casts.map(c => { const r = cs.casts.get(c); return r.slot >= 0 ? [r.slot + 1, what(r.hand[r.slot])] : [r.mode]; });
+  eq('Hod Yellow video: all 29 presses refill the slot, and with the card, that the recording shows', got, P.map(p => [p[3], p[4]]));
+  eq('and none of them was a card that is not in the hand', t.casts.every(c => cs.casts.get(c).mode !== 'missing'), true);
+  { const tagged = t.casts.filter(c => c.tag === 'COPY'); tagged.forEach(c => { c.copy = true; delete c.tag; });   // the same rotation with the Student box choice instead of the Note
+    const cs3 = E.cardStrips(t), got3 = t.casts.map(c => { const r = cs3.casts.get(c); return r.slot >= 0 ? [r.slot + 1, what(r.hand[r.slot])] : [r.mode]; });
+    eq('Hod Yellow video again with "(Copy)" in the Student box instead of the Note: the same 29 presses', [tagged.length, got3], [4, P.map(p => [p[3], p[4]])]);
+    tagged.forEach(c => { delete c.copy; c.tag = 'COPY'; }); }
+  eq('the opening hand is the first three starting skills; the queue is the 4th, the 5th, then the student not in the five', [cs.start.hand.map(s => D[s.id].name), cs.start.queue.map(i => D[i].name)], [['Seia', 'Rio', 'Kotama (Camp)'], ['Aru (Dress)', 'Mika', 'Kisaki']]);
+  eq('a hand always has 3 slots and the queue holds the other cards (one is Rio\'s copy at times)', t.casts.every(c => { const r = cs.casts.get(c); return r.hand.length === 3 && r.queue.length === 3; }), true);
+  // the same casts with no Note: a copy is the card in hand only when the real one is not
+  t.casts.forEach(c => delete c.tag); const cs2 = E.cardStrips(t);
+  eq('without the COPY note: the real Mika is in hand at press 4, so that press counts as the real card (the note is what says it was the copy)', cs2.casts.get(t.casts[3]).mode, 'real');
+  { const t3 = team(names); t3.startOrder = ['Rio', 'Seia', 'Kotama (Camp)', 'Aru (Dress)', 'Mika'].map(id); const r1 = cast(t3, 'Rio', 200); r1.target = id('Mika'); const m1 = cast(t3, 'Mika', 190);
+    const o = E.cardStrips(t3).casts.get(m1); eq('a plain Mika cast while only Rio\'s copy of her is in hand is the real card, which is not there: flagged, with the hint to pick "(Copy)"', [o.mode, o.want, o.copyInHand, E.cardsNote(Object.assign({who: id('Mika')}, o))[1].includes('Mika (Copy)')], ['missing', 'real', true, true]);
+    m1.copy = true; const o2 = E.cardStrips(t3).casts.get(m1); eq('the same cast as "Mika (Copy)" uses the copy: Rio goes to the back after it', [o2.mode, o2.hand.map(s => D[s.id].name), o2.queue.map(i => D[i].name)], ['copy', ['Aru (Dress)', 'Seia', 'Kotama (Camp)'], ['Mika', 'Kisaki', 'Rio']]); }
+  // not set / partly set starting skills
+  t.startOrder = ['Seia', 'Rio', 'Kotama (Camp)', 'Aru (Dress)'].map(id); eq('four of the five starting skills set: nothing to show', E.cardStrips(t), null);
+  delete t.startOrder; eq('no starting skills set: nothing to show', E.cardStrips(t), null);
+  // a cast of a card that is not in hand: flagged, the hand stays, the card goes to the back of the queue
+  t.startOrder = ['Seia', 'Rio', 'Kotama (Camp)', 'Aru (Dress)', 'Mika'].map(id); t.casts.length = 0; cast(t, 'Kisaki', 200);
+  { const r = E.cardStrips(t).casts.get(t.casts[0]); eq('Kisaki is still in the queue: flagged, hand unchanged, Kisaki goes to the back', [r.mode, r.hand.map(s => D[s.id].name), r.queue.map(i => D[i].name)], ['missing', ['Seia', 'Rio', 'Kotama (Camp)'], ['Aru (Dress)', 'Mika', 'Kisaki']]); }
+  // a roster of four: the 4th card is in the queue, a hand of three and nothing else waiting
+  t = team(['Seia', 'Mika', 'Kotama (Camp)', 'Aru (Dress)']); t.startOrder = ['Seia', 'Mika', 'Kotama (Camp)', 'Aru (Dress)'].map(id); cast(t, 'Seia', 200);
+  { const r = E.cardStrips(t).casts.get(t.casts[0]); eq('a team of four: Seia goes behind Aru and Aru takes her slot', [r.hand.map(s => D[s.id].name), r.queue.map(i => D[i].name)], [['Aru (Dress)', 'Mika', 'Kotama (Camp)'], ['Seia']]); }
+  // the strip HTML: 3 cards, a divider, the queue; the pressed slot is outlined; a copy glows
+  { t = team(names); t.startOrder = ['Seia', 'Rio', 'Kotama (Camp)', 'Aru (Dress)', 'Mika'].map(id); const c = cast(t, 'Rio', 200); c.target = id('Mika'); const r = E.cardStrips(t).casts.get(c), h = E.cardsHtml(r, r);
+    eq('the strip shows 3 hand cards and 3 queue cards, the new copy outlined and glowing', [(h.match(/class="hc /g) || []).length, /hc new cp/.test(h)], [6, true]); } }
+
+// EX cards that come straight back into the same slot ("immediately redraws the EX Skill"), from three more recordings (2026-11-26). Same layout as the Hod replay above:
+// [who, {copy, target, form}, slot refilled, card there afterwards]; 'again' marks a card redrawn at once.
+{ const replay = (names, start, presses) => {
+    const tm = team(names); tm.startOrder = start.map(id);
+    presses.forEach(([who, o], n) => { const c = cast(tm, who, 230 - n * 5); if (o.target) c.target = id(o.target); if (o.copy) c.tag = 'COPY'; if (o.form !== undefined) c.form = o.form; });
+    const cs = E.cardStrips(tm), what = s => s.copy > 0 ? 'copy:' + D[s.copy].name : D[s.id].name;
+    return { got: tm.casts.map(c => { const r = cs.casts.get(c); return r.slot >= 0 ? [r.slot + 1, what(r.hand[r.slot])] : [r.mode]; }), again: tm.casts.map(c => !!(cs.casts.get(c).hand[cs.casts.get(c).slot] || {}).again), cs, tm }; };
+  // Binah Lunatic Yellow Field, second team (Neru (School)): her first EX is redrawn at once as the follow-up (cost 4); the follow-up and Rio's copy of it go to the back like any card
+  const N = 'Neru (School)', K = 'Kanna (Swimsuit)', S = 'Seia (Swimsuit)', A = 'Aru (Dress)', H = 'Himari (Armed)';
+  const bn = [[H, {}, 1, A], ['Rio', { target: N }, 2, 'copy:' + N], [A, {}, 1, S], [N, {}, 3, N], [N, { form: 0 }, 3, K], [K, {}, 3, H], [S, {}, 1, A], [N, { copy: 1, form: 0 }, 2, N], [N, { form: 0 }, 2, K],
+    [A, {}, 1, S], [H, {}, 3, 'Rio'], ['Rio', { target: N }, 3, 'copy:' + N], [N, { copy: 1, form: 0 }, 3, N], [K, {}, 2, A], [S, {}, 1, H], [N, { form: 0 }, 3, 'Rio'], ['Rio', { target: N }, 3, 'copy:' + N], [N, { copy: 1, form: 0 }, 3, K]];
+  { const r = replay([K, N, S, A, H, 'Rio'], [H, 'Rio', N, A, S], bn);
+    eq('Binah (Neru): all 18 presses refill the slot, with the card, that the recording shows', r.got, bn.map(p => [p[2], p[3]]));
+    eq('Binah (Neru): only her first EX is redrawn at once (press 4); her follow-ups and the copies are not', r.again.map((a, i) => a ? i + 1 : null).filter(Boolean), [4]); }
+  // Shiro Kuro Torment (mock), Aris (Armed): Sword of Light (form 1) stays in her slot; Awakening: Supernova (form 0) goes to the back and the next card drops in
+  const AR = 'Aris (Armed)', HF = 'Hoshino (Armed · Fortification)';
+  const sk = [['Yuuka (Track)', {}, 2, 'Nagisa (Swimsuit)'], [AR, { form: 1 }, 1, AR], ['Nagisa (Swimsuit)', {}, 2, 'Kisaki'], ['Kei', {}, 3, HF], ['Kisaki', {}, 2, 'Yuuka (Track)'], [HF, {}, 3, 'Nagisa (Swimsuit)'], [AR, { form: 0 }, 1, 'Kei']];
+  { const r = replay([AR, 'Yuuka (Track)', 'Kei', 'Nagisa (Swimsuit)', 'Kisaki', HF], [AR, 'Yuuka (Track)', 'Kei', 'Nagisa (Swimsuit)', 'Kisaki'], sk);
+    eq('Shiro Kuro (Aris Armed): all 7 presses refill the slot, with the card, that the recording shows', r.got, sk.map(p => [p[2], p[3]]));
+    eq('Shiro Kuro (Aris Armed): only Sword of Light is redrawn at once', r.again.map((a, i) => a ? i + 1 : null).filter(Boolean), [2]);
+    eq('Aris with no form picked is Supernova (form 0): not redrawn', replay([AR, 'Kei', 'Kisaki', 'Aru', 'Mika', 'Seia'], [AR, 'Kei', 'Kisaki', 'Aru', 'Mika'], [[AR, {}, 1, 'Aru']]).again, [false]); }
+  // Gregorius Torment, Hina (Dress): the stance cast and the First and Second Note come straight back (the card shows x3, x2, x1 notes left), The Final Song goes to the back
+  { const HD = 'Hina (Dress)', r = replay([HD, 'Fuuka (New Year)', 'Mine', 'Kisaki', 'Hoshino (Swimsuit)', HF], [HD, 'Fuuka (New Year)', 'Mine', 'Kisaki', 'Hoshino (Swimsuit)'], [[HD, {}, 1, HD], [HD, {}, 1, HD], [HD, {}, 1, HD], [HD, {}, 1, 'Kisaki']]);
+    eq('Gregorius (Hina Dress): stance, First Note and Second Note stay in slot 1, The Final Song hands slot 1 to the next card', r.got, [[1, HD], [1, HD], [1, HD], [1, 'Kisaki']]);
+    eq('Hina: a fifth cast straight after The Final Song is flagged (she is at the back of the queue, not in hand)', replay([HD, 'Fuuka (New Year)', 'Mine', 'Kisaki', 'Hoshino (Swimsuit)', HF], [HD, 'Fuuka (New Year)', 'Mine', 'Kisaki', 'Hoshino (Swimsuit)'], [[HD, {}], [HD, {}], [HD, {}], [HD, {}], [HD, {}]]).got[4], ['missing']);
+    eq('Hina: the queue does not move while the notes are played, and she is at the back after The Final Song', [r.cs.casts.get(r.tm.casts[2]).queue.map(i => D[i].name), r.cs.casts.get(r.tm.casts[3]).queue.map(i => D[i].name)], [['Kisaki', 'Hoshino (Swimsuit)', HF], ['Hoshino (Swimsuit)', HF, HD]]); }
+  // students whose redraw has not been recorded are marked, the recorded ones are not
+  { const tt = team(['Toki', N, 'Mika', 'Aru', 'Seia', 'Kisaki']); tt.startOrder = ['Toki', N, 'Mika', 'Aru', 'Seia'].map(id); const c1 = cast(tt, 'Toki', 200), c2 = cast(tt, N, 190), cs = E.cardStrips(tt);
+    eq('a Toki cast is marked as an unchecked redraw, a Neru (School) cast is not', [cs.casts.get(c1).redraws, cs.casts.get(c2).redraws], [true, false]); }
+  // the line under a strip: what is special about the cast (nothing for an ordinary press)
+  { const names2 = ['Seia', 'Mika', 'Kotama (Camp)', 'Aru (Dress)', 'Rio', 'Kisaki'], t2 = team(names2); t2.startOrder = ['Seia', 'Rio', 'Kotama (Camp)', 'Aru (Dress)', 'Mika'].map(id);
+    const a = cast(t2, 'Seia', 200), b = cast(t2, 'Rio', 190); b.target = id('Mika'); const c3 = cast(t2, 'Kotama (Camp)', 180), d = cast(t2, 'Mika', 170); d.tag = 'COPY'; const e2 = cast(t2, 'Seia', 160), cs = E.cardStrips(t2), n = c => E.cardsNote(cs.casts.get(c));
+    eq('an ordinary press has no note', n(a), null);
+    eq('Rio: her card turns into a copy of the target, nothing is drawn', n(b), [false, "Rio's card turns into a copy of Mika's EX; nothing is drawn."]);
+    eq('using the copy: Rio goes to the back', n(d), [false, "The copy is used up: Rio's card goes to the back of the queue."]);
+    eq('a card that is not in hand is a warning', n(e2)[0], true);
+    const rows = E.cardsRowHtml(cs.casts.get(b), 7, false, 1); eq('the row under a cast spans the table and holds the strip and the note', [/colspan="7"/.test(rows), /data-cr="1"/.test(rows), /class="cs"/.test(rows), /turns into a copy/.test(rows)], [true, true, true, true]); }
+  // Neru (School)'s mark: her normal EX marks for 70 s from the cast; the follow-up (form 0) does not; near the end of the fight the 70 s are cut short
+  { const tn = team(['Neru (School)', 'Seia', 'Mika', 'Aru', 'Kisaki', 'Rio']), n1 = cast(tn, 'Neru (School)', 220), n2 = cast(tn, 'Neru (School)', 200), n3 = cast(tn, 'Neru (School)', 40), s1 = cast(tn, 'Seia', 210); n2.form = 0;
+    const m1 = E.markOf(tn, n1), m3 = E.markOf(tn, n3);
+    eq('a normal Neru EX marks for 70 s, starting 33 frames (1.1 s) into the cast, and the card is the normal EX again 71.1 s after the cast', [m1.from, m1.to, m1.secs, m1.ended, m1.back], [218.9, 148.9, 70, true, 148.9]);
+    eq('her follow-up (form 0) does not start a mark, and nobody else has one', [E.markOf(tn, n2), E.markOf(tn, s1)], [null, null]);
+    eq('a mark near the end of the fight runs to the end instead of 70 s', [m3.from, m3.to, m3.ended], [38.9, 0, false]);
+    // with no form picked: the first EX is the normal one, every cast inside its 70 s is the follow-up (cost 4), the first one after the mark is the normal EX again
+    const t4 = team(['Neru (School)', 'Seia', 'Mika', 'Aru', 'Kisaki', 'Rio']), k = [220, 200, 190, 140].map(x => cast(t4, 'Neru (School)', x));
+    eq('Neru with no form picked: normal EX, follow-up, follow-up, then (mark over) the normal EX again', k.map(c => E.formIdx(t4, c)), [null, 0, 0, null]);
+    eq('and what each costs: 1, 4, 4, 1', k.map(c => E.spendOf(t4, c)), [1, 4, 4, 1]);
+    k[1].form = null; eq('a normal EX picked by hand starts a mark of its own: the cast after it is the follow-up', [E.formIdx(t4, k[2]), E.markOf(t4, k[1]).to], [0, 128.9]);
+    k[1].form = 0; k[2].form = null; eq('a form picked by hand wins over the window', [E.formIdx(t4, k[1]), E.formIdx(t4, k[2])], [0, null]); }
+  // popups: a skill text with double quotes (Neru's "This'll Hurt, Y'know") cut a popup short when it was put into the data-tip attribute unescaped; every data-tip built from a value must escape quotes
+  { const html = require('fs').readFileSync(require('path').join(__dirname, '..', 'index.html'), 'utf8'), bare = [...html.matchAll(/data-tip="\$\{([^}]*)\}/g)].map(m => m[1]).filter(x => !/replace\(\/"\/g|esc\(/.test(x));
+    eq('every data-tip in index.html escapes double quotes', bare, []); }
+  eq('every student whose skill text redraws the EX card is either recorded or marked', [...E.COPYERS].length + Object.keys(E.INPLACE).length + [...E.REDRAWERS].length, 10); }
+
+// Rio's copy as a choice in the Student box ("Mika (Copy)", c.copy = true): cost, form, busy rule, options
+{ const names = ['Seia', 'Mika', 'Kotama (Camp)', 'Aru (Dress)', 'Rio', 'Kisaki'], tc = team(names), m = cast(tc, 'Mika', 200), mc = cast(tc, 'Mika', 190), r = cast(tc, 'Rio', 195); r.target = id('Mika'); mc.copy = true;
+  eq('isCopy: the flag, and the old Note "copy" until the flag is set', [E.isCopy(m), E.isCopy(mc), E.isCopy({tag: 'COPY'}), E.isCopy({tag: 'a copy', copy: false}), E.isCopy({tag: 'nothing'})], [false, true, true, false, false]);
+  eq('a copy of Mika (base 6) costs 5, the real card 6', [E.spendOf(tc, m), E.spendOf(tc, mc)], [6, 5]);
+  mc.cost = 2; eq('a price typed by hand is still the final price', E.spendOf(tc, mc), 2); delete mc.cost;
+  { const tr = team(['Seia', 'Mika', 'Kotama (Camp)', 'Aru (Dress)', 'Rio', 'Kisaki']), ts = cast(tr, 'Seia', 220); ts.target = id('Mika'); const cm = cast(tr, 'Mika', 210); cm.copy = true;
+    eq('Seia halves the price of the next EX: a copy of Mika costs 5 then 3 (the reduction works on the copy\'s base, like the 5 -> 3 in the Hod recording)', E.spendOf(tr, cm), 3); }
+  { const tz = team(['Seia', 'Neru (School)', 'Maki', 'Kokona', 'Himari (Armed)', 'Rio']), nz = cast(tz, 'Neru (School)', 217.23), sz = cast(tz, 'Seia', 215.2); sz.target = id('Neru (School)'); const rz = cast(tz, 'Rio', 204.6); rz.target = id('Neru (School)'); const cz = cast(tz, 'Neru (School)', 190); cz.copy = true;
+    eq('Rio\'s copy of Neru\'s follow-up under Seia\'s halving costs 2 (follow-up 4, copy 4 - 1 = 3, the cut then takes off 1): the blue 2 on the card in the Maki recording, not 1', [E.ownSpend(tz, cz, tz.casts, true), E.ownSpend(tz, cz, tz.casts), E.spendOf(tz, cz)], [4, 3, 2]); }
+  { const tn = team(['Neru (School)', 'Seia', 'Mika', 'Aru', 'Kisaki', 'Rio']); tn.casts.length = 0; const rio1 = cast(tn, 'Rio', 230); rio1.target = id('Neru (School)'); const n1 = cast(tn, 'Neru (School)', 225), cn = cast(tn, 'Neru (School)', 220), rio2 = cast(tn, 'Rio', 100); rio2.target = id('Neru (School)'); const cn2 = cast(tn, 'Neru (School)', 90); cn.copy = true; cn2.copy = true;
+    eq('a copy used while Neru is marked is the follow-up (cost 4 - 1 = 3) and starts no mark', [E.formIdx(tn, cn), E.spendOf(tn, cn), E.markOf(tn, cn)], [0, 3, null]);
+    eq('a copy used after her mark has ended is her normal EX again (cost 1 - 1 = 0)', [E.formIdx(tn, cn2), E.spendOf(tn, cn2)], [null, 0]);
+    const tn2 = team(['Neru (School)', 'Seia', 'Mika', 'Aru', 'Kisaki', 'Rio']), a1 = cast(tn2, 'Neru (School)', 225), rio3 = cast(tn2, 'Rio', 200); rio3.target = id('Neru (School)'); const c3 = cast(tn2, 'Neru (School)', 140); c3.copy = true;
+    const c4 = cast(tn2, 'Neru (School)', 190); c4.copy = true;
+    eq('(marked at 225 until 153.9) Rio copied her card at 200: used at 190 it is the follow-up (cost 3), used at 140 (the mark ended) the copy has changed back to her normal EX (cost 0)', [E.formIdx(tn2, c4), E.spendOf(tn2, c4), E.formIdx(tn2, c3), E.spendOf(tn2, c3), E.markOf(tn2, c3)], [0, 3, null, 0, null]); }
+  { const tb = team(['Neru (School)', 'Seia', 'Mika', 'Aru', 'Kisaki', 'Rio']), n = cast(tb, 'Neru (School)', 200), cp = cast(tb, 'Neru (School)', 198); cp.copy = true, plain = cast(tb, 'Neru (School)', 196);
+    const dur = E.animDur(tb, n); eq('the copy plays Neru\'s animation: while her own EX is playing the copy cannot go off (busy), and neither can a second cast of hers', [E.ownBusy(tb, cp, cp.t) !== null, E.ownBusy(tb, plain, plain.t) !== null, dur > 2], [true, true, true]);
+    tb.casts.splice(tb.casts.indexOf(plain), 1); cp.t = 200 - dur - 0.5; eq('after her animation it can', E.ownBusy(tb, cp, cp.t), null); }
+  { const to = team(['Seia', 'Mika', 'Kotama (Camp)', 'Aru (Dress)', 'Rio', 'Kisaki']), c0 = cast(to, 'Mika', 200), copies = c => E.whoOptions(to, c).filter(x => x.copy).map(x => x.label);
+    eq('Student box with Rio in the team but no copy made yet: just the six students', [E.whoOptions(to, c0).filter(x => !x.copy).length, copies(c0)], [6, []]);
+    const rio = cast(to, 'Rio', 210); rio.target = id('Mika');
+    eq('after Rio copied Mika the only copy on offer is Mika\'s (not one of every student)', copies(c0), ['Mika (Copy)']);
+    eq('the cast of Rio itself (before the copy exists) and a cast before Rio\'s offer none', [copies(rio), copies(cast(to, 'Seia', 220))], [[], []]);
+    const used = cast(to, 'Mika', 205); used.copy = true;
+    eq('once the copy of Mika has been used, no copy is on offer for the rows after it', copies(c0), []);
+    used.copy = false; rio.target = id('Kisaki'); eq('Rio cannot copy a Special (not targetable): none on offer', copies(c0), []);
+    rio.target = id('Aru (Dress)'); eq('she can copy any Striker', copies(c0), ['D. Aru (Copy)']);
+    eq('copyable: Strikers yes, Specials (Rio, Kisaki, Himari (Armed) on her wheelchair) no', [E.copyable(id('Seia')), E.copyable(id('Rio')), E.copyable(id('Kisaki')), E.copyable(id('Himari (Armed)'))], [true, false, false, false]);
+    rio.target = id('Mika'); eq('exactly one option is selected: Mika, and after "Mika (Copy)" the copy', [E.whoOptions(to, c0).filter(x => x.selected).map(x => x.value), (() => { E.opSetWho(to, to.casts.indexOf(c0), 'copy:' + id('Mika')); return [E.whoOptions(to, c0).filter(x => x.selected).map(x => x.value), c0.copy, c0.who === id('Mika')]; })()], [[String(id('Mika'))], [['copy:' + id('Mika')], true, true]]);
+    rio.target = id('Aru (Dress)'); eq('a copy already chosen for the row stays in its list even when Rio holds another one now', copies(c0).sort(), ['D. Aru (Copy)', 'Mika (Copy)']);
+    E.opSetWho(to, to.casts.indexOf(c0), id('Seia')); eq('back to a plain student: the copy flag is off (false when it was on, so a leftover Note cannot bring it back)', [c0.copy, E.isCopy(c0), c0.who === id('Seia')], [false, false, true]);
+    const tx = team(['Seia', 'Mika', 'Kotama (Camp)', 'Aru (Dress)', 'Kisaki', 'Hoshino (Swimsuit)']); eq('no Rio in the team: no (Copy) options', E.whoOptions(tx, { who: id('Mika') }).some(x => x.copy), false); }
+}
 
 console.log(bad ? `\n${bad} scenario(s) failed` : '\nALL SCENARIOS PASS'); process.exit(bad ? 1 : 0);
