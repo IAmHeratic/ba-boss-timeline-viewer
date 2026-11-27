@@ -399,7 +399,12 @@ eq('no student offers an EX form identical to the normal one (no cost of its own
     eq('Rio: her card turns into a copy of the target, nothing is drawn', n(b), [false, "Rio's card turns into a copy of Mika's EX; nothing is drawn."]);
     eq('using the copy: Rio goes to the back', n(d), [false, "The copy is used up: Rio's card goes to the back of the queue."]);
     eq('a card that is not in hand is a warning', n(e2)[0], true);
-    const rows = E.cardsRowHtml(cs.casts.get(b), 7, false, 1); eq('the row under a cast spans the table and holds the strip and the note', [/colspan="7"/.test(rows), /data-cr="1"/.test(rows), /class="cs"/.test(rows), /turns into a copy/.test(rows)], [true, true, true, true]); }
+    const rows = E.cardsRowHtml(cs.casts.get(b), 7, false, 1); eq('the row under a cast spans the table and holds the strip and the note', [/colspan="7"/.test(rows), /data-cr="1"/.test(rows), /class="cs"/.test(rows), /turns into a copy/.test(rows)], [true, true, true, true]);
+    // "only under the latest cast": the last row of the table (the latest in the battle), whatever order the casts were added in
+    const g = cast(t2, 'Mika', 300), all = E.cardsShown(t2, false), last = E.cardsShown(t2, true);
+    eq('cards under every cast: all six casts get a row', [all.size, [a, b, c3, d, e2, g].every(x => all.has(x))], [6, true]);
+    eq('only under the latest cast: just the cast with the least time left, even though it was not the last one added', [last.size, last.has(e2), last.has(g)], [1, true, false]);
+    eq('no casts, no rows', E.cardsShown(team(names2), true).size, 0); }
   // Neru (School)'s mark: her normal EX marks for 70 s from the cast; the follow-up (form 0) does not; near the end of the fight the 70 s are cut short
   { const tn = team(['Neru (School)', 'Seia', 'Mika', 'Aru', 'Kisaki', 'Rio']), n1 = cast(tn, 'Neru (School)', 220), n2 = cast(tn, 'Neru (School)', 200), n3 = cast(tn, 'Neru (School)', 40), s1 = cast(tn, 'Seia', 210); n2.form = 0;
     const m1 = E.markOf(tn, n1), m3 = E.markOf(tn, n3);
@@ -431,7 +436,16 @@ eq('no student offers an EX form identical to the normal one (no cost of its own
     eq('a copy used after her mark has ended is her normal EX again (cost 1 - 1 = 0)', [E.formIdx(tn, cn2), E.spendOf(tn, cn2)], [null, 0]);
     const tn2 = team(['Neru (School)', 'Seia', 'Mika', 'Aru', 'Kisaki', 'Rio']), a1 = cast(tn2, 'Neru (School)', 225), rio3 = cast(tn2, 'Rio', 200); rio3.target = id('Neru (School)'); const c3 = cast(tn2, 'Neru (School)', 140); c3.copy = true;
     const c4 = cast(tn2, 'Neru (School)', 190); c4.copy = true;
-    eq('(marked at 225 until 153.9) Rio copied her card at 200: used at 190 it is the follow-up (cost 3), used at 140 (the mark ended) the copy has changed back to her normal EX (cost 0)', [E.formIdx(tn2, c4), E.spendOf(tn2, c4), E.formIdx(tn2, c3), E.spendOf(tn2, c3), E.markOf(tn2, c3)], [0, 3, null, 0, null]); }
+    eq('(marked at 225 until 153.9) Rio copied her card at 200: used at 190 it is the follow-up (cost 3), used at 140 (the mark ended) the copy has changed back to her normal EX (cost 0)', [E.formIdx(tn2, c4), E.spendOf(tn2, c4), E.formIdx(tn2, c3), E.spendOf(tn2, c3), E.markOf(tn2, c3) && [E.markOf(tn2, c3).from, E.markOf(tn2, c3).to]], [0, 3, null, 0, [138.9, 68.9]]);
+    eq('... and that copy, being her normal EX, starts a new mark (the one on the timeline), so her own cast right after it is the follow-up with no form picked', (() => { const n2 = cast(tn2, 'Neru (School)', 130); return [E.formIdx(tn2, n2), E.spendOf(tn2, n2)]; })(), [0, 4]); }
+  // The Wakamo Phase 2 rotation as it was played (saved file, 2026-11-27): Neru's own casts and Rio's copies alternate; the cast after the last copy was picked as the follow-up by hand, and the copy before it is what starts that mark
+  { const tw = team(['Seia', 'Neru (School)', 'Maki', 'Kokona', 'Himari (Armed)', 'Rio']), N = 'Neru (School)', nz = (tt, cp) => { const c = cast(tw, N, tt); if(cp) c.copy = true; return c; };
+    const first = nz(217.23), c1 = nz(196.15, 1), f1 = nz(184.54), c2 = nz(176.46, 1), f2 = nz(168.01), c3w = nz(154.68, 1), f3 = nz(147.04), c4w = nz(135.6, 1), f4 = nz(130.53);
+    eq('the first cast is her normal EX and starts the mark (216.1 -> 146.1); everything up to 147.04 is inside it', [first, c1, f1, c2, f2, c3w, f3].map(c => E.formIdx(tw, c)), [null, 0, 0, 0, 0, 0, 0]);
+    eq('the copy at 135.6 comes after the mark ended: her normal EX again, so it starts a second mark (134.5 -> 64.5)', [E.formIdx(tw, c4w), E.markOf(tw, c4w).from, E.markOf(tw, c4w).to], [null, 134.5, 64.5]);
+    eq('so the next cast, at 130.53, is the follow-up without picking the form by hand', [E.formIdx(tw, f4), E.markOf(tw, f4)], [0, null]);
+    f4.form = 0; eq('picking it by hand changes nothing', E.formIdx(tw, f4), 0); }
+
   { const tb = team(['Neru (School)', 'Seia', 'Mika', 'Aru', 'Kisaki', 'Rio']), n = cast(tb, 'Neru (School)', 200), cp = cast(tb, 'Neru (School)', 198); cp.copy = true, plain = cast(tb, 'Neru (School)', 196);
     const dur = E.animDur(tb, n); eq('the copy plays Neru\'s animation: while her own EX is playing the copy cannot go off (busy), and neither can a second cast of hers', [E.ownBusy(tb, cp, cp.t) !== null, E.ownBusy(tb, plain, plain.t) !== null, dur > 2], [true, true, true]);
     tb.casts.splice(tb.casts.indexOf(plain), 1); cp.t = 200 - dur - 0.5; eq('after her animation it can', E.ownBusy(tb, cp, cp.t), null); }
