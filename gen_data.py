@@ -56,7 +56,10 @@ for i in WANT:
                 'desc': skill_text(pub['Desc'], x), 'params': pub.get('Parameters'), 'frames': pub.get('Duration', 60),
                 'effects': [{'type': e['Type'], 'stat': e.get('Stat'), 'ms': e.get('Duration'), 'apply': e.get('ApplyFrame', 0),
                              'target': (e['Target'][0] if isinstance(e.get('Target'), list) else e.get('Target')), 'values': (e['Value'][0] if e.get('Value') else None)}
-                            for e in pub['Effects'] if e['Type'] in ('Buff', 'Shield', 'Damage', 'Heal')]}
+                            for e in pub['Effects'] if e['Type'] in ('Buff', 'Shield', 'Damage', 'Heal')],
+                # Crowd control (Stunned / Fear / Provoke): the frame it lands on, the chance, and how many ms it lasts at each Basic Lv
+                'cc': [{'icon': e.get('Icon'), 'apply': e.get('ApplyFrame', 0), 'chance': (e.get('Chance') or 10000)/100, 'ms': e.get('Scale')}
+                       for e in pub['Effects'] if e['Type'] == 'CrowdControl' and e.get('Scale')]}
     # Alternate EX skills (a student whose EX changes after the first use, or by target): their own cost, animation and buffs. Cost[-1] is EX level 5.
     forms = []
     for xs in ex.get('ExtraSkills') or []:

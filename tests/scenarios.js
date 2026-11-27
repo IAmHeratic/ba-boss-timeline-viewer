@@ -97,6 +97,18 @@ t = team(['Ui', 'Mika', 'Aru']); { const u = cast(t, 'Ui', 170); u.target = id('
   E.dropCarry(old); eq('an old team with a carry: the carry becomes the target of the casts that needed one', [old.carry, old.casts[0].target, old.casts[1].target], [undefined, id('Mika'), undefined]); }
 
 
+// Cost Overload edge: a 6-cost Mika cast under Overload needs 1 cost held. Typing "1" lands within 0.012 of it (0.998 shows as 1), and that must still count as paid.
+{ const nag = 'Nagisa (Swimsuit)';
+  const mikaSees = deficit => {   // Mika's cast with her cost before it set to 1 - deficit (by moving the start cost), Nagisa's Overload on her
+    t = team([nag, 'Mika', 'Aru']); t.regen = 0.1; const n1 = cast(t, nag, 170); n1.target = id('Mika'); const m1 = cast(t, 'Mika', 160);
+    const ev = () => E.costModel(t, E.allResolved()).ev.find(e => e.i === t.casts.indexOf(m1));
+    t.startCost = 0; const base = ev().before; t.startCost = +(1 - deficit - base).toFixed(4); const e = ev();
+    return { before: +e.before.toFixed(3), spend: e.spend, ok: e.ok, overload: e.overload }; };
+  eq('Overload: exactly 1 held pays a 6-cost cast', mikaSees(0), { before: 1, spend: 6, ok: true, overload: true });
+  eq('Overload: 0.998 held (what typing 1 can land on) still pays it', mikaSees(0.002), { before: 0.998, spend: 6, ok: true, overload: true });
+  eq('Overload: 0.989 held still pays it (inside the 0.012 slack)', mikaSees(0.011), { before: 0.989, spend: 6, ok: true, overload: true });
+  eq('Overload: 0.97 held is really short and is flagged', mikaSees(0.03), { before: 0.97, spend: 6, ok: false, overload: false }); }
+
 // Buff wording: direction follows the skill text, and no raw stat name leaks into a label
 { const lab = (sid, which) => { const d = D[sid]; return (which === 'pub' ? d.public.effects.filter(e => e.type === 'Buff') : d.buffs).map(b => E.buffLabel(b.stat, b.target, b.values)); };
   eq('Kanna (Swimsuit): her passive reduces damage taken', lab(10096, 'pub').includes('Self DMG Taken Down'), true);
@@ -167,6 +179,31 @@ eq('no student offers an EX form identical to the normal one (no cost of its own
   eq('stance length and start match the EX\'s Shield effect in the data', [E.STANCE[k].ms, E.STANCE[k].apply], [shield.Duration, shield.ApplyFrame]);
   eq('stun durations match Iron Defense\'s text in the data (EX Lv 1-5)', E.STANCE[k].stun, iron.Parameters[1].slice(0, 5).map(x => parseFloat(x)));
   eq('and the stun is what Iron Defense does on exit', /exiting .* stance, inflicts <c:Stunned>/.test(iron.Desc), true); }
+
+// Skill activations placed by hand (asked for 2026-11-26, for Fubuki's "Every Last Round!", which fires once her ammo is 3 or less): the Basic Skill's stun, and the list the Team tab edits
+{ const fu = id('Fubuki'), sdb = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '..', 'research', 'students.json'), 'utf8'));
+  eq('Fubuki\'s Basic Skill has no "every N s": the rules cannot predict it, so it is added by hand', D[fu].public.interval, null);
+  eq('its stun lasts 1.9 s at Basic Lv 1-3, 2.1 s at 4-6, 2.3 s at 7-9 and 2.5 s at Lv 10, landing 77 frames after the skill starts, always', [1, 3, 4, 6, 7, 9, 10].map(l => E.basicCC(D[fu], l)[0].sec).concat(E.basicCC(D[fu], 10)[0].apply, E.basicCC(D[fu], 10)[0].chance, E.basicCC(D[fu], 10)[0].name), [1.9, 1.9, 2.1, 2.1, 2.3, 2.3, 2.5, 77, 100, 'Stun']);
+  eq('a chance to apply is kept: Karin 50% Stun 3.1 s, Kayoko 30% Fear 3.6 s', [E.basicCC(D[id('Karin')], 5)[0], E.basicCC(D[id('Kayoko')], 5)[0]].map(x => [x.name, x.chance, x.sec]), [['Stun', 50, 3.1], ['Fear', 30, 3.6]]);
+  eq('Konoka provokes rather than stuns', E.basicCC(D[id('Konoka')], 1)[0].name, 'Provoke');
+  const withCC = Object.values(D).filter(d => E.basicCC(d, 1).length).map(d => d.name).sort(), want = Object.values(sdb).filter(s => ((s.Skills || {}).Public || {}).Effects && s.Skills.Public.Effects.some(e => e.Type === 'CrowdControl')).map(s => D[s.Id].name).sort();
+  eq('exactly the students whose Basic Skill has crowd control in SchaleDB (' + want.length + ') get a stun / fear / provoke bar', withCC, want);
+  eq('every one of them reads its seconds per Basic Lv from the data', want.every(n => { const s = sdb[id(n)], e = s.Skills.Public.Effects.find(x => x.Type === 'CrowdControl'); return [1, 2, 5, 10].every(l => E.basicCC(D[id(n)], l)[0].sec === e.Scale[l - 1] / 1000); }), true);
+  eq('crowd-control kinds on a Basic Skill are all named (no raw icon names on the timeline)', [...new Set(Object.values(D).flatMap(d => E.basicCC(d, 1).map(x => x.name)))].every(n => Object.values(E.CCNAME).includes(n)), true);
+  eq('no Basic Skill has both a timed buff and crowd control (the timeline draws one effect bar per activation)', Object.values(D).filter(d => d.public && d.public.cc.length && d.public.effects.some(e => e.ms)).map(d => d.name), []);
+
+  t = team(['Fubuki', 'Mika', 'Aru']);
+  eq('nothing is added until you add it', E.actsOf(t, null), []);
+  const a1 = E.opAddAct(t, fu); eq('the first activation is 20 s into the fight', a1.t, 160);
+  eq('the next one 20 s after the last', E.opAddAct(t, fu).t, 140);
+  eq('a time you give is used as it is', E.opAddAct(t, id('Mika'), 100).t, 100);
+  eq('listed earliest first, each keeping its place in the saved list', E.actsOf(t, null).map(a => [a.who === fu ? 'Fubuki' : 'Mika', a.t, a.k]), [['Fubuki', 160, 0], ['Fubuki', 140, 1], ['Mika', 100, 2]]);
+  eq('one student at a time', E.actsOf(t, fu).map(a => a.t), [160, 140]);
+  eq('moving one clamps it to the fight (0:00 to the time limit) and keeps it to hundredths', [E.opMoveAct(t, 0, -5).t, E.opMoveAct(t, 0, 999).t, E.opMoveAct(t, 0, 123.456).t], [0, 180, 123.46]);
+  E.opRemoveAct(t, 1); eq('removing one leaves the others', E.actsOf(t, null).map(a => a.t), [123.46, 100]);
+  E.opRemoveAct(t, 9); eq('removing one that is not there does nothing', E.actsOf(t, null).length, 2);
+  t = team(['Fubuki', 'Aru']); E.setTotal(240); eq('the time limit is the fight\'s own (a 4:00 raid starts the first one at 3:40)', E.opAddAct(t, fu).t, 220); E.setTotal(180);
+  eq('adding for a student whose first activation is within 20 s of the end stops at 0:00', (() => { t = team(['Fubuki', 'Aru']); E.opAddAct(t, fu, 10); return E.opAddAct(t, fu).t; })(), 0); }
 
 // Things on the field (Hod, Yesod): placed by hand, aimed at from the Rotation table, with their cost effects
 { const near = (x, y) => Math.abs(x - y) < 1e-6, hod = E.BOSSES.find(b => b.path === 'hod'), yes = E.BOSSES.find(b => b.path === 'yesod');

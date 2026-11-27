@@ -161,6 +161,11 @@ body.rotfull #rotcard .rotbox{flex:1 1 auto;min-height:0;max-height:none !import
 .evline.groggy{border-color:#ff6b5e}.evline.skill{border-color:#b98cff;border-left-style:dashed}.evline.phase{border-color:#5dade2;border-left-style:dotted}.evline.note{border-color:#8fa0c0;border-left-style:dotted}
 .tbadge{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px 0 0;border-radius:6px;overflow:hidden;font-size:12.5px;font-weight:700;color:#fff;border:1px solid #0004}
 .stu .types{display:flex;gap:6px;margin:3px 0 2px}.stu .tbadge{height:20px;font-size:11px;padding-right:8px}.stu .tbadge i{font-size:9px;padding:0 6px}
+.dragline{position:absolute;border-left:1px dashed #ffffffc0;pointer-events:none;z-index:9}
+.dragdot{position:absolute;width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:50%;background:#fff;border:2px solid #0d1420;box-sizing:border-box;pointer-events:none;z-index:10}
+.dragtag{position:absolute;padding:2px 7px;border-radius:5px;background:#0b111b;border:1px solid #cfe3ff;color:#fff;font-size:12px;font-weight:700;white-space:nowrap;pointer-events:none;z-index:10}
+.dragtag.l{transform:translate(calc(-100% - 8px),-50%)}.dragtag.r{transform:translate(8px,-50%)}
+.actadd{margin:6px 0}.actrow{gap:8px;margin:4px 0}.actrow img{width:30px;height:30px;border-radius:8px;object-fit:cover;background:#0f1520;flex:none}.actrow span{color:var(--dim)}.actrow label{margin-left:auto}
 .stu .skbtn{margin-top:6px;padding:2px 12px;font-size:12px;border-radius:6px;background:#0f1520}.stu .skbtn:hover{border-color:var(--accent)}
 /* Skills window (Team tab): SchaleDB's wording, colours and icons. Centred, never taller than the screen (the box scrolls inside itself, the header stays). */
 #skillwin{position:fixed;inset:0;z-index:80;display:none;background:#000b;overflow:auto;padding:12px;align-items:center;justify-content:center}
@@ -320,6 +325,8 @@ header .btn,header select{padding:4px 12px}
     <div class="roster" id="rosterSpc"></div>
     <div class="rowhead"><b>Starting skills</b><small style="color:var(--dim)">the order of the first five EX skills, as set in the team selection menu</small></div>
     <div class="row" id="startorder" style="gap:8px;margin:6px 0 4px"></div>
+    <div class="rowhead"><b>Skill activations</b><small style="color:var(--dim)">a moment a student uses her Basic Skill when the rules can't say when (Fubuki's Every Last Round! fires once her ammo is 3 or less). It shows in her Basic Skill row on the timeline: drag it to move it</small></div>
+    <div id="acts"></div>
 </div>
   <div class="card" id="bosscard"><h2>Boss</h2>
     <div class="row" style="margin-bottom:8px"><label>Boss <select id="bsel"></select></label><label>Difficulty <select id="bdiff"></select></label><label>Terrain <img id="bterricon" class="terr" alt="" style="display:none"> <select id="bterr"></select></label><label title="Total Assault bosses have one armor type. In Grand Assault you pick the armor type per season: choose it here. HP and skills below are the Total Assault ones.">Armor <select id="barm"></select></label>
@@ -332,7 +339,7 @@ header .btn,header select{padding:4px 12px}
   </aside>
 </main>
 <div id="skillwin"><div class="box" id="skillbox"></div></div>
-<script src="data.js?v=11"></script>
+<script src="data.js?v=12"></script>
 <script src="bosses.js?v=4"></script>
 <script src="rotations.js"></script>
 <script>
@@ -415,6 +422,7 @@ function markSel(scroll){
     w.scrollTo({left: Math.max(0, (l + r)/2 - (LEFT + (w.clientWidth - LEFT)/2)), behavior: 'smooth'});
   }
 }
+let dragGuide = null;   // the bar being dragged on the timeline ({act: k} an activation, {ev: k} a boss event): render() draws guide lines at its start and end with the time and cost there
 let hlRow = null, costGeo = null;   // costGeo: where the cost graph is on the timeline (set by render) for the hover read-out   // id of the rotation row the player clicked to keep their place
 const timed = c => c.cb == null && !c.after;   // a time you typed or dragged; the others are placed by cost or by the chain
 const parse = v => { v = String(v).trim(); if(v.includes(':')){const [m,s]=v.split(':');return (+m)*60+(+s);} return +v; };
@@ -498,6 +506,19 @@ function simBasics(t, id){
   }
   return out;
 }
+// What a Basic Skill does to the enemy besides damage: Stunned / Fear / Provoke for so many seconds, landing so many frames after the skill starts (SchaleDB: Karin and Fubuki stun,
+// Kayoko frightens, Konoka provokes). Some only have a chance to apply. No Basic Skill has both a timed buff and one of these, so the timeline draws the one or the other.
+const CCNAME = {Stunned:'Stun', Fear:'Fear', Provoke:'Provoke'}, CCCOLOR = '#8f6fe0';   // CCCOLOR: the bar for a stun on the timeline
+const basicCC = (d, level) => ((d.public && d.public.cc) || []).map(x => ({name: CCNAME[x.icon] || x.icon, apply: x.apply, chance: x.chance, sec: pickv(x.ms, level)/1000}));
+// Skill activations placed by hand (t.acts = [{who, t}]): a moment a student uses her Basic Skill when the rules cannot say when, like Fubuki's "Every Last Round!" (it fires once her
+// ammo is 3 or less). They are drawn in that student's Basic Skill row, whatever the "predicted" setting says. Sorted earliest first; k is the place in t.acts.
+const actsOf = (t, id) => (t.acts || []).map((a, k) => ({who: a.who, t: a.t, k})).filter(a => id == null || a.who === id).sort((a, b) => b.t - a.t);
+function opAddAct(t, who, at){
+  const mine = actsOf(t, who), tt = at != null ? at : mine.length ? mine[mine.length - 1].t - 20 : TOTAL - 20;   // the next one 20 s after the last, the first 20 s into the fight
+  const a = {who, t: +Math.max(0, Math.min(TOTAL, tt)).toFixed(2)}; (t.acts || (t.acts = [])).push(a); return a;
+}
+const opMoveAct = (t, k, at) => { const a = (t.acts || [])[k]; if(a) a.t = +Math.max(0, Math.min(TOTAL, at)).toFixed(2); return a; };
+const opRemoveAct = (t, k) => { if(t.acts && t.acts[k]) t.acts.splice(k, 1); };
 // Cost over time: regen (per team), spends per cast, capped at 10. Cost Overload (Nagisa Swimsuit's buff) lets the target
 // spend up to 5 more than it has, which leaves the total negative (seen in the video: 1 -> -5 for a 6-cost Mika cast).
 // Boss data (SchaleDB) and the boss events the player placed on the timeline.
@@ -752,7 +773,7 @@ function costModel(t, list){
   [...list].sort((a,b)=>b.c.t-a.c.t).forEach(({c,i})=>{
     const spend = sm.get(c);
     const before = regenAdv(t, cost, last, c.t, rate, CAP);
-    const overload = before < spend - 0.012 && before + 5 >= spend && od(c.t, c.who);   // the Cost Over target may spend up to 5 beyond what it holds
+    const overload = before < spend - 0.012 && before + 5 >= spend - 0.012 && od(c.t, c.who);   // the Cost Over target may spend up to 5 beyond what it holds (same 0.012 slack as the plain check: typing "1" for a 6-cost cast can land at 0.998)
     ev.push({i, t:c.t, before, after:before-spend, spend, ok: before >= spend - 0.012 || overload, overload});
     cost = before - spend; last = c.t;
   });
@@ -1050,17 +1071,17 @@ function render0(){
     const d = SCHALE[c.who], exit = d.public ? skillText(d.public.desc, d.public.params, levelOf(c.who).basic) : '';
     Object.assign(it, {effect:true, landing:it.animEnd, end:sn.to, color:'#c99a2e', stext:it.text, text:sn.name + ' (stance)',
       title: it.title + `\n\n${sn.name}: Tactical Defensive stance ${fmt(sn.from)} → ${fmt(sn.to)} (${+(sn.from - sn.to).toFixed(1)}s), for as long as her shield lasts. Assumes the shield is not broken.` + (sn.ended ? `\nWhen it ends: one enemy is Stunned for ${sn.stun}s (${fmt(sn.to)} → ${fmt(sn.stunTo)}).${exit ? '\n' + exit : ''}` : '')});
-    if(sn.ended) L.ex.push({start:sn.to, landing:sn.to, end:sn.stunTo, effect:true, est:false, color:'#8f6fe0', text:`Stun ${sn.stun}s`,
+    if(sn.ended) L.ex.push({start:sn.to, landing:sn.to, end:sn.stunTo, effect:true, est:false, color:CCCOLOR, text:`Stun ${sn.stun}s`,
       title: `${d.name}: ${sn.name}\nWhen she leaves the stance at ${fmt(sn.to)}, one enemy is Stunned for ${sn.stun}s (until ${fmt(sn.stunTo)}).${exit ? '\n' + exit : ''}`});
   });
-  if(showBasic()) t.roster.forEach(id=>{
+  if(showBasic() || (t.acts || []).length) t.roster.forEach(id=>{   // the activations you added by hand are always drawn; "predicted" only decides whether the rules add the rest
     const L = laneOf(id), d = SCHALE[id], p = d.public; if(!p) return;
     const seen = (t.basics||[]).filter(x=>x.who===id).map(x=>({t:x.t, cancelled:false}));
     const measured = $('#basic').value==='measured' && seen.length>0;
-    const evs = measured ? seen : simBasics(t, id), tag = measured ? 'read from video' : 'predicted from rules';
+    const evs = (!showBasic() ? [] : measured ? seen : simBasics(t, id)).concat(actsOf(t, id).map(a => ({t:a.t, cancelled:false, hand:a.k})));
     const eff = p.effects.filter(e=>e.ms);
     for(const ev of evs){
-      const t0 = ev.t, animEnd = t0 - p.frames/FPS;
+      const t0 = ev.t, animEnd = t0 - p.frames/FPS, hand = ev.hand != null, tag = hand ? 'added by hand' : measured ? 'read from video' : 'predicted from rules';
       if(ev.cancelled){
         const cEnd = t0 - (eff.length ? Math.min(...eff.map(e=>e.apply))/FPS : 1);
         L.bs.push({start:t0, landing:cEnd, animEnd, end:cEnd, effect:false, est:true, cls:'cancelled', color:'transparent',
@@ -1069,10 +1090,11 @@ function render0(){
       }
       const bl = levelOf(id).basic;
       const eb = eff.map(e=>({label: e.type==='Shield' ? 'Shield' : buffLabel(e.stat,e.target,e.values) + (e.values && e.values.length ? ' '+(Math.abs(pickv(e.values, bl))/100)+'%' : ''), who:whoText(e.target), s:t0-e.apply/FPS, e:t0-e.apply/FPS-e.ms/1000, stat:e.stat, type:e.type}));
+      if(!eb.length) basicCC(d, bl).forEach(x => eb.push({label: `${x.name} ${x.sec}s` + (x.chance < 100 ? ` (${x.chance}% chance)` : ''), who:'one enemy', s:t0-x.apply/FPS, e:t0-x.apply/FPS-x.sec, cc:true}));   // Stun / Fear / Provoke: the bar after the skill lands shows how long it holds
       const landing = eb.length ? Math.max(...eb.map(x=>x.s)) : animEnd, end = eb.length ? Math.min(...eb.map(x=>x.e)) : animEnd;
-      L.bs.push({start:t0, landing, animEnd, end, effect:eb.length>0, est:!measured, color: eb.length ? (eb[0].type==='Shield' ? '#9aa7c7' : palette(eb[0].stat)) : '#7f8fb0',
+      L.bs.push({start:t0, landing, animEnd, end, effect:eb.length>0, est:!measured && !hand, act: hand ? ev.hand : null, color: eb.length ? (eb[0].cc ? CCCOLOR : eb[0].type==='Shield' ? '#9aa7c7' : palette(eb[0].stat)) : '#7f8fb0',
         text: p.name + (eb.length ? ': '+eb.map(x=>x.label).join(' + ') : ''),
-        title: `Basic: ${p.name}\n${skillText(p.desc, p.params, bl)}\n\n${d.name}\nStarts @ ${fmt(t0)}\n${eb.map(x=>`• ${x.label} (${x.who})\n    ${fmt(x.s)} → ${fmt(x.e)}  (${(x.s-x.e).toFixed(1)}s)`).join('\n')}${eb.length?'\n':''}Animation ends ${fmt(animEnd)} [${tag}]`});
+        title: `Basic: ${p.name}\n${skillText(p.desc, p.params, bl)}\n\n${d.name}\nStarts @ ${fmt(t0)}\n${eb.map(x=>`• ${x.label} (${x.who})\n    ${fmt(x.s)} → ${fmt(x.e)}  (${(x.s-x.e).toFixed(1)}s)`).join('\n')}${eb.length?'\n':''}Animation ends ${fmt(animEnd)} [${tag}]${hand ? '\nDrag the bar to move it; change or remove it in the Team tab (Skill activations).' : ''}`});
     }
   });
   // stack overlapping uses of the same skill into extra rows
@@ -1086,7 +1108,7 @@ function render0(){
   let nrows = pack(evItems);   // relic heals and the Violet Relic's buffs are not drawn: the timeline is about EX and Basic skills
   const BOSSL = (bb || evs.length) ? nrows*30 + 10 : 0;
   let y = HEAD + BOSSL;
-  lanes.forEach(L=>{ L.exRows = pack(L.ex); L.bsRows = showBasic() ? pack(L.bs) : 0; });
+  lanes.forEach(L=>{ L.exRows = pack(L.ex); L.bsRows = showBasic() || L.bs.length ? pack(L.bs) : 0; });   // the Basic Skill row is there while it is on, or when something you added by hand is in it
   const maxRows = Math.max(1, ...lanes.map(L => L.exRows + L.bsRows));   // every student row is as tall as the busiest one, so the rows all look alike
   // Sidebar mode: the timeline card fills the window height. The cost graph shrinks to half and the student rows share the space, so the bars get taller (up to 46 px).
   const wrapEl = $('.tl-wrap'), onSide = document.body.classList.contains('side');
@@ -1135,7 +1157,7 @@ function render0(){
     const hasStart = it.landing - it.start < -0.005 || !it.effect;           // is there a startup segment?
     const sEnd = it.effect ? it.landing : it.end;                            // startup runs until the effect lands
     const sw = Math.max(4, (it.start - sEnd)*px), mw = Math.max(4, (it.landing - it.end)*px);
-    const di = it.i!=null ? `data-i="${it.i}"` : '';
+    const di = it.i!=null ? `data-i="${it.i}"` : it.act!=null ? `data-act="${it.act}"` : '';   // data-act: a skill activation added by hand (draggable)
     let out = '';
     if(hasStart) out += `<div class="bar startup ${it.effect?'':'solo'} ${it.atk ? 'atk' : ''} ${it.lock && !it.effect ? 'lk' : ''} ${it.cls||''}" ${di} data-tip="${it.title}" style="${it.atk ? '--atk:' + it.atk + ';' : ''}left:${X(it.start)}px;width:${sw}px;top:${top}px;height:${ROW}px">`
       + ((it.effect ? it.stext : it.text) && sw > 60 ? `<span class="btext" style="margin-left:8px;left:${LEFT+10}px;max-width:${sw-14}px">${it.effect ? it.stext : it.text}</span>` : '') + `</div>`;   // stext: the cast's own name on its startup bar when an effect bar follows (Kurumi)
@@ -1147,6 +1169,12 @@ function render0(){
     L.ex.forEach(it=> html += bars(it, L.top + PAD + it.row*(ROW+GAP)));
     L.bs.forEach(it=> html += bars(it, L.top + PAD + (L.exRows + it.row)*(ROW+GAP)));
   });
+  // While a bar is being dragged: the clock times of its start and end (an event with no length has only the start)
+  const guideT = [];
+  if(dragGuide){
+    const it = dragGuide.act != null ? lanes.flatMap(L => L.bs).find(x => x.act === dragGuide.act) : evItems.find(x => x.k === dragGuide.ev), len = !it ? 0 : dragGuide.act != null ? it.start - it.end : it.dur;
+    if(it){ guideT.push(it.start); if(len > 0.005) guideT.push(+Math.max(0, it.start - len).toFixed(3)); }
+  }
   // cost lane: line chart of the team's cost (range -5 .. 10)
   winOverride = allWindows(t, t.casts);
   {
@@ -1174,12 +1202,17 @@ function render0(){
     html += `<div class="lane costlane" style="top:${costTop}px;height:${CL}px"><div class="lname"><b class="tc">Team<br>Cost</b>${refPts ? '<small style="position:absolute;left:10px;bottom:6px;color:#8aa0c8;font-size:10px;font-weight:400;text-align:left">dashed = video<br>green = model</small>' : ''}`
       + [cm.cap,5,0,-5].map(v=>`<span style="top:${yy(v)-costTop-7}px">${v}</span>`).join('')
       + `</div></div><svg style="position:absolute;left:0;top:0;pointer-events:none" width="${w}" height="${costTop+CL}">${g}${refLine}<polyline points="${path}" fill="none" stroke="#7bd88f" stroke-width="2"/>${dots}</svg>`;
+    // guide lines for the bar being dragged: from the top of the timeline to the bottom, with a dot and a tag (clock time, team cost) where the line crosses the cost graph
+    guideT.forEach((T, n) => {
+      const x = X(T), c = costAt(t, -1, T, castsExcept(t, -1)), yc = yy(Math.max(lo, Math.min(hi, c)));
+      html += `<div class="dragline" style="left:${x}px;top:0;height:${h}px"></div><i class="dragdot" style="left:${x}px;top:${yc}px"></i><span class="dragtag ${guideT.length === 2 && n === 0 ? 'l' : 'r'}" style="left:${x}px;top:${yc}px">${fmt2(T)} &middot; cost ${c.toFixed(1)}</span>`;
+    });
   }
   winOverride = null;
 
   $('#tl').innerHTML = html;
 
-  bindEventDrag(t);
+  bindEventDrag(t); bindActDrag(t);
   renderBoss(t);
 
 
@@ -1216,6 +1249,15 @@ function render0(){
       + (cur.filter(Boolean).length >= 5 && t.roster.length > 5 ? `<small style="color:var(--dim)">Not in the first five: ${t.roster.filter(id => !cur.includes(id)).map(sname).join(', ')}</small>` : '');
     document.querySelectorAll('#startorder [data-so]').forEach(el => el.onchange = () => { const a = Array.from({length:5}, (_, i) => cur[i]); a[+el.dataset.so] = +el.value || 0; t.startOrder = a; save(); render(); });
     if($('#soclear')) $('#soclear').onclick = () => { delete t.startOrder; save(); render(); }; }
+  // Skill activations: Basic Skills used at a moment you choose (t.acts), one row each, earliest first
+  { const ids = t.roster.filter(id => SCHALE[id].public), acts = actsOf(t, null).filter(a => ids.includes(a.who));
+    if(!ids.includes(actWho)) actWho = ids.find(id => !SCHALE[id].public.interval) || ids[0] || 0;   // start on a student whose skill the rules cannot predict
+    $('#acts').innerHTML = (ids.length ? `<div class="row actadd"><select id="actwho" title="Whose Basic Skill">${ids.map(id => { const p = SCHALE[id].public; return `<option value="${id}" ${id === actWho ? 'selected' : ''}>${sname(id)}: ${p.name}${p.interval ? ` (every ${p.interval} s, already predicted)` : ''}</option>`; }).join('')}</select><button class="btn" id="actadd">+ Add activation</button></div>` : '<small style="color:var(--dim)">Add a student to the team first.</small>')
+      + acts.map(a => `<div class="row actrow"><img src="https://schaledb.com/images/student/icon/${a.who}.webp" onerror="this.style.visibility='hidden'" alt=""><b>${sname(a.who)}</b><span>${SCHALE[a.who].public.name}</span><label>at <input type="text" data-actt="${a.k}" value="${fmt2(a.t)}" style="width:78px" title="Clock time the skill starts"></label><button type="button" class="btn" data-actx="${a.k}" title="Remove this activation">&#10005;</button></div>`).join('');
+    if($('#actwho')) $('#actwho').onchange = e => { actWho = +e.target.value; };
+    if($('#actadd')) $('#actadd').onclick = () => { opAddAct(t, actWho); save(); render(); };
+    document.querySelectorAll('[data-actt]').forEach(el => el.onchange = () => { const v = parse(el.value); if(v >= 0 && v <= TOTAL){ opMoveAct(t, +el.dataset.actt, v); save(); } render(); });
+    document.querySelectorAll('[data-actx]').forEach(el => el.onclick = () => { opRemoveAct(t, +el.dataset.actx); save(); render(); }); }
   $('#addstrbtn').disabled = t.roster.filter(id=>SCHALE[id].squad==='Main').length >= 4;
   $('#addspcbtn').disabled = t.roster.filter(id=>SCHALE[id].squad!=='Main').length >= 2;
   document.querySelectorAll('[data-lv]').forEach(i=>i.onchange=()=>{ const id=i.dataset.id; const S = tset(t); S.lv[id] = Object.assign({}, S.lv[id], {[i.dataset.lv]: +i.value}); save(); render(); });
@@ -1224,7 +1266,7 @@ function render0(){
   document.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{
     const id = +b.dataset.rm, n = t.casts.filter(c=>c.who===id).length;
     if(n && !confirm(SCHALE[id].name+' has '+n+' cast(s) in the rotation. Remove the student and those casts?')) return;
-    t.roster = t.roster.filter(x=>x!==id); t.casts = t.casts.filter(c=>c.who!==id); t.casts.forEach(c => { if(c.target === id) delete c.target; }); save(); render(); });
+    t.roster = t.roster.filter(x=>x!==id); t.casts = t.casts.filter(c=>c.who!==id); if(t.acts) t.acts = t.acts.filter(a=>a.who!==id); t.casts.forEach(c => { if(c.target === id) delete c.target; }); save(); render(); });
   // drag and drop to reorder within a row
   let dragId = null;
   document.querySelectorAll('.roster .stu').forEach(el=>{
@@ -1355,9 +1397,21 @@ function bindEventDrag(t){
   document.querySelectorAll('.evpill[data-ev]').forEach(el=>{
     el.onmousedown = ev=>{
       ev.preventDefault();
-      const e = evOf(t)[+el.dataset.ev], x0 = ev.clientX, t0 = e.t, st = STEP(px);
-      const mv = m=>{ e.t = Math.max(0, Math.min(TOTAL, +(Math.round((t0 - (m.clientX - x0)/UI()/px)/st)*st).toFixed(2))); render(); };
-      const up = ()=>{ document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up); save(); render(); };
+      const k = +el.dataset.ev, e = evOf(t)[k], x0 = ev.clientX, t0 = e.t, st = STEP(px);
+      const mv = m=>{ dragGuide = {ev:k}; e.t = Math.max(0, Math.min(TOTAL, +(Math.round((t0 - (m.clientX - x0)/UI()/px)/st)*st).toFixed(2))); render(); };
+      const up = ()=>{ document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up); dragGuide = null; save(); render(); };
+      document.addEventListener('mousemove', mv); document.addEventListener('mouseup', up);
+    };
+  });
+}
+function bindActDrag(t){   // a skill activation added by hand moves with the mouse; a click without a drag opens its details as usual
+  const px = pxs();
+  document.querySelectorAll('.bar[data-act]').forEach(el=>{
+    el.onmousedown = ev=>{
+      ev.preventDefault();
+      const k = +el.dataset.act, x0 = ev.clientX, t0 = t.acts[k].t, st = STEP(px);
+      const mv = m => { dragGuide = {act:k}; opMoveAct(t, k, Math.round((t0 - (m.clientX - x0)/UI()/px)/st)*st); render(); };
+      const up = () => { document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up); dragGuide = null; save(); render(); };
       document.addEventListener('mousemove', mv); document.addEventListener('mouseup', up);
     };
   });
@@ -1514,7 +1568,7 @@ const addTo = (sq, sel, max, label) => { const t = team(), id = +$(sel).value; i
 $('#addstrbtn').onclick = ()=>addTo('Main', '#addstr', 4, 'striker');
 $('#addspcbtn').onclick = ()=>addTo('Support', '#addspc', 2, 'special');
 // ---- Skills window (Team tab): a student's skills as SchaleDB shows them. The texts are in skills.js, fetched the first time one is opened. ----
-let skillDbP = null, skState = null;
+let skillDbP = null, skState = null, actWho = 0;   // actWho: the student picked in the Skill activations box
 const loadSkillDb = () => typeof SKILLDB !== 'undefined' ? Promise.resolve() : (skillDbP = skillDbP || new Promise((ok, bad) => {
   const s = document.createElement('script'); s.src = 'skills.js?v=1'; s.onload = ok; s.onerror = () => { skillDbP = null; bad(new Error('skills.js did not load')); }; document.head.appendChild(s); }));
 function paintSkillWin(){
