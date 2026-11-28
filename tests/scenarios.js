@@ -479,5 +479,65 @@ eq('no student offers an EX form identical to the normal one (no cost of its own
   delete sc.target; eq('no target picked: the label says so', [E.costCuts(tc, tc.casts).get(sc), E.cutLabel(tc, sc, undefined).text], [undefined, 'pick a target for the EX cost cut']);
   { const tk = team(['Kisaki (Swimsuit)', 'Seia', 'Mika', 'Aru', 'Hina', 'Rio']), kc = cast(tk, 'Kisaki (Swimsuit)', 200); const ck = E.costCuts(tk, tk.casts).get(kc);
     eq('Kisaki (Swimsuit): 1 less on the next EX of each other Striker', E.cutLabel(tk, kc, ck).text, "the other Strikers' next EX: cost -1"); } }
+// A cut that changes nothing is not used up. Wakamo recording (attempt 2, 2026-11-27): Seia's halving was on U. Neru; her normal EX (cost 1: half of 1 rounds the cut down to 0) paid 1,
+// and her next EX (the follow-up, 4 -> 2) and Rio's copy of it (3 -> 2) were both still halved.
+{ const tw = team(['Seia', 'Neru (School)', 'Maki', 'Kokona', 'Himari (Armed)', 'Rio']), sw = cast(tw, 'Seia', 200); sw.target = id('Neru (School)');
+  const n1 = cast(tw, 'Neru (School)', 190), n2 = cast(tw, 'Neru (School)', 170), n3 = cast(tw, 'Neru (School)', 150), n4 = cast(tw, 'Neru (School)', 110); n3.copy = true;
+  eq('the forms: normal EX starts the mark, the follow-up and the copy are inside it, the last cast is after the mark', [n1, n2, n3, n4].map(c => E.formIdx(tw, c)), [null, 0, 0, null]);
+  eq('the cost-1 normal EX is not halved and does not use up the cut: it goes to the follow-up (4 -> 2) and Rio\'s copy of it (3 -> 2); a later cast is full price', [n1, n2, n3, n4].map(c => E.spendOf(tw, c)), [1, 2, 2, 1]);
+  const cuts = E.costCuts(tw, tw.casts).get(sw);
+  eq('... and the cut lists only the two casts it changed', [cuts.used.length, cuts.used.map(u => [u.before, u.after])], [2, [[4, 2], [3, 2]]]); }
+// A full cost bar. The bar stops at the cap (10.5 here), so "cost before 10.5" fits every moment the bar sits full; the row goes to the first of them, the moment the bar fills
+// (the Wakamo Phase 2 rotation had Rio at 3:24.62 where the recording shows her at 3:29.63: she was cast the moment the bar filled, 5 s earlier).
+{ const tf = team(['Seia', 'Neru (School)', 'Maki', 'Kokona', 'Himari (Armed)', 'Rio']); E.setTotal(240); tf.set.ue[id('Rio')] = 60;
+  const mk = (who, tm, cb, extra) => { const c = Object.assign({ t: tm, who: id(who), cb, id: who.slice(0, 3) + tm }, extra || {}); tf.casts.push(c); return c; }, ix = c => tf.casts.indexOf(c), nn = id('Neru (School)');
+  const f1 = mk('Neru (School)', 217.23, 10.5), f2 = mk('Seia', 215.25, 10.5, { target: nn }), f3 = mk('Rio', 204.62, 10.5, { target: nn }), f4 = mk('Himari (Armed)', 201.23, 10.5, { target: nn });
+  const ff = E.fullFrom(tf, ix(f3));
+  eq('the cost cap here is 10.5', E.capOf(tf), 10.5);
+  eq('Rio at 3:24.62 sees a full bar that filled at about 3:29.7 (5.1 s of regen wasted); the casts that follow the previous one at once do not', [Math.round(ff.T * 10) / 10, ff.secs, E.fullFrom(tf, ix(f1)), E.fullFrom(tf, ix(f2)), E.fullFrom(tf, ix(f4))], [209.7, 5.1, null, null, null]);
+  f3.lock = true; eq('a locked row is left alone', [E.retimeByCost(tf), f3.t], [0, 204.62]); delete f3.lock;
+  const mv = E.retimeByCost(tf);
+  eq('re-timing by cost moves Rio to the moment the bar fills and Himari to the moment she can be paid after that (the recording: 3:29.63 and 3:26.27); the first two rows stay', [mv, f1.t, f2.t, Math.abs(f3.t - 209.63) < 0.2, Math.abs(f4.t - 206.27) < 0.2], [2, 217.23, 215.25, true, true]);
+  eq('... and a second time nothing moves, no row sees a full bar any more', [E.retimeByCost(tf), tf.casts.map((c, k) => E.fullFrom(tf, k))], [0, [null, null, null, null]]);
+  f3.t = 200; f3.cb = 10.5; f4.t = 190;
+  E.placeByCost(tf, ix(f3), 10.5);
+  eq('typing 10.5 on a row that sits later on the full-bar stretch takes it to the moment the bar fills', Math.abs(f3.t - 209.63) < 0.2, true);
+  const f5 = mk('Maki', 150, 7); f5.t = 150; E.placeByCost(tf, ix(f5), 7); const at7 = f5.t;
+  eq('a row planned below the cap is placed as before (the cost passes 7 once)', E.fullFrom(tf, ix(f5)), null); }
+// Re-timing puts a row planned at a cost at the first moment after the cast above it where the bar shows that cost. The cost you planned stays: a row met first while the cast tied above it
+// had not followed its parent yet (Seia at 3:10 instead of 3:37) used to be overwritten with the cost it saw there (7.5), and then sat in the wrong place (recording: the "cost 6" row was cast 0.7 s after Seia).
+{ const tr = team(['Seia', 'Neru (School)', 'Maki', 'Kokona', 'Himari (Armed)', 'Rio']); E.setTotal(240); tr.set.ue[id('Rio')] = 60; const nn = id('Neru (School)');
+  const g1 = { t: 217.23, who: nn, cb: 10.5, id: 'gn', form: 0 }, g2 = { t: 190, who: id('Seia'), after: 'gn', target: nn, id: 'gs' }, g3 = { t: 183.55, who: id('Rio'), cb: 6, target: nn, id: 'gr' };
+  tr.casts.push(g1, g2, g3); E.retimeByCost(tr);
+  eq('Seia follows Neru at once; Rio goes when the bar shows 6 (3.5 left after Neru 4 and Seia 3: 4.7 s later, the regen boost from Seia comes in after 3.2 s) and keeps its planned cost 6', [g2.t < 217.23 && g2.t > 217.1, Math.abs((g2.t - g3.t) - 4.69) < 0.15, g3.cb], [true, true, 6]);
+  eq('... and nothing is left to move', E.retimeByCost(tr), 0); }
+
+// Rio's copy only appears E.COPY_DELAY (116 frames = 3.87 s) after her cast: before that the card is greyed out, so the copy cannot be cast. (Measured: 10 Rio casts in the Binah, Hod and Kaiten recordings, 3.79-3.97 s of game clock between her cost drop and the copy showing up.)
+{ const names = ['Seia', 'Mika', 'Kotama (Camp)', 'Aru (Dress)', 'Rio', 'Kisaki'], mk = () => { const t = team(names); E.setTotal(240); return t; };
+  eq('the delay is 116 frames', [E.COPY_DELAY, Math.round(E.COPY_DELAY * 30)], [116 / 30, 116]);
+  { const t = mk(), r = cast(t, 'Rio', 200); r.target = id('Mika'); const c = cast(t, 'Mika', 190); c.copy = true; const plain = cast(t, 'Mika', 205);
+    eq('copySource: the Rio cast that made the copy; a plain cast has none', [E.copySource(t, c) === r, E.copySource(t, plain)], [true, null]);
+    const c2 = cast(t, 'Mika', 180); c2.copy = true; eq('a copy that was already used has no source for a second one (no new Rio cast)', E.copySource(t, c2), null);
+    const r2 = cast(t, 'Rio', 185); r2.target = id('Mika'); eq('after a second Rio cast the later copy goes back to a source', E.copySource(t, c2) === r2, true);
+    const t2 = mk(), r3 = cast(t2, 'Rio', 200); r3.target = id('Mika'); const other = cast(t2, 'Kotama (Camp)', 190); other.copy = true;
+    eq('a copy of someone Rio did not copy has no source', E.copySource(t2, other), null); }
+  { const t = mk(), r = cast(t, 'Rio', 200); r.target = id('Mika'); const c = cast(t, 'Mika', 197); c.copy = true;
+    eq('a copy 3 s after Rio is inside the wait: busy until 196.133', [E.ownBusy(t, c, 197), E.copyWait(t, c)], [196.133, true]);
+    eq('a copy 3.9 s after her is fine', [E.ownBusy(t, c, 196.1), E.copyWait(t, Object.assign({}, c, {t: 196.1}))], [null, false]);
+    eq('the same cast as the real card (not a copy) has no wait', E.ownBusy(t, Object.assign({}, c, {copy: false}), 197), null);
+    eq('the instant of her cast itself is not inside the wait of an earlier row', E.ownBusy(t, c, 200), null); }
+  // tied right after Rio: lands where the copy shows up
+  { const t = mk(), r = cast(t, 'Rio', 200); r.target = id('Mika'); r.id = 'rr'; const c = cast(t, 'Mika', 199.99); c.copy = true; c.after = 'rr'; c.id = 'cc'; const k = cast(t, 'Aru (Dress)', 199.98); k.after = 'cc'; k.id = 'kk';
+    E.applyChains(t); eq('a copy tied to Rio is placed 3.87 s after her cast', c.t, 196.13);
+    eq('... and what is tied to the copy follows it', k.t <= 196.12 && k.t >= 196.0, true);
+    // a rotation saved before this rule: the row stays where it was (it is flagged), and Re-time by cost moves it
+    c.t = 199.99; k.t = 199.98; E.applyChains(t); eq('a saved row inside the wait is left alone by a reload (and shows as busy)', [c.t, E.ownBusy(t, c, c.t) !== null], [199.99, true]);
+    const n = E.retimeByCost(t); eq('Re-time by cost places the tied copy at 3.87 s after Rio and its kid after it', [c.t, k.t <= 196.12 && k.t >= 196.0, n >= 2], [196.13, true, true]);
+    eq('... and a second Re-time has nothing left to move', E.retimeByCost(t), 0); }
+  { const t = mk(), r = cast(t, 'Rio', 200); r.target = id('Mika'); const c = cast(t, 'Mika', 199); c.copy = true; c.cb = 3; E.placeByCost(t, t.casts.indexOf(c), 3);
+    eq('a copy planned by cost never lands inside the wait', c.t <= 196.14, true); }
+  { const t = mk(), r = cast(t, 'Rio', 200); r.target = id('Mika'); const c = cast(t, 'Mika', 190); c.copy = true; const before = c.t; E.applyChains(t);
+    eq('a copy cast long after Rio is not touched', c.t, before); }
+}
 
 console.log(bad ? `\n${bad} scenario(s) failed` : '\nALL SCENARIOS PASS'); process.exit(bad ? 1 : 0);
